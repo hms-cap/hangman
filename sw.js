@@ -1,6 +1,6 @@
 // Offline cache. Serves from cache immediately and refreshes in the background, so updates show on the next launch.
-const CACHE = 'paper-games-v2';
-const FILES = ['./', 'index.html', 'hangman.html', 'sudoku.html', 'paper.css', 'words.js', 'puzzles.js',
+const CACHE = 'paper-games-v3';
+const FILES = ['./', 'index.html', 'hangman.html', 'sudoku.html', 'fiveletters.html', 'paper.css', 'words.js', 'puzzles.js', 'fivewords.js',
   'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

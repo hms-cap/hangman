@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman and Sudoku on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku and Five Letters on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -40,12 +40,26 @@ It opens full-screen from its own icon. On Android, open the link in Chrome and 
 - Play a specific puzzle by its number
 - Keyboard controls: `1–9`, arrow keys, `Backspace`, `N` for notes, `H` for hint, `P` to pause, `Ctrl/Cmd+Z` to undo
 
+### Five Letters
+A five-letter word-guessing game in the style of Wordle.
+- **Daily** mode: one word a day, the same for everyone, numbered from No. 1 on 14 October 2026. The 2,139 hand-picked answers last almost six years before repeating.
+- **Practice** mode: unlimited random words, with separate stats
+- 6,486 accepted guesses, from the Hunspell en_US dictionary plus the answer list
+- Correct scoring for repeated letters
+- Hard mode
+- High-contrast colors
+- Stats with guess distribution and streaks
+- Share your result as an emoji grid
+- Countdown to the next daily word
+- Saves progress
+
 ## Files
 | File | What it is |
 | --- | --- |
 | `index.html` | Home screen |
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js` | Sudoku game and puzzle set |
+| `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

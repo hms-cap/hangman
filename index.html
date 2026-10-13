@@ -38,6 +38,8 @@
 .g-box{fill:none;stroke:var(--ink);stroke-width:2.2}
 .g-given{font-family:var(--mono);font-weight:600;font-size:15px;fill:var(--ink)}
 .g-pencil{font-family:var(--hand);font-size:19px;fill:var(--hit)}
+.t-c{fill:var(--correct)}.t-p{fill:var(--present)}.t-a{fill:var(--absent)}.t-e{fill:none;stroke:var(--line);stroke-width:1.5}
+.t-l{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--on-tile);text-transform:uppercase}
 .foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
 </style>
 </head>
@@ -45,7 +47,7 @@
 <main class="app">
   <div class="masthead">
     <h1>Paper Games</h1>
-    <p>Two pencil-and-paper classics. Your progress stays on this device.</p>
+    <p>Three pencil-and-paper puzzles. Your progress stays on this device.</p>
   </div>
 
   <nav class="games">
@@ -72,12 +74,23 @@
         <div class="now" id="sNow"></div>
       </div>
     </a>
+    <a class="game" href="fiveletters.html">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g id="tiles"></g>
+      </svg>
+      <div>
+        <h2>Five Letters</h2>
+        <p class="about">Guess the hidden five-letter word in six tries. A new daily word, plus unlimited practice.</p>
+        <div class="now" id="fNow"></div>
+      </div>
+    </a>
   </nav>
 
-  <p class="foot">On iPhone, open this page in Safari and choose Share, then Add to Home Screen. After the first visit both games work offline.</p>
+  <p class="foot">On iPhone, open this page in Safari and choose Share, then Add to Home Screen. After the first visit all three games work offline.</p>
 </main>
 
 <script src="words.js"></script>
+<script src="fivewords.js"></script>
 <script>
 'use strict';
 const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
@@ -112,6 +125,22 @@ const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
   const solved = Object.values(st).reduce((n, s) => n + ((s.done && s.done.length) || 0), 0);
   out.push(chip(solved ? `${solved} solved` : 'Easy · Medium · Hard · Expert'));
   document.getElementById('sNow').innerHTML = out.join('');
+})();
+
+// Five Letters status + mini board
+(function(){
+  const rows = [['pence','aaapa'],['storm','acaaa'],['tiger','pccaa'],['',''],['','']];
+  const cls = { c:'t-c', p:'t-p', a:'t-a' }; let s = '';
+  rows.slice(0,4).forEach(([w, r], y) => { for (let x = 0; x < 5; x++){
+    const X = 6 + x*18, Y = 14 + y*18;
+    s += w ? `<rect x="${X}" y="${Y}" width="16" height="16" rx="2.5" class="${cls[r[x]]}"/><text x="${X+8}" y="${Y+12}" text-anchor="middle" class="t-l">${w[x]}</text>` : `<rect x="${X}" y="${Y}" width="16" height="16" rx="2.5" class="t-e"/>`; } });
+  document.getElementById('tiles').innerHTML = s;
+  const day = Math.round((new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) - new Date(2026, 9, 14)) / 864e5);
+  const d = get('five-daily', null), st = get('five-stats', {}), out = [];
+  if (d && d.day === day && d.done) out.push(chip(d.won ? `No. ${day + 1} solved in ${d.guesses.length}` : `No. ${day + 1} missed`));
+  else out.push(chip(`Play daily No. ${day + 1}`, true));
+  if (st.daily && st.daily.cur) out.push(chip(`streak ${st.daily.cur}`));
+  document.getElementById('fNow').innerHTML = out.join('');
 })();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -5,6 +5,7 @@
   --hit:#2e5ea6; --miss:#c4353d; --key:#ffffff; --key-edge:#cfd6d2;
   --line:#b9c3c8; --sel:rgba(46,94,166,.26); --peer:rgba(46,94,166,.08); --same:rgba(46,94,166,.17);
   --sheet:#fbfcf9; --scrim:rgba(20,30,40,.38);
+  --correct:#2e5ea6; --present:#c98a12; --absent:#8d989f; --on-tile:#ffffff;
   --hand:"Gochi Hand","Marker Felt","Comic Sans MS",cursive;
   --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
   --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
@@ -14,12 +15,16 @@
   --paper:#102a43; --grid:rgba(150,195,235,.12); --ink:#e4edf6; --muted:#93a9bd;
   --hit:#8cc2ff; --miss:#ff8a8a; --key:#173756; --key-edge:#2a4d70;
   --line:#2f5276; --sel:rgba(140,194,255,.30); --peer:rgba(140,194,255,.08); --same:rgba(140,194,255,.18);
-  --sheet:#15324f; --scrim:rgba(0,8,16,.55); color-scheme:dark}}
+  --sheet:#15324f; --scrim:rgba(0,8,16,.55);
+  --correct:#4f8fe0; --present:#d9a03a; --absent:#2d4863; --on-tile:#ffffff; color-scheme:dark}}
 :root[data-theme="dark"]{
   --paper:#102a43; --grid:rgba(150,195,235,.12); --ink:#e4edf6; --muted:#93a9bd;
   --hit:#8cc2ff; --miss:#ff8a8a; --key:#173756; --key-edge:#2a4d70;
   --line:#2f5276; --sel:rgba(140,194,255,.30); --peer:rgba(140,194,255,.08); --same:rgba(140,194,255,.18);
-  --sheet:#15324f; --scrim:rgba(0,8,16,.55); color-scheme:dark}
+  --sheet:#15324f; --scrim:rgba(0,8,16,.55);
+  --correct:#4f8fe0; --present:#d9a03a; --absent:#2d4863; --on-tile:#ffffff; color-scheme:dark}
+/* High-contrast tile colors for Five Letters (same in both themes) */
+:root.hc{--correct:#e8742a; --present:#2fa0d4}
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
