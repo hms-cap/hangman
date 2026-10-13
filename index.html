@@ -6,236 +6,115 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hangman">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
 <meta name="theme-color" content="#102a43">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-</head>
-<body>
-<title>Hangman</title>
+<title>Paper Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
 <style>
-/* Layout: one-screen notebook page — pencil gallows up top, letter slots, then a thumb-reach keyboard */
-:root{
-  --paper:#f2f4ef; --grid:rgba(52,96,128,.11); --ink:#26323b; --muted:#6b7780;
-  --hit:#2e5ea6; --miss:#c4353d; --key:#ffffff; --key-edge:#cfd6d2;
-  --hand:"Gochi Hand","Marker Felt","Comic Sans MS",cursive;
-  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+.app{gap:22px;justify-content:center}
+.masthead{display:flex;flex-direction:column;gap:4px;padding-inline:4px}
+.masthead h1{font-family:var(--hand);font-weight:400;font-size:clamp(2.6rem,12vw,3.4rem);margin:0;line-height:.95}
+.masthead p{margin:0;color:var(--muted);font-size:.95rem}
+.games{display:flex;flex-direction:column;gap:14px}
+.game{
+  display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:center;
+  padding:16px;border-radius:16px;background:var(--key);border:1px solid var(--key-edge);border-bottom-width:4px;
+  color:var(--ink);text-decoration:none;transition:transform .1s;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#102a43; --grid:rgba(150,195,235,.12); --ink:#e4edf6; --muted:#8fa6bb;
-  --hit:#8cc2ff; --miss:#ff8a8a; --key:#173756; --key-edge:#2a4d70; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#102a43; --grid:rgba(150,195,235,.12); --ink:#e4edf6; --muted:#8fa6bb;
-  --hit:#8cc2ff; --miss:#ff8a8a; --key:#173756; --key-edge:#2a4d70; color-scheme:dark}
-
-html,body{height:100%}
-body{
-  margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
-  background-size:22px 22px;-webkit-tap-highlight-color:transparent;
-  -webkit-user-select:none;user-select:none;touch-action:manipulation;overscroll-behavior:none;
-}
-.app{
-  height:100%;max-width:520px;margin:0 auto;box-sizing:border-box;
-  padding:max(12px,env(safe-area-inset-top,0px)) 16px max(14px,env(safe-area-inset-bottom,0px));
-  display:flex;flex-direction:column;gap:10px;
-}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-h1{font-family:var(--hand);font-weight:400;font-size:2.1rem;margin:0;line-height:1;letter-spacing:.01em}
-.score{display:flex;gap:14px;font-family:var(--mono);font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.score b{color:var(--ink);font-weight:600}
-.score span{display:flex;flex-direction:column;align-items:flex-end;text-transform:uppercase;letter-spacing:.08em;font-size:.62rem}
-.score span b{font-size:1rem;letter-spacing:0}
-
-.stage{flex:1 1 auto;min-height:150px;display:flex;align-items:center;justify-content:center;position:relative}
-.stage svg{height:100%;max-height:260px;width:auto;max-width:100%;overflow:visible}
-.stage path,.stage line,.stage circle{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
-.part{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .45s ease-out}
-.part.on{stroke-dashoffset:0}
-.stage .part{stroke:var(--miss)}
-.lives{position:absolute;right:0;top:4px;font-family:var(--hand);font-size:1.15rem;color:var(--muted);text-align:right;line-height:1.1}
-.lives b{display:block;font-size:2rem;color:var(--ink);font-weight:400}
-.cat{position:absolute;left:0;top:4px;font-family:var(--hand);font-size:1.15rem;color:var(--muted);line-height:1.1}
-.cat b{display:block;font-size:1.5rem;color:var(--hit);font-weight:400}
-
-.word{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:46px}
-.slot{
-  width:clamp(24px,8.4vw,38px);height:44px;border-bottom:3px solid var(--ink);
-  display:flex;align-items:flex-end;justify-content:center;
-  font-family:var(--mono);font-weight:600;font-size:clamp(1.25rem,6vw,1.7rem);line-height:1.3;
-}
-.slot.show{animation:pop .25s ease-out}
-.slot.missed{color:var(--miss)}
-@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
-
-.msg{text-align:center;font-family:var(--hand);font-size:1.35rem;min-height:1.6em;margin:0;color:var(--muted)}
-.msg.win{color:var(--hit)} .msg.lose{color:var(--miss)}
-
-.kb{display:flex;flex-direction:column;gap:7px}
-.row{display:flex;gap:5px;justify-content:center}
-.key{
-  flex:1 1 0;max-width:44px;height:48px;min-width:0;border:1px solid var(--key-edge);border-bottom-width:3px;
-  border-radius:7px;background:var(--key);color:var(--ink);font-family:var(--mono);font-weight:600;font-size:1.05rem;
-  padding:0;cursor:pointer;transition:transform .08s,background .15s,opacity .15s;
-}
-.key:active{transform:translateY(2px)}
-.key:focus-visible,.btn:focus-visible{outline:2px solid var(--hit);outline-offset:2px}
-.key.hit{background:var(--hit);border-color:var(--hit);color:var(--paper)}
-.key.miss{background:transparent;color:var(--miss);border-color:transparent;text-decoration:line-through;opacity:.7}
-.key:disabled{cursor:default}
-
-.actions{display:flex;justify-content:center;gap:10px}
-.btn{
-  font-family:var(--hand);font-size:1.3rem;padding:6px 22px;border-radius:999px;cursor:pointer;
-  border:2px solid var(--ink);background:transparent;color:var(--ink);
-}
-.btn.primary{background:var(--ink);color:var(--paper)}
-@media (prefers-reduced-motion:reduce){.part,.key{transition:none}.slot.show{animation:none}}
-@media (max-height:620px){h1{font-size:1.7rem}.key{height:42px}.stage{min-height:120px}}
+.game:active{transform:translateY(2px)}
+.game svg{width:96px;height:96px;display:block}
+.game h2{font-family:var(--hand);font-weight:400;font-size:2rem;margin:0;line-height:1}
+.game .about{margin:4px 0 8px;color:var(--muted);font-size:.88rem;line-height:1.4}
+.game .now{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:.72rem;padding:3px 8px;border-radius:999px;background:var(--peer);border:1px solid var(--line);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.go{background:var(--hit);border-color:var(--hit);color:var(--paper)}
+.ink{fill:none;stroke:var(--ink);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.red{fill:none;stroke:var(--miss);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.g-line{stroke:var(--line);stroke-width:1}
+.g-box{fill:none;stroke:var(--ink);stroke-width:2.2}
+.g-given{font-family:var(--mono);font-weight:600;font-size:15px;fill:var(--ink)}
+.g-pencil{font-family:var(--hand);font-size:19px;fill:var(--hit)}
+.foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
 </style>
-
-<div class="app">
-  <header>
-    <h1>Hangman</h1>
-    <div class="score" aria-label="Score">
-      <span>Won<b id="sWins">0</b></span>
-      <span>Lost<b id="sLoss">0</b></span>
-      <span>Streak<b id="sStreak">0</b></span>
-    </div>
-  </header>
-
-  <div class="stage">
-    <div class="cat">category<b id="cat">—</b></div>
-    <div class="lives">guesses left<b id="lives">6</b></div>
-    <svg viewBox="0 0 200 230" role="img" aria-label="Gallows drawing">
-      <path d="M20 218 Q60 214 108 218" />
-      <path d="M50 216 L52 22" />
-      <path d="M50 24 Q100 21 140 23" />
-      <path d="M52 62 L88 24" />
-      <path d="M138 23 L139 52" />
-      <circle class="part" pathLength="1" cx="139" cy="71" r="19" transform="rotate(-90 139 71)" />
-      <path class="part" pathLength="1" d="M139 90 Q141 120 139 148" />
-      <path class="part" pathLength="1" d="M139 104 Q125 116 113 128" />
-      <path class="part" pathLength="1" d="M139 104 Q153 116 165 128" />
-      <path class="part" pathLength="1" d="M139 148 Q130 168 120 188" />
-      <path class="part" pathLength="1" d="M139 148 Q148 168 158 188" />
-    </svg>
+</head>
+<body>
+<main class="app">
+  <div class="masthead">
+    <h1>Paper Games</h1>
+    <p>Two pencil-and-paper classics. Your progress stays on this device.</p>
   </div>
 
-  <div class="word" id="word" aria-live="polite"></div>
-  <p class="msg" id="msg">Tap a letter to guess.</p>
-  <div class="kb" id="kb"></div>
-  <div class="actions"><button class="btn" id="newBtn" type="button">New word</button></div>
-</div>
+  <nav class="games">
+    <a class="game" href="hangman.html">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <path class="ink" d="M12 92 Q34 90 58 92"/><path class="ink" d="M26 91 L27 10"/><path class="ink" d="M25 11 Q50 9 72 10"/><path class="ink" d="M27 30 L45 11"/><path class="ink" d="M71 10 L71 22"/>
+        <circle class="red" cx="71" cy="31" r="9"/><path class="red" d="M71 40 Q72 54 71 66"/><path class="red" d="M71 47 L62 57 M71 47 L80 57 M71 66 L64 80 M71 66 L78 80"/>
+      </svg>
+      <div>
+        <h2>Hangman</h2>
+        <p class="about" id="hAbout">Guess the word one letter at a time before the drawing is finished.</p>
+        <div class="now" id="hNow"></div>
+      </div>
+    </a>
 
+    <a class="game" href="sudoku.html">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g id="mini"></g>
+        <rect class="g-box" x="5" y="5" width="90" height="90" rx="4"/>
+      </svg>
+      <div>
+        <h2>Sudoku</h2>
+        <p class="about">4,000 puzzles, each with a single solution, from Easy to Expert. Includes notes, hints and undo.</p>
+        <div class="now" id="sNow"></div>
+      </div>
+    </a>
+  </nav>
+
+  <p class="foot">On iPhone, open this page in Safari and choose Share, then Add to Home Screen. After the first visit both games work offline.</p>
+</main>
+
+<script src="words.js"></script>
 <script>
-const WORDS = {
-  Animals:["GIRAFFE","PENGUIN","ELEPHANT","KANGAROO","OCTOPUS","CHEETAH","DOLPHIN","PORCUPINE","FLAMINGO","CHAMELEON","ARMADILLO","HEDGEHOG","PANTHER","WALRUS","PELICAN","JAGUAR","BUFFALO","LOBSTER","MONGOOSE","PEACOCK","SQUIRREL","TORTOISE","HAMSTER","ALLIGATOR"],
-  Fruits:["PINEAPPLE","MANGO","PAPAYA","BLUEBERRY","WATERMELON","APRICOT","POMEGRANATE","GUAVA","LYCHEE","TANGERINE","COCONUT","JACKFRUIT","RASPBERRY","KIWI","CHERRY","PERSIMMON","GRAPEFRUIT","PLUM"],
-  Countries:["PORTUGAL","ARGENTINA","MOROCCO","VIETNAM","ICELAND","NORWAY","KENYA","MEXICO","CANADA","SWEDEN","EGYPT","INDONESIA","PERU","GREECE","JAPAN","AUSTRALIA","BHUTAN","CROATIA","ETHIOPIA","MONGOLIA"],
-  Space:["GALAXY","NEBULA","ASTEROID","COMET","JUPITER","SATURN","ECLIPSE","QUASAR","PULSAR","METEOR","ORBIT","TELESCOPE","SUPERNOVA","GRAVITY","NEPTUNE","ASTRONAUT","CONSTELLATION"],
-  Instruments:["VIOLIN","SAXOPHONE","TRUMPET","CLARINET","HARMONICA","ACCORDION","TAMBOURINE","XYLOPHONE","UKULELE","CELLO","BANJO","SITAR","TABLA","FLUTE","OBOE","BAGPIPES","TROMBONE"],
-  Sports:["CRICKET","BADMINTON","FOOTBALL","VOLLEYBALL","ARCHERY","FENCING","CYCLING","GYMNASTICS","WRESTLING","SURFING","SKIING","KABADDI","HOCKEY","ROWING","MARATHON","BASKETBALL"]
-};
-const MAX = 6;
-const $ = id => document.getElementById(id);
-const parts = [...document.querySelectorAll('.part')];
-const keys = {};
-let S;
+'use strict';
+const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
+const fmt = s => { const m = Math.floor(s/60), x = s%60; return String(m).padStart(2,'0') + ':' + String(x).padStart(2,'0'); };
+const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
 
-function load(){ try{ return JSON.parse(localStorage.getItem('hangman-stats')) || {w:0,l:0,s:0,b:0}; }catch(e){ return {w:0,l:0,s:0,b:0}; } }
-function save(){ try{ localStorage.setItem('hangman-stats', JSON.stringify(stats)); }catch(e){} }
-const stats = load();
+// Mini sudoku box drawing
+(function(){
+  const g = document.getElementById('mini'), cells = [[5,'g'],[0],[3,'p'],[0],[7,'g'],[0],[8,'p'],[0],[1,'g']];
+  let s = '';
+  for (let k = 1; k < 3; k++) s += `<line class="g-line" x1="${5+k*30}" y1="5" x2="${5+k*30}" y2="95"/><line class="g-line" x1="5" y1="${5+k*30}" x2="95" y2="${5+k*30}"/>`;
+  cells.forEach(([d, t], i) => { if (!d) return; const x = 20 + (i%3)*30, y = 26 + Math.floor(i/3)*30; s += `<text x="${x}" y="${y}" text-anchor="middle" class="${t === 'g' ? 'g-given' : 'g-pencil'}">${d}</text>`; });
+  g.innerHTML = s;
+})();
 
-function buildKeyboard(){
-  ["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"].forEach(r=>{
-    const row=document.createElement('div'); row.className='row';
-    for(const ch of r){
-      const b=document.createElement('button'); b.type='button'; b.className='key'; b.textContent=ch;
-      b.setAttribute('aria-label','Guess '+ch);
-      b.addEventListener('click',()=>guess(ch)); keys[ch]=b; row.appendChild(b);
-    }
-    $('kb').appendChild(row);
-  });
-}
+// Hangman status
+(function(){
+  const st = get('hangman-stats', {}), game = get('hangman-game', null);
+  const total = Object.values(window.HANGMAN_WORDS || {}).reduce((n, s) => n + s.trim().split(/\s+/).length, 0);
+  const out = [];
+  if (game && game.word) out.push(chip('Word in progress', true));
+  if (st.w || st.l) out.push(chip(`${st.w || 0} won`), chip(`streak ${st.s || 0}`));
+  else out.push(chip(`${total.toLocaleString()} words`), chip(`${Object.keys(window.HANGMAN_WORDS || {}).length} categories`));
+  document.getElementById('hNow').innerHTML = out.join('');
+})();
 
-function pick(){
-  const cats=Object.keys(WORDS); const cat=cats[Math.floor(Math.random()*cats.length)];
-  const list=WORDS[cat]; let w;
-  do{ w=list[Math.floor(Math.random()*list.length)]; }while(S && w===S.word && list.length>1);
-  return {word:w,cat};
-}
+// Sudoku status
+(function(){
+  const g = get('sudoku-game', null), st = get('sudoku-stats', {}), out = [];
+  const names = { easy:'Easy', medium:'Medium', hard:'Hard', expert:'Expert' };
+  if (g && g.puzzle && !g.done) out.push(chip(`Continue ${names[g.level]} #${g.idx + 1} · ${fmt(Math.floor((g.elapsed || 0)/1000))}`, true));
+  const solved = Object.values(st).reduce((n, s) => n + ((s.done && s.done.length) || 0), 0);
+  out.push(chip(solved ? `${solved} solved` : 'Easy · Medium · Hard · Expert'));
+  document.getElementById('sNow').innerHTML = out.join('');
+})();
 
-function newGame(restore){
-  const p = restore && restore.word ? restore : pick();
-  S = {word:p.word, cat:p.cat, guessed:new Set(p.guessed||[]), wrong:0, over:false};
-  S.wrong = [...S.guessed].filter(c=>!S.word.includes(c)).length;
-  $('word').innerHTML='';
-  for(const ch of S.word){ const d=document.createElement('div'); d.className='slot'; d.dataset.ch=ch; $('word').appendChild(d); }
-  Object.entries(keys).forEach(([c,b])=>{ b.className='key'; b.disabled=false; });
-  $('cat').textContent=S.cat; $('msg').className='msg'; $('msg').textContent='Tap a letter to guess.';
-  $('newBtn').className='btn'; $('newBtn').textContent='New word';
-  render(); check();
-}
-
-function guess(ch){
-  if(!S || S.over || S.guessed.has(ch)) return;
-  S.guessed.add(ch);
-  if(!S.word.includes(ch)) S.wrong++;
-  render(); check();
-}
-
-function render(){
-  S.guessed.forEach(c=>{ const b=keys[c]; b.disabled=true; b.classList.add(S.word.includes(c)?'hit':'miss'); });
-  [...$('word').children].forEach(d=>{
-    if(S.guessed.has(d.dataset.ch) && !d.textContent){ d.textContent=d.dataset.ch; d.classList.add('show'); }
-  });
-  parts.forEach((p,i)=>p.classList.toggle('on', i < S.wrong));
-  $('lives').textContent = MAX - S.wrong;
-}
-
-function check(){
-  const won=[...S.word].every(c=>S.guessed.has(c));
-  const lost=S.wrong>=MAX;
-  if(!won && !lost) return;
-  S.over=true;
-  Object.values(keys).forEach(b=>b.disabled=true);
-  if(won){
-    stats.w++; stats.s++; stats.b=Math.max(stats.b,stats.s);
-    $('msg').className='msg win';
-    $('msg').textContent = S.wrong===0 ? 'Flawless! No misses.' : `Solved with ${MAX-S.wrong} to spare.`;
-  }else{
-    stats.l++; stats.s=0;
-    [...$('word').children].forEach(d=>{ if(!d.textContent){ d.textContent=d.dataset.ch; d.classList.add('show','missed'); } });
-    $('msg').className='msg lose'; $('msg').textContent='Out of guesses. The word was '+S.word+'.';
-  }
-  save(); renderStats();
-  $('newBtn').className='btn primary'; $('newBtn').textContent='Next word';
-}
-
-function renderStats(){ $('sWins').textContent=stats.w; $('sLoss').textContent=stats.l; $('sStreak').textContent=stats.s; }
-
-$('newBtn').addEventListener('click',()=>{
-  if(S && !S.over && S.guessed.size){ stats.l++; stats.s=0; save(); renderStats(); } // skipping a started word counts as a loss
-  newGame();
-});
-document.addEventListener('keydown',e=>{
-  if(e.metaKey||e.ctrlKey||e.altKey) return;
-  const k=e.key.toUpperCase();
-  if(/^[A-Z]$/.test(k)) guess(k);
-  else if(e.key==='Enter' && S.over) newGame();
-});
-
-function start(data){ buildKeyboard(); renderStats(); newGame(data); }
-try{ window.claude?.hot?.snapshot?.(()=>S?{word:S.word,cat:S.cat,guessed:[...S.guessed]}:{}); }catch(e){}
-window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
-
-// Offline support when installed from your own host (ignored inside other viewers)
-if('serviceWorker' in navigator && location.protocol==='https:' && document.documentElement.dataset.pwa==='1'){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
-}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
-</body></html>
+</body>
+</html>

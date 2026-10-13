@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Hangman</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+.score{display:flex;gap:14px;justify-content:center;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.score span{display:flex;align-items:baseline;gap:5px;text-transform:uppercase;letter-spacing:.08em;font-size:.62rem}
+.score b{color:var(--ink);font-weight:600;font-size:1rem;letter-spacing:0}
+
+.stage{flex:1 1 auto;min-height:140px;display:flex;align-items:center;justify-content:center;position:relative}
+.stage svg{height:100%;max-height:250px;width:auto;max-width:100%;overflow:visible}
+.stage path,.stage circle{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.stage .part{stroke:var(--miss);stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .45s ease-out}
+.stage .part.on{stroke-dashoffset:0}
+.stage .part:not(.on){visibility:hidden}
+.cat{position:absolute;left:0;top:2px;display:flex;flex-direction:column;align-items:flex-start;gap:0;border:0;background:transparent;padding:0;cursor:pointer;text-align:left;max-width:48%}
+.cat .label{font-size:.62rem}
+.cat b{font-family:var(--hand);font-weight:400;font-size:1.45rem;color:var(--hit);line-height:1.1;display:flex;align-items:center;gap:4px}
+.cat b svg{width:14px;height:14px;flex:none}
+.lives{position:absolute;right:0;top:2px;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
+.lives .label{font-size:.62rem}
+.lives b{font-family:var(--hand);font-size:2rem;font-weight:400;line-height:1}
+
+.word{display:flex;flex-wrap:wrap;justify-content:center;column-gap:22px;row-gap:10px;min-height:46px}
+.w{display:flex;gap:6px}
+.slot{
+  width:clamp(22px,7.6vw,36px);height:44px;border-bottom:3px solid var(--ink);
+  display:flex;align-items:flex-end;justify-content:center;
+  font-family:var(--mono);font-weight:600;font-size:clamp(1.15rem,5.6vw,1.65rem);line-height:1.3;
+}
+.slot.show{animation:pop .25s ease-out}
+.slot.missed{color:var(--miss)}
+.slot.hinted{color:var(--hit)}
+@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+
+.msg{text-align:center;font-family:var(--hand);font-size:1.3rem;min-height:1.5em;margin:0;color:var(--muted);text-wrap:balance}
+.msg.win{color:var(--hit)} .msg.lose{color:var(--miss)}
+
+.kb{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:5px;justify-content:center}
+.key{
+  flex:1 1 0;max-width:46px;height:48px;min-width:0;border:1px solid var(--key-edge);border-bottom-width:3px;
+  border-radius:7px;background:var(--key);color:var(--ink);font-family:var(--mono);font-weight:600;font-size:1.05rem;
+  padding:0;cursor:pointer;transition:transform .08s,background .15s,opacity .15s;
+}
+.key:active{transform:translateY(2px)}
+.key.hit{background:var(--hit);border-color:var(--hit);color:var(--paper)}
+.key.miss{background:transparent;color:var(--miss);border-color:transparent;text-decoration:line-through;opacity:.7}
+.key:disabled{cursor:default}
+.actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px}
+
+.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.cats button{display:flex;justify-content:space-between;align-items:baseline;gap:8px;text-align:left;border:1px solid var(--line);background:var(--key);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:.92rem;min-width:0}
+.cats button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cats button small{font-family:var(--mono);color:var(--muted);font-size:.72rem;flex:none}
+.cats button[aria-pressed="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit);color:var(--hit)}
+.cats button.any{grid-column:1/-1}
+@media (max-height:640px){.key{height:42px}.stage{min-height:110px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+    <h1>Hangman</h1>
+    <span></span>
+  </header>
+  <div class="score" aria-label="Score">
+    <span>Won <b id="sWins">0</b></span><span>Lost <b id="sLoss">0</b></span><span>Streak <b id="sStreak">0</b></span><span>Best <b id="sBest">0</b></span>
+  </div>
+
+  <div class="stage">
+    <button class="cat" id="catBtn" type="button" aria-label="Change category">
+      <span class="label" id="catLabel">Category</span>
+      <b><span id="cat">—</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6l4 4 4-4"/></svg></b>
+    </button>
+    <div class="lives"><span class="label">Guesses left</span><b id="lives">6</b></div>
+    <svg viewBox="0 0 200 230" role="img" aria-label="Gallows drawing">
+      <path d="M20 218 Q60 214 108 218" />
+      <path d="M50 216 L52 22" />
+      <path d="M50 24 Q100 21 140 23" />
+      <path d="M52 62 L88 24" />
+      <path d="M138 23 L139 52" />
+      <circle class="part" pathLength="1" cx="139" cy="71" r="19" transform="rotate(-90 139 71)" />
+      <path class="part" pathLength="1" d="M139 90 Q141 120 139 148" />
+      <path class="part" pathLength="1" d="M139 104 Q125 116 113 128" />
+      <path class="part" pathLength="1" d="M139 104 Q153 116 165 128" />
+      <path class="part" pathLength="1" d="M139 148 Q130 168 120 188" />
+      <path class="part" pathLength="1" d="M139 148 Q148 168 158 188" />
+    </svg>
+  </div>
+
+  <div class="word" id="word" aria-live="polite"></div>
+  <p class="msg" id="msg">Tap a letter to guess.</p>
+  <div class="kb" id="kb"></div>
+  <div class="actions">
+    <button class="btn" id="hintBtn" type="button" title="Reveal a letter. Uses one guess.">Hint</button>
+    <button class="btn" id="newBtn" type="button">New word</button>
+  </div>
+</div>
+
+<div class="sheet" id="catSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="catTitle">
+    <h2 id="catTitle">Pick a category</h2>
+    <div class="cats" id="cats"></div>
+    <button class="btn" id="catClose" type="button">Close</button>
+  </div>
+</div>
+
+<script src="words.js"></script>
+<script>
+'use strict';
+const WORDS = Object.fromEntries(Object.entries(window.HANGMAN_WORDS).map(([c, s]) => [c, s.trim().split(/\s+/).map(w => w.replace(/_/g, ' '))]));
+const CATS = Object.keys(WORDS), TOTAL = CATS.reduce((n, c) => n + WORDS[c].length, 0);
+const MAX = 6;
+const $ = id => document.getElementById(id);
+const parts = [...document.querySelectorAll('.part')];
+const keys = {};
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const old = store.get('hangman-stats', {});
+const stats = { w: old.w || 0, l: old.l || 0, s: old.s || 0, b: Math.max(old.b || 0, old.s || 0) };
+let chosen = store.get('hangman-category', 'Any');
+if (chosen !== 'Any' && !WORDS[chosen]) chosen = 'Any';
+let recent = store.get('hangman-recent', []);
+let S;
+
+function buildKeyboard(){
+  ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].forEach(r => {
+    const row = document.createElement('div'); row.className = 'row';
+    for (const ch of r){
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'key'; b.textContent = ch;
+      b.setAttribute('aria-label', 'Guess ' + ch); b.addEventListener('click', () => guess(ch));
+      keys[ch] = b; row.appendChild(b);
+    }
+    $('kb').appendChild(row);
+  });
+}
+
+function pick(){
+  // Weighted by list size for "Any", and skip anything played recently.
+  const pool = chosen === 'Any' ? CATS.flatMap(c => WORDS[c].map(w => [c, w])) : WORDS[chosen].map(w => [chosen, w]);
+  const seen = new Set(recent);
+  let fresh = pool.filter(([, w]) => !seen.has(w));
+  if (!fresh.length){ recent = recent.filter(w => !pool.some(([, x]) => x === w)); fresh = pool; }
+  const [cat, word] = fresh[(Math.random() * fresh.length) | 0];
+  recent.push(word); if (recent.length > 600) recent = recent.slice(-600); store.set('hangman-recent', recent);
+  return { word, cat };
+}
+const letters = w => [...new Set(w.replace(/ /g, ''))];
+
+function newGame(restore){
+  const p = restore && restore.word ? restore : pick();
+  S = { word: p.word, cat: p.cat, guessed: new Set(p.guessed || []), hinted: new Set(p.hinted || []), wrong: 0, over: false };
+  S.wrong = [...S.guessed].filter(c => !S.word.includes(c)).length + S.hinted.size;
+  $('word').innerHTML = '';
+  for (const part of S.word.split(' ')){
+    const w = document.createElement('div'); w.className = 'w';
+    for (const ch of part){ const d = document.createElement('div'); d.className = 'slot'; d.dataset.ch = ch; w.appendChild(d); }
+    $('word').appendChild(w);
+  }
+  Object.values(keys).forEach(b => { b.className = 'key'; b.disabled = false; });
+  $('cat').textContent = S.cat;
+  $('catLabel').textContent = chosen === 'Any' ? 'Category · any' : 'Category';
+  $('msg').className = 'msg';
+  $('msg').textContent = S.word.includes(' ') ? `${S.word.split(' ').length} words. Tap a letter to guess.` : 'Tap a letter to guess.';
+  $('newBtn').className = 'btn'; $('newBtn').textContent = 'New word';
+  render(); check(true); save();
+}
+
+function guess(ch){
+  if (!S || S.over || S.guessed.has(ch)) return;
+  S.guessed.add(ch);
+  if (!S.word.includes(ch)){ S.wrong++; try{ navigator.vibrate && navigator.vibrate(30); }catch(e){} }
+  render(); check(); save();
+}
+function hint(){
+  if (!S || S.over || MAX - S.wrong <= 1) return;
+  const hidden = letters(S.word).filter(c => !S.guessed.has(c));
+  if (hidden.length <= 1) return;
+  const c = hidden[(Math.random() * hidden.length) | 0];
+  S.guessed.add(c); S.hinted.add(c); S.wrong++;
+  $('msg').className = 'msg'; $('msg').textContent = `Revealed ${c} for one guess.`;
+  render(); check(); save();
+}
+
+function render(){
+  S.guessed.forEach(c => { const b = keys[c]; if (!b) return; b.disabled = true; b.classList.add(S.word.includes(c) ? 'hit' : 'miss'); });
+  document.querySelectorAll('.slot').forEach(d => {
+    if (S.guessed.has(d.dataset.ch) && !d.textContent){ d.textContent = d.dataset.ch; d.classList.add('show'); if (S.hinted.has(d.dataset.ch)) d.classList.add('hinted'); }
+  });
+  parts.forEach((p, i) => p.classList.toggle('on', i < S.wrong));
+  $('lives').textContent = MAX - S.wrong;
+  const hidden = letters(S.word).filter(c => !S.guessed.has(c)).length;
+  $('hintBtn').disabled = S.over || MAX - S.wrong <= 1 || hidden <= 1;
+}
+
+function check(silent){
+  const won = letters(S.word).every(c => S.guessed.has(c));
+  const lost = S.wrong >= MAX;
+  if (!won && !lost) return;
+  S.over = true;
+  Object.values(keys).forEach(b => b.disabled = true);
+  if (won){
+    if (!silent){ stats.w++; stats.s++; stats.b = Math.max(stats.b, stats.s); }
+    $('msg').className = 'msg win';
+    $('msg').textContent = S.wrong === 0 ? 'Flawless! No misses.' : `Solved with ${MAX - S.wrong} to spare.`;
+  } else {
+    if (!silent){ stats.l++; stats.s = 0; }
+    document.querySelectorAll('.slot').forEach(d => { if (!d.textContent){ d.textContent = d.dataset.ch; d.classList.add('show', 'missed'); } });
+    $('msg').className = 'msg lose'; $('msg').textContent = 'Out of guesses. It was ' + S.word + '.';
+  }
+  store.set('hangman-stats', stats); renderStats(); render();
+  $('newBtn').className = 'btn primary'; $('newBtn').textContent = 'Next word';
+}
+function renderStats(){ $('sWins').textContent = stats.w; $('sLoss').textContent = stats.l; $('sStreak').textContent = stats.s; $('sBest').textContent = stats.b; }
+function save(){ store.set('hangman-game', S.over ? null : { word: S.word, cat: S.cat, guessed: [...S.guessed], hinted: [...S.hinted] }); }
+
+function abandonIfStarted(){ if (S && !S.over && S.guessed.size){ stats.l++; stats.s = 0; store.set('hangman-stats', stats); renderStats(); } }
+
+// Category sheet
+function openCats(){
+  $('cats').innerHTML = `<button type="button" class="any" data-c="Any" aria-pressed="${chosen === 'Any'}"><span>Any category</span><small>${TOTAL} words</small></button>`
+    + CATS.map(c => `<button type="button" data-c="${c}" aria-pressed="${chosen === c}"><span>${c}</span><small>${WORDS[c].length}</small></button>`).join('');
+  $('catSheet').hidden = false;
+}
+$('cats').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  chosen = b.dataset.c; store.set('hangman-category', chosen); $('catSheet').hidden = true;
+  abandonIfStarted(); newGame();
+});
+$('catBtn').addEventListener('click', openCats);
+$('catClose').addEventListener('click', () => $('catSheet').hidden = true);
+$('catSheet').addEventListener('click', e => { if (e.target === $('catSheet')) $('catSheet').hidden = true; });
+
+$('hintBtn').addEventListener('click', hint);
+$('newBtn').addEventListener('click', () => { abandonIfStarted(); newGame(); }); // skipping a started word counts as a loss
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || !$('catSheet').hidden) return;
+  const k = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(k)) guess(k);
+  else if (e.key === 'Enter' && S.over) newGame();
+});
+
+buildKeyboard(); renderStats();
+newGame(store.get('hangman-game', null));
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

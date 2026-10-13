@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Sudoku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+.status{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.status b{color:var(--ink);font-weight:600}
+.status .lvl{font-family:var(--hand);font-size:1.25rem;color:var(--ink);white-space:nowrap}
+.status .lvl em{font-style:normal;color:var(--muted);font-family:var(--mono);font-size:.8rem;margin-left:4px}
+.timer{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--key);border-radius:999px;padding:4px 10px 4px 8px;font-family:var(--mono);font-weight:500;font-size:.9rem;cursor:pointer;color:var(--ink)}
+.timer svg{width:14px;height:14px}
+.timer.off .t{display:none}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.board{
+  width:min(100cqw,100cqh);height:min(100cqw,100cqh);container-type:size;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;background:var(--ink);border-radius:6px;
+}
+.box{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+.cell{position:relative;background:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0;overflow:hidden}
+.cell::before{content:"";position:absolute;inset:0;pointer-events:none}
+.cell.peer::before{background:var(--peer)}
+.cell.same::before{background:var(--same)}
+.cell.sel::before{background:var(--sel)}
+.cell .v{position:relative;line-height:1}
+.cell.given .v{font-family:var(--mono);font-weight:600;font-size:6.2cqw;color:var(--ink)}
+.cell.user .v{font-family:var(--hand);font-size:7.6cqw;color:var(--hit)}
+.cell.hinted .v{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.cell.wrong .v,.cell.conflict .v{color:var(--miss)}
+.cell.conflict::after{content:"";position:absolute;inset:3px;border:2px dashed var(--miss);border-radius:4px;opacity:.6;pointer-events:none}
+.n{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-family:var(--mono);font-size:2.4cqw;color:var(--muted);line-height:1}
+.n span{display:flex;align-items:center;justify-content:center}
+.n span.hl{color:var(--hit);font-weight:600}
+.board.paused .v,.board.paused .n{visibility:hidden}
+.cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.cover p{font-family:var(--hand);font-size:2rem;margin:0}
+
+.tools{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.tool{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:10px;cursor:pointer;color:var(--ink);font-size:.72rem;position:relative}
+.tool svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tool:disabled{opacity:.35;cursor:default}
+.tool .badge{position:absolute;top:2px;left:calc(50% + 8px);font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:999px;background:var(--line);color:var(--ink);letter-spacing:.04em}
+.tool[aria-pressed="true"]{color:var(--hit)}
+.tool[aria-pressed="true"] .badge{background:var(--hit);color:var(--paper)}
+
+.pad{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
+.num{
+  border:1px solid var(--key-edge);border-bottom-width:3px;border-radius:9px;background:var(--key);cursor:pointer;
+  height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;min-width:0;
+  transition:transform .08s;
+}
+.num:active{transform:translateY(2px)}
+.num b{font-family:var(--mono);font-weight:500;font-size:1.55rem;line-height:1}
+.num small{font-family:var(--mono);font-size:.62rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.pad.notes .num b{font-size:1.05rem;color:var(--hit)}
+.num.done{opacity:.28}
+
+.levels{display:flex;flex-direction:column;gap:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats div{display:flex;flex-direction:column;gap:2px;padding:8px 4px;border-radius:10px;background:var(--peer)}
+.stats b{font-family:var(--mono);font-size:1.15rem;font-weight:500;font-variant-numeric:tabular-nums}
+.pick{display:flex;gap:8px;align-items:center}
+.pick input{flex:1;min-width:0;font-family:var(--mono);font-size:1rem;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--key);color:var(--ink)}
+.menu{display:flex;flex-direction:column}
+.menu > button{text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:12px 2px;font-size:1rem;cursor:pointer}
+.menu > button small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.menu > button.armed{color:var(--miss)}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.result div{display:flex;flex-direction:column;gap:2px}
+.result b{font-family:var(--mono);font-weight:500;font-size:1.3rem}
+.newbest{color:var(--hit);font-family:var(--hand);font-size:1.2rem}
+@media (max-height:640px){.num{height:48px}.num b{font-size:1.3rem}.tool span.lbl{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+    <h1>Sudoku</h1>
+    <button class="btn small end" id="newBtn" type="button">New</button>
+  </header>
+
+  <div class="status">
+    <span class="lvl" id="lvl">Easy<em>#1</em></span>
+    <span id="score">Mistakes <b>0</b></span>
+    <button class="timer" id="timer" type="button" aria-label="Pause">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2.5" width="3.4" height="11" rx="1"/><rect x="9.6" y="2.5" width="3.4" height="11" rx="1"/></svg>
+      <span class="t" id="time">00:00</span>
+    </button>
+  </div>
+
+  <div class="boardWrap">
+    <div class="board" id="board" role="grid" aria-label="Sudoku board"></div>
+    <div class="cover" id="cover" hidden><p>Paused</p><button class="btn primary" id="resume" type="button">Resume</button></div>
+  </div>
+
+  <div class="tools">
+    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg><span class="lbl">Undo</span></button>
+    <button class="tool" id="redo" type="button"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg><span class="lbl">Redo</span></button>
+    <button class="tool" id="erase" type="button"><svg viewBox="0 0 24 24"><path d="M7 20h13"/><path d="M4.5 14.5l9.4-9.4a2 2 0 012.8 0l2.2 2.2a2 2 0 010 2.8L11 18H7.9z"/><path d="M9.5 9.5l5 5"/></svg><span class="lbl">Erase</span></button>
+    <button class="tool" id="notes" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 013 3L8 18.5z"/><path d="M13.5 7l3 3"/></svg><span class="lbl">Notes</span><span class="badge" id="notesBadge">OFF</span></button>
+    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span class="lbl">Hint</span></button>
+    <button class="tool" id="more" type="button"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="lbl">More</span></button>
+  </div>
+
+  <div class="pad" id="pad"></div>
+</div>
+
+<!-- New game -->
+<div class="sheet" id="newSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="newTitle">
+    <h2 id="newTitle">New puzzle</h2>
+    <div class="seg" id="seg"></div>
+    <div class="stats" id="lvStats"></div>
+    <button class="btn primary" id="startRandom" type="button">Start a random puzzle</button>
+    <div class="pick">
+      <input id="pickNum" type="number" inputmode="numeric" min="1" max="1000" placeholder="Puzzle number, 1–1000" aria-label="Puzzle number">
+      <button class="btn small" id="pickGo" type="button">Play</button>
+    </div>
+    <button class="btn" id="newCancel" type="button">Back to current puzzle</button>
+  </div>
+</div>
+
+<!-- More menu -->
+<div class="sheet" id="moreSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="moreTitle">
+    <h2 id="moreTitle">Options</h2>
+    <div class="menu">
+      <button id="fillNotes" type="button">Fill in all notes<small>Pencil every possible number into each empty square</small></button>
+      <button id="clearNotes" type="button">Clear all notes</button>
+      <button id="restart" type="button">Restart this puzzle<small>Clears your entries and resets the timer</small></button>
+    </div>
+    <div class="label">Settings</div>
+    <div id="settings"></div>
+    <button class="btn primary" id="moreClose" type="button">Done</button>
+  </div>
+</div>
+
+<!-- Win -->
+<div class="sheet" id="winSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="winTitle">
+    <h2 id="winTitle">Solved!</h2>
+    <p id="winSub"></p>
+    <div class="result" id="winResult"></div>
+    <div class="row"><button class="btn primary" id="winNext" type="button">Next puzzle</button><button class="btn" id="winChange" type="button">Change level</button></div>
+  </div>
+</div>
+
+<!-- Mistake limit -->
+<div class="sheet" id="loseSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="loseTitle">
+    <h2 id="loseTitle">Three mistakes</h2>
+    <p>You hit the mistake limit for this puzzle. You can keep going without a limit, start over, or try another puzzle.</p>
+    <div class="row"><button class="btn primary" id="loseGo" type="button">Keep going</button><button class="btn" id="loseRestart" type="button">Restart</button><button class="btn" id="loseNew" type="button">New puzzle</button></div>
+  </div>
+</div>
+
+<script src="puzzles.js"></script>
+<script>
+'use strict';
+const P = window.SUDOKU_PUZZLES;
+const LEVELS = [['easy','Easy'],['medium','Medium'],['hard','Hard'],['expert','Expert']];
+const COUNT = k => P[k].length / 81;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const SETTINGS = [
+  ['showMistakes','Show mistakes','Wrong numbers turn red straight away', true],
+  ['limit','Three-mistake limit','The puzzle ends after three wrong numbers', false],
+  ['autoClear','Auto-clear notes','Placing a number removes it from notes in the same row, column and box', true],
+  ['sameHL','Highlight matching numbers','Shade every square with the selected number', true],
+  ['areaHL','Highlight row, column and box', '', true],
+  ['showTimer','Show timer','', true],
+];
+let settings = Object.assign(Object.fromEntries(SETTINGS.map(s => [s[0], s[3]])), store.get('sudoku-settings', {}));
+let stats = store.get('sudoku-stats', {});
+const lv = k => (stats[k] ||= { played:0, solved:0, best:null, total:0, done:[] });
+
+// ---- geometry ----
+const ROW = i => (i/9)|0, COL = i => i%9, BOX = i => ((ROW(i)/3)|0)*3 + ((COL(i)/3)|0);
+const UNITS = [];
+for (let r=0;r<9;r++) UNITS.push([...Array(9)].map((_,c)=>r*9+c));
+for (let c=0;c<9;c++) UNITS.push([...Array(9)].map((_,r)=>r*9+c));
+for (let b=0;b<9;b++){ const u=[]; for(let k=0;k<9;k++) u.push((((b/3)|0)*3+((k/3)|0))*9+(b%3)*3+(k%3)); UNITS.push(u); }
+const PEERS = [...Array(81)].map((_,i)=>{ const s=new Set(); UNITS.forEach(u=>{ if(u.includes(i)) u.forEach(j=>j!==i&&s.add(j)); }); return [...s]; });
+const IS_PEER = [...Array(81)].map((_,i)=>{ const a=new Array(81).fill(false); PEERS[i].forEach(j=>a[j]=true); return a; });
+const bit = d => 1 << (d-1);
+
+function solve(g0){
+  const g=g0.slice(), R=new Array(9).fill(0), C=new Array(9).fill(0), B=new Array(9).fill(0);
+  for(let i=0;i<81;i++) if(g[i]){ const b=bit(g[i]); R[ROW(i)]|=b; C[COL(i)]|=b; B[BOX(i)]|=b; }
+  (function rec(){
+    let best=-1, bm=0, bp=10;
+    for(let i=0;i<81;i++) if(!g[i]){ const m=511&~(R[ROW(i)]|C[COL(i)]|B[BOX(i)]); let p=0; for(let x=m;x;x&=x-1) p++; if(p<bp){best=i;bm=m;bp=p;if(p<2)break;} }
+    if(best<0) return true;
+    for(let d=1;d<=9;d++) if(bm&bit(d)){
+      const b=bit(d), r=ROW(best), c=COL(best), x=BOX(best);
+      g[best]=d; R[r]|=b; C[c]|=b; B[x]|=b;
+      if(rec()) return true;
+      g[best]=0; R[r]&=~b; C[c]&=~b; B[x]&=~b;
+    }
+    return false;
+  })();
+  return g;
+}
+// Relabel digits and shuffle rows/columns within their bands so a replayed puzzle looks fresh (difficulty is unchanged).
+function disguise(p){
+  const sh = a => { for(let k=a.length-1;k>0;k--){ const j=(Math.random()*(k+1))|0; [a[k],a[j]]=[a[j],a[k]]; } return a; };
+  const digits = sh([1,2,3,4,5,6,7,8,9]);
+  const order = () => sh([0,1,2]).flatMap(b => sh([0,1,2]).map(r => b*3+r));
+  const rows = order(), cols = order(), flip = Math.random() < .5, out = new Array(81);
+  for(let r=0;r<9;r++) for(let c=0;c<9;c++){ const v = p[rows[r]*9+cols[c]]; out[flip ? c*9+r : r*9+c] = v ? digits[v-1] : 0; }
+  return out;
+}
+
+// ---- state ----
+let S = null;
+function newGame(level, idx){
+  const n = COUNT(level);
+  if (idx == null){
+    const done = new Set(lv(level).done);
+    const open = []; for(let k=0;k<n;k++) if(!done.has(k)) open.push(k);
+    const pool = open.length ? open : [...Array(n).keys()];
+    idx = pool[(Math.random()*pool.length)|0];
+  }
+  const puzzle = disguise([...P[level].slice(idx*81, idx*81+81)].map(Number));
+  S = { level, idx, puzzle, solution: solve(puzzle), values: puzzle.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false),
+        mistakes:0, hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false };
+  lv(level).played++; saveStats();
+  paused = false; save(); render();
+}
+function restore(){
+  const g = store.get('sudoku-game', null);
+  if (!g || !g.puzzle || g.puzzle.length !== 81) return false;
+  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1 }, g);
+  S.solution = solve(S.puzzle);
+  if (S.sel < 0) S.sel = S.values.indexOf(0);
+  return true;
+}
+function save(){
+  if (!S) return;
+  const { solution, ...rest } = S; rest.history = S.history.slice(-300); rest.future = S.future.slice(-300);
+  store.set('sudoku-game', rest);
+}
+const saveStats = () => store.set('sudoku-stats', stats);
+
+// ---- board DOM ----
+const cells = [];
+(function build(){
+  for (let b=0;b<9;b++){
+    const box = document.createElement('div'); box.className='box';
+    for (let k=0;k<9;k++){
+      const i = (((b/3)|0)*3+((k/3)|0))*9 + (b%3)*3 + (k%3);
+      const c = document.createElement('div'); c.className='cell'; c.setAttribute('role','gridcell'); c.dataset.i=i;
+      c.innerHTML = '<span class="v"></span><div class="n">' + '<span></span>'.repeat(9) + '</div>';
+      box.appendChild(c); cells[i] = c;
+    }
+    $('board').appendChild(box);
+  }
+  for (let d=1; d<=9; d++){
+    const b = document.createElement('button'); b.type='button'; b.className='num'; b.dataset.d=d;
+    b.innerHTML = `<b>${d}</b><small>9</small>`; b.setAttribute('aria-label', 'Enter '+d);
+    $('pad').appendChild(b);
+  }
+})();
+
+// ---- render ----
+function render(){
+  const sel = S.sel, sv = sel >= 0 ? S.values[sel] : 0, counts = new Array(10).fill(0);
+  for (let i=0;i<81;i++) counts[S.values[i]]++;
+  for (let i=0;i<81;i++){
+    const el = cells[i], v = S.values[i], given = S.puzzle[i] !== 0;
+    let cls = 'cell' + (given ? ' given' : v ? ' user' : '') + (S.hinted[i] ? ' hinted' : '');
+    if (v && !given){
+      if (settings.showMistakes && v !== S.solution[i]) cls += ' wrong';
+      else if (!settings.showMistakes && PEERS[i].some(j => S.values[j] === v)) cls += ' conflict';
+    }
+    if (i === sel) cls += ' sel';
+    else if (sel >= 0 && settings.areaHL && IS_PEER[sel][i]) cls += ' peer';
+    if (settings.sameHL && sv && v === sv && i !== sel) cls += ' same';
+    if (el.className !== cls) el.className = cls;
+    el.firstChild.textContent = v || '';
+    const ns = el.lastChild.children, m = v ? 0 : S.notes[i];
+    for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = on && settings.sameHL && d === sv ? 'hl' : ''; }
+    el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty'));
+  }
+  [...$('pad').children].forEach((b, k) => { const d = k+1, left = Math.max(0, 9 - counts[d]); b.lastChild.textContent = left; b.classList.toggle('done', left === 0); });
+  $('pad').classList.toggle('notes', S.notesMode);
+  $('notes').setAttribute('aria-pressed', S.notesMode); $('notesBadge').textContent = S.notesMode ? 'ON' : 'OFF';
+  $('undo').disabled = !S.history.length || S.done; $('redo').disabled = !S.future.length || S.done;
+  $('erase').disabled = $('hint').disabled = S.done;
+  const name = LEVELS.find(l => l[0] === S.level)[1];
+  $('lvl').innerHTML = `${name}<em>#${S.idx+1}</em>`;
+  const lim = settings.limit && !S.limitOff;
+  $('score').innerHTML = `Mistakes <b>${S.mistakes}${lim ? '/3' : ''}</b>` + (S.hints ? ` · Hints <b>${S.hints}</b>` : '');
+  $('timer').classList.toggle('off', !settings.showTimer);
+  $('board').classList.toggle('paused', paused);
+  $('cover').hidden = !paused;
+  tickLabel();
+}
+
+// ---- actions ----
+function commit(changes){
+  if (!changes.length) return;
+  S.history.push(changes); S.future = [];
+}
+function setCell(i, v, n, changes){
+  if (S.values[i] === v && S.notes[i] === n) return;
+  changes.push({ i, v0:S.values[i], n0:S.notes[i], v1:v, n1:n });
+  S.values[i] = v; S.notes[i] = n;
+}
+function place(i, d, changes){
+  setCell(i, d, 0, changes);
+  if (settings.autoClear) for (const j of PEERS[i]) if (!S.values[j] && (S.notes[j] & bit(d))) setCell(j, 0, S.notes[j] & ~bit(d), changes);
+}
+function input(d){
+  if (!S || S.done || paused) return;
+  const i = S.sel; if (i < 0 || S.puzzle[i]) return;
+  const changes = [];
+  if (S.notesMode){
+    if (S.values[i]) return;
+    setCell(i, 0, S.notes[i] ^ bit(d), changes);
+  } else {
+    if (S.values[i] === d){ setCell(i, 0, 0, changes); }
+    else {
+      place(i, d, changes); S.hinted[i] = false;
+      if (d !== S.solution[i]){ S.mistakes++; buzz(); }
+      else celebrateUnits(i);
+    }
+  }
+  commit(changes); after();
+}
+function erase(){
+  const i = S.sel; if (S.done || paused || i < 0 || S.puzzle[i]) return;
+  const ch = []; setCell(i, 0, 0, ch); S.hinted[i] = false; commit(ch); after();
+}
+function candidates(i){ let m = 511; for (const j of PEERS[i]) if (S.values[j]) m &= ~bit(S.values[j]); return m; }
+function hint(){
+  if (S.done || paused) return;
+  let i = S.sel;
+  if (i < 0 || S.puzzle[i] || S.values[i] === S.solution[i]){
+    // choose the empty or wrong square with the fewest possibilities: the most "findable" next move
+    let best = -1, bp = 10;
+    for (let k=0;k<81;k++) if (S.values[k] !== S.solution[k]){ const m = S.values[k] ? 0 : candidates(k); let p=0; for(let x=m;x;x&=x-1)p++; if (S.values[k]) p = 0; if (p < bp){ bp = p; best = k; } }
+    i = best;
+  }
+  if (i < 0) return;
+  const ch = []; place(i, S.solution[i], ch); S.hinted[i] = true; S.hints++; S.sel = i;
+  commit(ch); celebrateUnits(i); after();
+}
+function fillNotes(){
+  const ch = []; for (let i=0;i<81;i++) if (!S.values[i]) setCell(i, 0, candidates(i), ch);
+  commit(ch); after();
+}
+function clearNotes(){
+  const ch = []; for (let i=0;i<81;i++) if (S.notes[i]) setCell(i, S.values[i], 0, ch);
+  commit(ch); after();
+}
+function undo(){ const c = S.history.pop(); if (!c || S.done) return; for (let k=c.length-1;k>=0;k--){ const x=c[k]; S.values[x.i]=x.v0; S.notes[x.i]=x.n0; } S.future.push(c); S.sel = c[0].i; after(); }
+function redo(){ const c = S.future.pop(); if (!c || S.done) return; for (const x of c){ S.values[x.i]=x.v1; S.notes[x.i]=x.n1; } S.history.push(c); S.sel = c[0].i; after(); }
+function restart(){
+  S.values = S.puzzle.slice(); S.notes.fill(0); S.hinted.fill(false); S.history = []; S.future = [];
+  S.mistakes = 0; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
+  paused = false; save(); render();
+}
+function after(){
+  if (S.values.every((v,i) => v === S.solution[i])) return win();
+  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); return open('loseSheet'); }
+  save(); render();
+}
+function win(){
+  S.done = true;
+  const st = lv(S.level), t = Math.round(S.elapsed/1000), first = !st.done.includes(S.idx);
+  const newBest = st.best == null || t < st.best;
+  st.solved++; st.total += t; if (newBest) st.best = t; if (first) st.done.push(S.idx);
+  saveStats(); save(); render();
+  const name = LEVELS.find(l => l[0] === S.level)[1];
+  $('winSub').textContent = `${name} puzzle #${S.idx+1}` + (S.hints || S.mistakes ? '' : ', no mistakes and no hints');
+  $('winResult').innerHTML = `<div><span class="label">Time</span><b>${fmt(t)}</b>${newBest ? '<span class="newbest">new best</span>' : ''}</div>`
+    + `<div><span class="label">Mistakes</span><b>${S.mistakes}</b></div><div><span class="label">Hints</span><b>${S.hints}</b></div>`;
+  $('winNext').textContent = `Next ${name} puzzle`;
+  wave(); setTimeout(() => open('winSheet'), reduced ? 0 : 900);
+}
+
+// ---- motion & feedback ----
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function pulse(i, delay){ if (reduced) return; cells[i].firstChild.animate([{transform:'scale(1)'},{transform:'scale(1.35)'},{transform:'scale(1)'}], {duration:380, delay, easing:'ease-out'}); }
+function celebrateUnits(i){
+  for (const u of UNITS) if (u.includes(i) && u.every(j => S.values[j] === S.solution[j])) u.forEach((j,k) => pulse(j, k*35));
+}
+function wave(){ for (let i=0;i<81;i++) pulse(i, (ROW(i)+COL(i))*40); }
+function buzz(){ try{ navigator.vibrate && navigator.vibrate(40); }catch(e){} }
+
+// ---- timer ----
+let paused = false, last = Date.now();
+const fmt = s => { const h=(s/3600)|0, m=((s%3600)/60)|0, x=s%60; return (h ? h+':'+String(m).padStart(2,'0') : String(m).padStart(2,'0')) + ':' + String(x).padStart(2,'0'); };
+function tickLabel(){ if (S) $('time').textContent = fmt(Math.floor(S.elapsed/1000)); }
+setInterval(() => {
+  const now = Date.now(), dt = Math.min(now - last, 5000); last = now;
+  if (!S || S.done || paused || S.failed || document.hidden || anySheet()) return;
+  S.elapsed += dt; tickLabel();
+  if ((S.elapsed/1000|0) % 5 === 0) save();
+}, 1000);
+function setPaused(p){ if (!S || S.done) return; paused = p; last = Date.now(); render(); save(); }
+document.addEventListener('visibilitychange', () => { if (document.hidden && S && !S.done){ paused = true; save(); render(); } last = Date.now(); });
+
+// ---- sheets ----
+const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hidden);
+function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); last = Date.now(); }
+function close(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); last = Date.now(); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'loseSheet' && !(s.id === 'newSheet' && !S)) close(); }));
+
+let segLevel = 'easy';
+function openNew(){
+  segLevel = S ? S.level : 'easy';
+  $('newCancel').hidden = !S || S.done;
+  drawSeg(); open('newSheet');
+}
+function drawSeg(){
+  $('seg').innerHTML = LEVELS.map(([k,n]) => `<button type="button" data-k="${k}" aria-pressed="${k===segLevel}">${n}</button>`).join('');
+  const st = lv(segLevel), n = COUNT(segLevel);
+  $('lvStats').innerHTML = `<div><span class="label">Solved</span><b>${st.done.length}<small style="font-size:.7em;color:var(--muted)">/${n}</small></b></div>`
+    + `<div><span class="label">Best</span><b>${st.best == null ? '–' : fmt(st.best)}</b></div>`
+    + `<div><span class="label">Average</span><b>${st.solved ? fmt(Math.round(st.total/st.solved)) : '–'}</b></div>`;
+  $('pickNum').max = n; $('pickNum').placeholder = `Puzzle number, 1–${n}`;
+}
+$('seg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ segLevel = b.dataset.k; drawSeg(); } });
+$('startRandom').addEventListener('click', () => { close(); newGame(segLevel); });
+$('pickGo').addEventListener('click', () => {
+  const n = parseInt($('pickNum').value, 10), max = COUNT(segLevel);
+  if (!(n >= 1 && n <= max)){ $('pickNum').value = ''; $('pickNum').placeholder = `Enter a number from 1 to ${max}`; $('pickNum').focus(); return; }
+  close(); newGame(segLevel, n-1);
+});
+$('newCancel').addEventListener('click', close);
+$('newBtn').addEventListener('click', openNew);
+
+$('settings').innerHTML = SETTINGS.map(([k,t,d]) => `<label class="switch"><span>${t}${d ? `<small>${d}</small>` : ''}</span><input type="checkbox" id="set-${k}" data-k="${k}"></label>`).join('');
+$('settings').addEventListener('change', e => { const k = e.target.dataset.k; if (!k) return; settings[k] = e.target.checked; store.set('sudoku-settings', settings); render(); });
+let armed = null;
+$('more').addEventListener('click', () => {
+  SETTINGS.forEach(([k]) => $('set-'+k).checked = !!settings[k]);
+  $('restart').classList.remove('armed'); $('restart').firstChild.textContent = 'Restart this puzzle';
+  open('moreSheet');
+});
+$('moreClose').addEventListener('click', close);
+$('fillNotes').addEventListener('click', () => { if (!S.done){ fillNotes(); } close(); });
+$('clearNotes').addEventListener('click', () => { if (!S.done){ clearNotes(); } close(); });
+$('restart').addEventListener('click', () => {
+  const b = $('restart');
+  if (b.classList.contains('armed')){ clearTimeout(armed); close(); restart(); return; }
+  b.classList.add('armed'); b.firstChild.textContent = 'Tap again to restart';
+  armed = setTimeout(() => { b.classList.remove('armed'); b.firstChild.textContent = 'Restart this puzzle'; }, 3000);
+});
+$('winNext').addEventListener('click', () => { close(); newGame(S.level); });
+$('winChange').addEventListener('click', openNew);
+$('loseGo').addEventListener('click', () => { S.limitOff = true; S.failed = false; close(); save(); render(); });
+$('loseRestart').addEventListener('click', () => { close(); restart(); });
+$('loseNew').addEventListener('click', openNew);
+
+// ---- input wiring ----
+$('board').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c || paused) return; S.sel = +c.dataset.i; render(); });
+$('pad').addEventListener('click', e => { const b = e.target.closest('.num'); if (b) input(+b.dataset.d); });
+$('undo').addEventListener('click', undo);
+$('redo').addEventListener('click', redo);
+$('erase').addEventListener('click', erase);
+$('notes').addEventListener('click', () => { S.notesMode = !S.notesMode; render(); });
+$('hint').addEventListener('click', hint);
+$('timer').addEventListener('click', () => setPaused(!paused));
+$('resume').addEventListener('click', () => setPaused(false));
+document.addEventListener('keydown', e => {
+  if (!S || anySheet() || e.target.tagName === 'INPUT') return;
+  const k = e.key, mod = e.metaKey || e.ctrlKey;
+  if (mod && k.toLowerCase() === 'z'){ e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if (mod && k.toLowerCase() === 'y'){ e.preventDefault(); return redo(); }
+  if (mod || e.altKey) return;
+  if (/^[1-9]$/.test(k)) return input(+k);
+  if (k === 'Backspace' || k === 'Delete' || k === '0') return erase();
+  if (k === 'n' || k === 'N'){ S.notesMode = !S.notesMode; return render(); }
+  if (k === 'h' || k === 'H') return hint();
+  if (k === 'p' || k === 'P' || k === ' '){ e.preventDefault(); return setPaused(!paused); }
+  const mv = { ArrowUp:-9, ArrowDown:9, ArrowLeft:-1, ArrowRight:1 }[k];
+  if (mv != null && !paused){
+    e.preventDefault(); let i = S.sel < 0 ? 40 : S.sel;
+    if (mv === -1 && COL(i) === 0) i += 8; else if (mv === 1 && COL(i) === 8) i -= 8; else i = (i + mv + 81) % 81;
+    S.sel = i; render();
+  }
+});
+
+// ---- boot ----
+if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) open('loseSheet'); } }
+else { newGame('easy'); }
+if (location.hash === '#new') openNew();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
