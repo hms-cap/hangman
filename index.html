@@ -40,6 +40,21 @@
 .g-pencil{font-family:var(--hand);font-size:19px;fill:var(--hit)}
 .t-c{fill:var(--correct)}.t-p{fill:var(--present)}.t-a{fill:var(--absent)}.t-e{fill:none;stroke:var(--line);stroke-width:1.5}
 .t-l{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--on-tile);text-transform:uppercase}
+.install{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:14px;border:1.5px dashed var(--line)}
+.install h3{font-family:var(--hand);font-weight:400;font-size:1.45rem;margin:0;line-height:1}
+.install .lead{margin:0;color:var(--muted);font-size:.85rem;line-height:1.45}
+.howto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.howto section{display:flex;flex-direction:column;gap:6px;min-width:0}
+.howto h4{margin:0;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.howto h4 .you{font-size:.62rem;letter-spacing:.04em;text-transform:none;padding:1px 7px;border-radius:999px;background:var(--hit);color:var(--paper)}
+.howto ol{margin:0;padding-left:1.15em;font-size:.86rem;line-height:1.45;color:var(--ink)}
+.howto li{padding-left:2px}
+.howto li + li{margin-top:3px}
+.howto b{font-weight:600}
+.howto svg{width:14px;height:14px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.howto .mine{order:-1}
+#installBtn{align-self:flex-start}
+@media (max-width:420px){.howto{grid-template-columns:1fr}}
 .foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
 </style>
 </head>
@@ -86,7 +101,29 @@
     </a>
   </nav>
 
-  <p class="foot">On iPhone, open this page in Safari and choose Share, then Add to Home Screen. After the first visit all three games work offline.</p>
+  <aside class="install" id="install">
+    <h3>Install on your phone</h3>
+    <p class="lead">Add Paper Games to your home screen and it opens full-screen like an app. After the first visit all three games work offline.</p>
+    <button class="btn primary" id="installBtn" type="button" hidden>Install app</button>
+    <div class="howto">
+      <section id="howIos">
+        <h4>iPhone and iPad</h4>
+        <ol>
+          <li>Open this page in <b>Safari</b>.</li>
+          <li>Tap <b>Share</b> <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg> at the bottom of the screen.</li>
+          <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+        </ol>
+      </section>
+      <section id="howAndroid">
+        <h4>Android</h4>
+        <ol>
+          <li>Open this page in <b>Chrome</b>.</li>
+          <li>Tap the menu <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg> at the top right.</li>
+          <li>Tap <b>Install app</b> or <b>Add to Home screen</b>, then <b>Install</b>.</li>
+        </ol>
+      </section>
+    </div>
+  </aside>
 </main>
 
 <script src="words.js"></script>
@@ -141,6 +178,19 @@ const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
   else out.push(chip(`Play daily No. ${day + 1}`, true));
   if (st.daily && st.daily.cur) out.push(chip(`streak ${st.daily.cur}`));
   document.getElementById('fNow').innerHTML = out.join('');
+})();
+
+// Install help: hide once installed, show this device's steps first, offer Chrome's one-tap install when available
+(function(){
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (installed){ document.getElementById('install').hidden = true; return; }
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
+  const mine = ios ? 'howIos' : android ? 'howAndroid' : null;
+  if (mine){ const el = document.getElementById(mine); el.classList.add('mine'); el.querySelector('h4').insertAdjacentHTML('beforeend', '<span class="you">this device</span>'); }
+  let deferred = null; const btn = document.getElementById('installBtn');
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; btn.hidden = false; });
+  btn.addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); try{ await deferred.userChoice; }catch(e){} deferred = null; btn.hidden = true; });
+  addEventListener('appinstalled', () => { document.getElementById('install').hidden = true; });
 })();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

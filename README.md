@@ -4,11 +4,16 @@ Hangman, Sudoku and Five Letters on graph paper, built as an installable web app
 
 **Play:** https://hms-cap.github.io/hangman/
 
-## Install on iPhone
+## Install
+**iPhone and iPad**
 1. Open the link above in **Safari**.
-2. Tap **Share → Add to Home Screen → Add**.
+2. Tap **Share**, then **Add to Home Screen → Add**.
 
-It opens full-screen from its own icon. On Android, open the link in Chrome and choose **Add to Home screen** or **Install app**.
+**Android**
+1. Open the link above in **Chrome**.
+2. Tap the **⋮** menu, then **Install app** (or **Add to Home screen**) **→ Install**. Chrome may also show an **Install app** button on the home page.
+
+Either way it opens full-screen from its own icon. The install steps on the home page hide themselves once the app is installed.
 
 ## Games
 
