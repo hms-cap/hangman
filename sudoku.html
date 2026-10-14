@@ -26,15 +26,17 @@
 .boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
 .board{
   width:min(100cqw,100cqh);height:min(100cqw,100cqh);container-type:size;
-  display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:2px;background:var(--ink);border-radius:6px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));
+  gap:2px;padding:2px;background:var(--ink);border-radius:6px;
 }
-.box{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
-.cell{position:relative;background:var(--paper);display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;min-height:0;overflow:hidden}
+/* Fixed, equal tracks: a cell's content (font, notes) can never change its size */
+.box{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);min-width:0;min-height:0}
+.cell{position:relative;background:var(--paper);cursor:pointer;min-width:0;min-height:0;overflow:hidden;contain:strict}
 .cell::before{content:"";position:absolute;inset:0;pointer-events:none}
 .cell.peer::before{background:var(--peer)}
 .cell.same::before{background:var(--same)}
 .cell.sel::before{background:var(--sel)}
-.cell .v{position:relative;line-height:1}
+.cell .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1}
 .cell.given .v{font-family:var(--mono);font-weight:600;font-size:6.2cqw;color:var(--ink)}
 .cell.user .v{font-family:var(--hand);font-size:7.6cqw;color:var(--hit)}
 .cell.hinted .v{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
