@@ -55,6 +55,9 @@
 .howto .mine{order:-1}
 #installBtn{align-self:flex-start}
 @media (max-width:420px){.howto{grid-template-columns:1fr}}
+.c-l{fill:var(--sheet)}.c-d{fill:var(--line)}.c-b{fill:none;stroke:var(--ink);stroke-width:2}
+.game #chessMini svg{width:28px;height:28px}
+#chessMini .pb{stroke-width:1.5;stroke-linejoin:round}#chessMini .w .pb{fill:#fbfbf6;stroke:#1d262d}#chessMini .b .pb{fill:#27323b;stroke:#10171c}#chessMini .pl{fill:none;stroke-width:1.3}#chessMini .w .pl{stroke:#1d262d}#chessMini .b .pl{stroke:#e9eef2}#chessMini .px{fill:none;stroke-width:2.3}#chessMini .w .px{stroke:#1d262d}
 .foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
 </style>
 </head>
@@ -62,7 +65,7 @@
 <main class="app">
   <div class="masthead">
     <h1>Paper Games</h1>
-    <p>Three pencil-and-paper puzzles. Your progress stays on this device.</p>
+    <p>Four pencil-and-paper games. Your progress stays on this device.</p>
   </div>
 
   <nav class="games">
@@ -99,11 +102,21 @@
         <div class="now" id="fNow"></div>
       </div>
     </a>
+    <a class="game" href="chess.html">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g id="chessMini"></g>
+      </svg>
+      <div>
+        <h2>Chess</h2>
+        <p class="about">Play the computer at five strengths, from Beginner to Expert, or pass the phone to a friend.</p>
+        <div class="now" id="cNow"></div>
+      </div>
+    </a>
   </nav>
 
   <aside class="install" id="install">
     <h3>Install on your phone</h3>
-    <p class="lead">Add Paper Games to your home screen and it opens full-screen like an app. After the first visit all three games work offline.</p>
+    <p class="lead">Add Paper Games to your home screen and it opens full-screen like an app. After the first visit every game works offline.</p>
     <button class="btn primary" id="installBtn" type="button" hidden>Install app</button>
     <div class="howto">
       <section id="howIos">
@@ -128,6 +141,7 @@
 
 <script src="words.js"></script>
 <script src="fivewords.js"></script>
+<script src="chess-pieces.js"></script>
 <script>
 'use strict';
 const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
@@ -178,6 +192,21 @@ const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
   else out.push(chip(`Play daily No. ${day + 1}`, true));
   if (st.daily && st.daily.cur) out.push(chip(`streak ${st.daily.cur}`));
   document.getElementById('fNow').innerHTML = out.join('');
+})();
+
+// Chess status + mini board
+(function(){
+  let s = '';
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) s += `<rect x="${8 + c*28}" y="${8 + r*28}" width="28" height="28" class="${(r + c) % 2 ? 'c-d' : 'c-l'}"/>`;
+  s += '<rect x="8" y="8" width="84" height="84" class="c-b" rx="2"/>';
+  const put = (svg, x, y) => svg.replace('<svg ', `<svg x="${x}" y="${y}" width="28" height="28" `);
+  s += put(ChessPieces.pieceSVG('n', 'w'), 36, 36) + put(ChessPieces.pieceSVG('k', 'b'), 64, 8) + put(ChessPieces.pieceSVG('p', 'w'), 8, 64) + put(ChessPieces.pieceSVG('q', 'b'), 8, 8);
+  document.getElementById('chessMini').innerHTML = s;
+  const g = get('chess-game', null), st = get('chess-stats', {}), out = [];
+  if (g && Array.isArray(g.moves) && g.moves.length && !g.over) out.push(chip(`Continue · move ${Math.floor(g.moves.length / 2) + 1}`, true));
+  const wins = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
+  out.push(chip(wins ? `${wins} win${wins > 1 ? 's' : ''} vs computer` : 'Beginner to Expert'));
+  document.getElementById('cNow').innerHTML = out.join('');
 })();
 
 // Install help: hide once installed, show this device's steps first, offer Chrome's one-tap install when available

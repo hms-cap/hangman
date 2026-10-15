@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku and Five Letters on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters and Chess on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -58,6 +58,18 @@ A five-letter word-guessing game in the style of Wordle.
 - Countdown to the next daily word
 - Saves progress
 
+### Chess
+- Play the computer at five strengths (Beginner, Casual, Intermediate, Advanced, Expert) as White, Black or a random side, or two players on one phone
+- Full rules: castling, en passant and promotion with a piece picker
+- Draws by stalemate, threefold repetition, the fifty-move rule and insufficient material
+- Tap-to-move or drag, with legal-move dots, last-move and check highlights, and coordinates
+- Undo, hints (an arrow shows a suggested move), flip board, resign, and offering the computer a draw
+- Move list in standard notation; tap a move to look back at that position
+- Copy the game as PGN to analyze it elsewhere
+- Saves the game in progress and your win–draw–loss record at each level
+- The engine is written for this app: alpha-beta search with a transposition table, quiescence search, null-move pruning and late-move reductions. It runs in a Web Worker so the board never freezes. The move generator passes the standard perft test positions.
+- Original pencil-outline piece set drawn for this app
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -65,6 +77,7 @@ A five-letter word-guessing game in the style of Wordle.
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js` | Sudoku game and puzzle set |
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
+| `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; piece drawings |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |
@@ -74,3 +87,9 @@ A five-letter word-guessing game in the style of Wordle.
 node tools/generate-sudoku.js 1000 1000 1000 1000   # easy medium hard expert
 ```
 This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js` so installed copies pick up the update.
+
+## Testing the chess engine
+```sh
+node tools/test-chess.js
+```
+Runs the standard perft positions (move generation must match known node counts exactly), notation and draw-rule checks, a few tactics puzzles and a short Expert vs Beginner match.

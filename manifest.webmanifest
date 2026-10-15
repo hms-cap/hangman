@@ -1,7 +1,7 @@
 {
   "name": "Paper Games",
   "short_name": "Paper Games",
-  "description": "Hangman, Sudoku and Five Letters on graph paper. Works offline.",
+  "description": "Hangman, Sudoku, Five Letters and Chess on graph paper. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
