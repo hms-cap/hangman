@@ -93,3 +93,10 @@ This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js` so 
 node tools/test-chess.js
 ```
 Runs the standard perft positions (move generation must match known node counts exactly), notation and draw-rule checks, a few tactics puzzles and a short Expert vs Beginner match.
+
+## Measuring the chess levels
+```sh
+node tools/elo-match.js 1-2:40,2-3:40,3-4:30,4-5:24 results.json   # pairings:games
+node tools/elo-fit.js results.json
+```
+`elo-match.js` plays the strength levels against each other from balanced openings, both colors, each side with its own search memory. `elo-fit.js` fits a rating per level with bootstrap error bars. The 16 Oct 2026 run is saved in `tools/elo-results-2026-10-16.json`.

@@ -324,7 +324,10 @@ function evaluate(pos) {
 // ---------------- Search ----------------
 const MATE = 100000, INF = 1000000;
 const TT_BITS = 18, TT_SIZE = 1 << TT_BITS, TT_MASK = TT_SIZE - 1;
-const ttKey = new Int32Array(TT_SIZE), ttMove = new Int32Array(TT_SIZE), ttScore = new Int32Array(TT_SIZE), ttDepth = new Int8Array(TT_SIZE), ttFlag = new Int8Array(TT_SIZE);
+let ttKey = new Int32Array(TT_SIZE), ttMove = new Int32Array(TT_SIZE), ttScore = new Int32Array(TT_SIZE), ttDepth = new Int8Array(TT_SIZE), ttFlag = new Int8Array(TT_SIZE);
+// Lets a test harness give each player its own search memory (the app uses one engine, so it never calls this).
+function newTT(){ return { ttKey: new Int32Array(TT_SIZE), ttMove: new Int32Array(TT_SIZE), ttScore: new Int32Array(TT_SIZE), ttDepth: new Int8Array(TT_SIZE), ttFlag: new Int8Array(TT_SIZE) }; }
+function useTT(t){ ({ ttKey, ttMove, ttScore, ttDepth, ttFlag } = t); }
 const EXACT = 1, LOWER = 2, UPPER = 3;
 
 const BOOK = {
@@ -533,7 +536,7 @@ class Search {
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
-const api = { Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE };
+const api = { newTT, useTT, Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE };
 root.Chess = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);
