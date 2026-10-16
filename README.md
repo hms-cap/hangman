@@ -69,6 +69,11 @@ A five-letter word-guessing game in the style of Wordle.
 - Saves the game in progress and your win–draw–loss record at each level
 - The engine is written for this app: alpha-beta search with a transposition table, quiescence search, null-move pruning and late-move reductions. It runs in a Web Worker so the board never freezes. The move generator passes the standard perft test positions.
 - Original pencil-outline piece set drawn for this app
+- **Tutor mode** (switch it on when starting a game, or from More): after each of your moves a coach card grades it (Best, Excellent, Good, Inaccuracy, Mistake, Blunder) and says why in plain words — a piece left hanging, a fork, a mate you allowed or missed — and names a better move and what it does
+  - **Show better move** jumps to the position before your move with arrows for what you played and what was better; **Take back** lets you try again
+  - Warns you about threats before you move: pieces that can be won and mate-in-one threats, with arrows on the board
+  - Marks your moves `?!`, `?` and `??` in the move list (tap one to read its comment again) and shows a summary when the game ends
+  - Reviews run in a second Web Worker, so the computer's reply is never slowed down. Tutor games don't count toward your record
 
 ### Chess Puzzles
 - Positions mined from engine self-play right after a blunder: find the move that wins
@@ -107,7 +112,7 @@ A word-grouping puzzle in the style of Connections.
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js` | Sudoku game and puzzle set |
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
-| `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; piece drawings |
+| `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-data.js` | Four Groups page and its hand-written puzzles |
 | `chess-puzzles.html`, `chess-puzzles.js` | Chess Puzzles page and its verified puzzle set |
@@ -126,6 +131,8 @@ This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js` so 
 node tools/test-chess.js
 ```
 Runs the standard perft positions (move generation must match known node counts exactly), notation and draw-rule checks, a few tactics puzzles and a short Expert vs Beginner match.
+
+`node tools/test-chess-tutor.js` checks the tutor: blunders that allow mate, missed mates, hanging pieces, sound moves graded as sound, and threat warnings.
 
 ## Measuring the chess levels
 ```sh

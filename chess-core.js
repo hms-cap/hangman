@@ -570,9 +570,15 @@ function isMated(pos, n, budget) {
   return true;
 }
 
+// Plain search from any position for the tutor: no opening book, no single-move shortcut. Score is for the side to move.
+function analyse(pos, timeMs, maxDepth = 64) {
+  if (!pos.legal().length) return { move: 0, score: pos.inCheck() ? -MATE : 0, depth: 0 };
+  return new Search(pos, timeMs).iterate(maxDepth);
+}
+
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
-const api = { scoreMoves, mateIn, isMated, newTT, useTT, Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE };
+const api = { analyse, scoreMoves, mateIn, isMated, newTT, useTT, Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE, VAL };
 root.Chess = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);
