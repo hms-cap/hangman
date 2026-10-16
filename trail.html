@@ -65,6 +65,8 @@
 .tile.on{background:var(--hit);border-color:var(--hit);color:var(--paper)}
 .tile.on .n{color:var(--paper);opacity:.7}
 .tile.hint{box-shadow:0 0 0 3px var(--present)}
+.tile .hn{position:absolute;bottom:5%;left:8%;font-family:var(--mono);font-size:3.2cqw;font-weight:700;color:var(--present);pointer-events:none}
+.grid.s5 .tile .hn{font-size:2.8cqw}
 .trailLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .trailLayer polyline{fill:none;stroke:var(--hit);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.45}
 
@@ -135,6 +137,7 @@
       <li>Words need <b>4 or more letters</b> and can't reuse a tile.</li>
       <li>Find every <b>target word</b> to finish the grid. Targets are everyday words. Plurals, other word forms and rarer words still count as <b>bonus words</b>.</li>
       <li>The small number on a tile shows how many target words still to find <b>start</b> there. A tile is inked in once every target word that uses it has been found.</li>
+      <li>Stuck? <b>Hint</b> shows the first three letters of a word and outlines them on the grid.</li>
     </ol>
     <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
     <p>A new daily grid starts at midnight. Practice gives you as many fresh grids as you like, in 4×4 or 5×5.</p>
@@ -229,8 +232,12 @@ function render(){
   const found = new Set(S.found);
   tiles.forEach((t, i) => {
     const n = startsOn(i), needed = stillNeeded(i);
-    t.className = 'tile' + (needed ? '' : ' done') + (path.includes(i) ? ' on' : '') + (hintTile() === i ? ' hint' : '');
+    t.className = 'tile' + (needed ? '' : ' done') + (path.includes(i) ? ' on' : '') + (hintTiles().includes(i) ? ' hint' : '');
     t.lastChild.textContent = n || '';
+    const order = hintTiles().indexOf(i), hn = t.querySelector('.hn');
+    if (order >= 0 && !hn) t.lastChild.insertAdjacentHTML('beforebegin', `<span class="hn">${order + 1}</span>`);
+    else if (order >= 0) hn.textContent = order + 1;
+    else if (hn) hn.remove();
     t.setAttribute('aria-label', P.grid[i].toUpperCase() + (!needed ? ', finished' : n ? `, ${n} word${n > 1 ? 's' : ''} start here` : ''));
   });
   drawTrail();
@@ -240,11 +247,24 @@ function render(){
   $('hintBtn').disabled = S.done;
   drawCurrent(); drawWords();
 }
-function hintTile(){
+const HINT_LETTERS = 3;
+// Tiles to outline for the open hint: the first three letters of one path, starting on the word's counted start tile.
+function hintTiles(){
   const w = S.hints.find(h => !S.found.includes(h));
-  if (!w) return -1;
-  return P.start[w]; // the same tile the word is counted on
+  if (!w) return [];
+  const nb = Trail.neighbors(P.size), g = P.grid, need = Math.min(HINT_LETTERS, w.length);
+  let out = [];
+  const go = (i, k, used) => {
+    if (g[i] !== w[k]) return false;
+    used.push(i);
+    if (k === w.length - 1){ out = used.slice(0, need); return true; }
+    for (const j of nb[i]) if (!used.includes(j) && go(j, k + 1, used)) return true;
+    used.pop(); return false;
+  };
+  go(P.start[w], 0, []);
+  return out;
 }
+const hintText = w => w.slice(0, HINT_LETTERS).toUpperCase() + '·'.repeat(Math.max(0, w.length - HINT_LETTERS));
 function drawTrail(){
   const pts = path.map(i => `${(i % P.size) * 10 + 5},${Math.floor(i / P.size) * 10 + 5}`).join(' ');
   $('trailLayer').innerHTML = path.length > 1 ? `<polyline points="${pts}"/>` : '';
@@ -269,7 +289,7 @@ function drawWords(){
     for (const w of ws.filter(w => found.has(w)).sort()) html += `<span class="word${w === justFound ? ' new' : ''}">${w}</span>`;
     for (const w of ws.filter(w => !found.has(w))){
       const h = S.hints.includes(w);
-      html += `<span class="word blank">${h ? w.slice(0, 2).toUpperCase() + '·'.repeat(L - 2) : '·'.repeat(L)}</span>`;
+      html += `<span class="word blank">${h ? hintText(w) : '·'.repeat(L)}</span>`;
     }
     html += '</div></div>';
   }
@@ -342,12 +362,12 @@ $('hintBtn').addEventListener('click', () => {
   if (S.done) return;
   const open = P.targets.filter(w => !S.found.includes(w) && !S.hints.includes(w));
   const pending = S.hints.find(h => !S.found.includes(h));
-  if (pending){ feedback(pending.slice(0, 2).toUpperCase() + '·'.repeat(pending.length - 2), 'Starts at the outlined tile', 'bonus'); render(); return; }
+  if (pending){ feedback(hintText(pending), 'Follow the outlined tiles', 'bonus'); render(); return; }
   if (!open.length) return;
   open.sort((a, b) => a.length - b.length);
   const pick = open[Math.floor(Math.random() * Math.min(open.length, 6))]; // a shorter word
   S.hints.push(pick); save();
-  feedback(pick.slice(0, 2).toUpperCase() + '·'.repeat(pick.length - 2), 'Starts at the outlined tile', 'bonus'); render();
+  feedback(hintText(pick), 'Follow the outlined tiles', 'bonus'); render();
 });
 document.addEventListener('keydown', e => {
   if (anySheet()) return;

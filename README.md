@@ -78,7 +78,7 @@ A letter-grid word search in the style of Squares.
 - **Daily** grid (No. 1 = 16 Oct 2026; 730 pre-made grids), the same for everyone, with streaks and a countdown
 - **Practice**: unlimited fresh 4×4 or 5×5 grids made on the phone
 - Every grid is checked so all tiles are covered by target words and at least one longer word is hidden
-- Hints outline the first tile of a word and show its first two letters
+- Hints show the first three letters of a word and outline those tiles, numbered, on the grid
 - Share your result, saves progress
 
 ## Files
