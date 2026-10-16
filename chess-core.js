@@ -534,9 +534,45 @@ class Search {
 }
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+// ---------------- Puzzle helpers ----------------
+// Score every legal move with a fixed-depth search (best first). Scores are from the mover's point of view.
+function scoreMoves(pos, depth) {
+  const S = new Search(pos, 1e12), out = [];
+  for (const m of pos.legal()) { pos.make(m); const s = -S.search(depth - 1, -INF, INF, 1, true); pos.unmake(); out.push({ move: m, score: s }); }
+  return out.sort((a, b) => b.score - a.score);
+}
+// Exact mate solver (no pruning). mateIn: a move that forces mate within n moves, or 0.
+// budget = { nodes } caps the work; when exceeded the answer is unknown (returns -1 / null).
+function mateIn(pos, n, budget, all) {
+  const moves = pos.legal(), checks = [], rest = [];
+  for (const m of moves) { pos.make(m); (pos.inCheck() ? checks : rest).push(m); pos.unmake(); }
+  const found = [];
+  for (const m of checks.concat(rest)) {
+    if (budget && --budget.nodes < 0) return all ? null : -1;
+    pos.make(m); const r = isMated(pos, n - 1, budget); pos.unmake();
+    if (r === null) return all ? null : -1;
+    if (r) { if (!all) return m; found.push(m); }
+  }
+  return all ? found : 0;
+}
+// Is the side to move mated now, or within n more attacker moves whatever it does? null = budget ran out.
+function isMated(pos, n, budget) {
+  const moves = pos.legal();
+  if (!moves.length) return pos.inCheck();
+  if (n <= 0) return false;
+  for (const d of moves) {
+    if (budget && --budget.nodes < 0) return null;
+    pos.make(d); const r = mateIn(pos, n, budget); pos.unmake();
+    if (r === -1) return null;
+    if (!r) return false;
+  }
+  return true;
+}
+
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 
-const api = { newTT, useTT, Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE };
+const api = { scoreMoves, mateIn, isMated, newTT, useTT, Position, Engine, LEVELS, START, WHITE, BLACK, P, N, B, R, Q, K, pc, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_CAP, F_EP, F_CASTLE, F_PROMO, sqName, sqFrom, evaluate, MATE };
 root.Chess = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);

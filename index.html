@@ -24,15 +24,16 @@
   --chess:#33424f; --chess-edge:#1f2a33;
   --hang:#c0393f; --hang-edge:#91262b;
   --groups:#7457a6; --groups-edge:#553d80;
+  --cpz:#2b6c84; --cpz-edge:#1c4d5f;
   --on:#ffffff; --on-soft:rgba(255,255,255,.78); --on-faint:rgba(255,255,255,.22); --on-line:rgba(255,255,255,.4);
   --flame:#e0782a;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --flame:#f08c3c}}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --flame:#f08c3c}}
 :root[data-theme="dark"]{
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --flame:#f08c3c}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --flame:#f08c3c}
 
 html,body{height:auto;min-height:100%}
 .hub{max-width:820px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
@@ -59,7 +60,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
   background-image:linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px);background-size:16px 16px}
 .t-five{--bg:var(--five);--edge:var(--five-edge)} .t-trail{--bg:var(--trail);--edge:var(--trail-edge)}
-.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)}
+.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)} .t-cpz{--bg:var(--cpz);--edge:var(--cpz-edge)}
 .tile h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.65rem;line-height:1;text-wrap:balance}
 .tile .status{margin:0;font-size:.86rem;line-height:1.35;color:var(--on-soft)}
 .tile .status b{color:var(--on);font-weight:600}
@@ -87,13 +88,14 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .wide .meta{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;position:relative;z-index:1}
 
 @media (min-width:640px){
-  .library{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .library{grid-template-columns:repeat(2,minmax(0,1fr))}
   .wide{flex-direction:column;align-items:stretch;padding:14px 14px 16px}
   .wide .art{width:auto;height:120px} .wide .art > svg{width:120px;height:120px}
 }
 
 /* art details */
 .a-cell{fill:var(--on-faint)}
+.cp-arrow{fill:none;stroke:#ffd27a;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:5 4}.cp-dot{fill:#ffd27a}
 .a-line{fill:none;stroke:var(--on);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .a-soft{fill:none;stroke:var(--on-line);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:3 3}
 .a-txt{font-family:var(--mono);font-weight:700;fill:var(--on);text-anchor:middle;text-transform:uppercase}
@@ -110,7 +112,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 @media (prefers-reduced-motion:no-preference){
   .tile{animation:rise .45s cubic-bezier(.2,.8,.2,1.15) both}
   .today .tile:nth-child(2){animation-delay:.06s} .today .tile:nth-child(3){animation-delay:.1s}
-  .library .tile:nth-child(1){animation-delay:.12s} .library .tile:nth-child(2){animation-delay:.17s} .library .tile:nth-child(3){animation-delay:.22s}
+  .library .tile:nth-child(1){animation-delay:.12s} .library .tile:nth-child(2){animation-delay:.17s} .library .tile:nth-child(3){animation-delay:.22s} .library .tile:nth-child(4){animation-delay:.27s}
 }
 @keyframes rise{from{transform:translateY(14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
 
@@ -169,6 +171,10 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     <a class="tile wide t-chess" href="chess.html">
       <div class="art" id="artChess"></div>
       <div class="meta"><h3>Chess</h3><p class="status" id="sChess"></p><span class="cta" id="cChess">Play</span></div>
+    </a>
+    <a class="tile wide t-cpz" href="chess-puzzles.html">
+      <div class="art" id="artCpz"></div>
+      <div class="meta"><h3>Chess Puzzles</h3><p class="status" id="sCpz"></p><span class="cta" id="cCpz">Solve</span></div>
     </a>
     <a class="tile wide t-hang" href="hangman.html">
       <div class="art" id="artHang"></div>
@@ -331,6 +337,19 @@ let groupsDone = false;
     const st = get('chess-stats', {}), w = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
     $('sChess').innerHTML = w ? `<b>${w}</b> win${w > 1 ? 's' : ''} against the computer` : 'Play the computer or a friend';
   }
+})();
+
+// ---- Chess Puzzles: a knight fork, and the player's rating ----
+(function(){
+  const P = window.ChessPieces; let body = '';
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) body += `<rect x="${c * 25}" y="${r * 25}" width="25" height="25" class="${(r + c) % 2 ? 'ch-d' : 'ch-l'}"/>`;
+  const put = (t, col, x, y) => P.pieceSVG(t, col).replace('<svg ', `<svg x="${x}" y="${y}" width="25" height="25" `);
+  body += put('k', 'b', 0, 0) + put('r', 'b', 75, 0) + put('n', 'w', 25, 75);
+  body += '<path class="cp-arrow" d="M37.5 85 L50 37.5"/><circle class="cp-dot" cx="50" cy="37.5" r="4"/>';
+  $('artCpz').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="cpzc"><rect width="100" height="100" rx="6"/></clipPath><g clip-path="url(#cpzc)">${body}</g></svg>`;
+  const st = get('cpz-state', null);
+  if (st && st.games){ $('sCpz').innerHTML = `Rating <b>${Math.round(st.rating)}</b>, ${st.solved} solved`; $('cCpz').textContent = 'Keep solving'; }
+  else $('sCpz').innerHTML = 'Find the winning move. Mate in 1 to 3 and winning combinations';
 })();
 
 // ---- Hangman: the drawing so far ----

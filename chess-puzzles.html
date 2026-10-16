@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Chess Puzzles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+:root{
+  --sq-l:#f4f6f1; --sq-d:#b6c6d3; --sq-last:rgba(214,150,26,.40); --sq-sel:rgba(46,94,166,.42);
+  --dot:rgba(29,38,45,.30); --check:rgba(196,53,61,.85); --coord-l:#7d8f9e; --coord-d:#f4f6f1;
+  --pw-fill:#fbfbf6; --pw-line:#1d262d; --pb-fill:#27323b; --pb-line:#10171c; --pb-detail:#e9eef2; --pb-cross:#27323b;
+  --good:#2f8a5b; --good-sq:rgba(47,138,91,.45); --bad-sq:rgba(196,53,61,.45);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --sq-l:#4d6b86; --sq-d:#2c4966; --sq-last:rgba(217,160,58,.45); --sq-sel:rgba(140,194,255,.45);
+  --dot:rgba(8,16,24,.45); --check:rgba(255,110,110,.9); --coord-l:#c6d4e1; --coord-d:#93a9bd;
+  --pw-fill:#f3f6f8; --pw-line:#0e1a26; --pb-fill:#0e1a26; --pb-line:#8ea5ba; --pb-detail:#a9bccd; --pb-cross:#d6e1ea;
+  --good:#5cc08a; --good-sq:rgba(92,192,138,.45); --bad-sq:rgba(255,110,110,.45)}}
+:root[data-theme="dark"]{
+  --sq-l:#4d6b86; --sq-d:#2c4966; --sq-last:rgba(217,160,58,.45); --sq-sel:rgba(140,194,255,.45);
+  --dot:rgba(8,16,24,.45); --check:rgba(255,110,110,.9); --coord-l:#c6d4e1; --coord-d:#93a9bd;
+  --pw-fill:#f3f6f8; --pw-line:#0e1a26; --pb-fill:#0e1a26; --pb-line:#8ea5ba; --pb-detail:#a9bccd; --pb-cross:#d6e1ea;
+  --good:#5cc08a; --good-sq:rgba(92,192,138,.45); --bad-sq:rgba(255,110,110,.45)}
+
+.app{gap:9px}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.8rem}
+@media (max-width:440px){.back .txt{display:none}}
+.rating{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;border:1px solid var(--key-edge);background:var(--key);border-radius:12px;padding:4px 10px;cursor:pointer;color:var(--ink)}
+.rating b{font-family:var(--mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.rating small{font-size:.66rem;color:var(--muted)}
+.rating .delta{font-family:var(--mono);font-size:.7rem;font-weight:600}
+.delta.up{color:var(--good)} .delta.down{color:var(--miss)}
+
+.filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.filters::-webkit-scrollbar{display:none}
+.filters button{flex:none;border:1px solid var(--line);background:var(--key);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.prompt{display:flex;align-items:center;gap:10px;min-height:44px}
+.prompt .side{width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.prompt .side.w{background:var(--pw-fill)} .prompt .side.b{background:var(--ink)}
+.prompt .txt{display:flex;flex-direction:column;min-width:0}
+.prompt .txt > b{font-family:var(--hand);font-weight:400;font-size:1.4rem;line-height:1.05}
+.prompt .txt small{color:var(--muted);font-size:.8rem}
+.prompt .txt small .tag{display:inline-block;margin-right:6px}
+.prompt.good .txt > b{color:var(--good)} .prompt.bad .txt > b{color:var(--miss)}
+.prompt .txt small b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.board{
+  width:min(100cqw,100cqh);height:min(100cqw,100cqh);position:relative;container-type:size;
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));
+  border:2px solid var(--ink);border-radius:4px;overflow:hidden;touch-action:none;
+}
+.sq{position:relative;min-width:0;min-height:0;contain:strict}
+.sq.l{background:var(--sq-l)} .sq.d{background:var(--sq-d)}
+.sq::before{content:"";position:absolute;inset:0;pointer-events:none}
+.sq.last::before{background:var(--sq-last)}
+.sq.sel::before{background:var(--sq-sel)}
+.sq.good::before{background:var(--good-sq)}
+.sq.bad::before{background:var(--bad-sq)}
+.sq.hint{box-shadow:inset 0 0 0 .7cqw var(--present)}
+.sq.check::before{background:radial-gradient(circle,var(--check) 0,transparent 72%)}
+.sq .pc{position:absolute;inset:4%;width:92%;height:92%;pointer-events:none}
+.sq .pc.lift{opacity:.25}
+.sq .mv{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.sq .mv::after{content:"";width:30%;height:30%;border-radius:50%;background:var(--dot)}
+.sq .mv.cap::after{width:84%;height:84%;background:transparent;border:.9cqw solid var(--dot);box-sizing:border-box}
+.sq .rk,.sq .fl{position:absolute;font-family:var(--mono);font-weight:600;font-size:2.1cqw;line-height:1;pointer-events:none}
+.sq .rk{top:3%;left:4%} .sq .fl{bottom:3%;right:5%}
+.sq.l .rk,.sq.l .fl{color:var(--coord-l)} .sq.d .rk,.sq.d .fl{color:var(--coord-d)}
+.arrowLayer{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+.arrowLayer line{stroke:var(--present);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:3 2.2}
+.arrowLayer circle{fill:var(--present)}
+.ghost{position:fixed;z-index:30;pointer-events:none;transform:translate(-50%,-58%) scale(1.12);filter:drop-shadow(0 6px 8px rgba(0,0,0,.25))}
+.pc .pb{stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.pc.w .pb{fill:var(--pw-fill);stroke:var(--pw-line)} .pc.b .pb{fill:var(--pb-fill);stroke:var(--pb-line)}
+.pc .pl{fill:none;stroke-width:1.3;stroke-linecap:round}
+.pc.w .pl{stroke:var(--pw-line)} .pc.b .pl{stroke:var(--pb-detail)}
+.pc .px{fill:none;stroke-width:2.3;stroke-linecap:round}
+.pc.w .px{stroke:var(--pw-line)} .pc.b .px{stroke:var(--pb-cross)}
+.promo{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:var(--scrim)}
+.promo[hidden]{display:none}
+.promo div{display:flex;gap:8px;background:var(--sheet);padding:10px;border-radius:14px}
+.promo button{width:64px;height:64px;border:1px solid var(--line);background:var(--sq-l);border-radius:10px;padding:4px;cursor:pointer}
+.promo .pc{width:100%;height:100%}
+
+.actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.actions .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.spark{width:100%;height:80px}
+.spark path.l{fill:none;stroke:var(--hit);stroke-width:2;stroke-linejoin:round}
+.spark path.a{fill:var(--peer)}
+.spark text{font-family:var(--mono);font-size:9px;fill:var(--muted)}
+.empty{color:var(--muted);text-align:center;margin:0}
+@media (max-height:680px){.filters button{padding:4px 10px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Chess Puzzles</h1>
+    <button class="rating" id="ratingBtn" type="button" aria-label="Your puzzle rating and stats"><small>Rating</small><b id="rating">1200</b><span class="delta" id="delta"></span></button>
+  </header>
+
+  <div class="filters" id="filters" role="group" aria-label="Puzzle type"></div>
+
+  <div class="prompt" id="prompt"><span class="side w" id="side"></span><div class="txt"><b id="pTitle"></b><small id="pSub"></small></div></div>
+
+  <div class="boardWrap">
+    <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+    <div class="promo" id="promo" hidden><div id="promoChoices"></div></div>
+  </div>
+
+  <div class="actions" id="actions"></div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Puzzle stats</h2>
+    <div class="stats4" id="stats4"></div>
+    <div class="label">Rating, last 40 puzzles</div>
+    <svg class="spark" id="spark" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <p id="statsNote" style="font-size:.85rem">Your rating goes up when you solve a puzzle without a mistake and down when you miss one. Using a hint or showing the solution counts as a miss. Puzzles are picked near your rating.</p>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<script src="chess-core.js"></script>
+<script src="chess-pieces.js"></script>
+<script src="chess-puzzles.js"></script>
+<script>
+'use strict';
+const { Position, WHITE, BLACK, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_PROMO, sqName, sqFrom } = window.Chess;
+const { pieceSVG } = window.ChessPieces;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const PUZ = (window.CHESS_PUZZLES || []).map(([fen, line, rating, themes, last], i) => ({ i, fen, line: line.split(' '), rating, themes: themes.split(','), last, key: fen.split(' ').slice(0, 4).join(' ') }));
+const FILTERS = [['all', 'All puzzles'], ['mateIn1', 'Mate in 1'], ['mateIn2', 'Mate in 2'], ['mateIn3', 'Mate in 3'], ['material', 'Win material'], ['fork', 'Forks'], ['sacrifice', 'Sacrifices']];
+const THEME_TEXT = { mateIn1: 'Mate in 1', mateIn2: 'Mate in 2', mateIn3: 'Mate in 3', material: 'Win material', fork: 'Fork', sacrifice: 'Sacrifice', quiet: 'Quiet move', promotion: 'Promotion' };
+const TYPE_LETTER = ' pnbrqk';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let S = Object.assign({ rating: 1200, games: 0, solved: 0, failed: 0, streak: 0, best: 0, history: [], seen: {}, filter: 'all', current: null }, store.get('cpz-state', {}));
+const save = () => store.set('cpz-state', S);
+
+// ---- puzzle selection ----
+function pool(){ return PUZ.filter(p => S.filter === 'all' || p.themes.includes(S.filter)); }
+function pick(){
+  const list = pool(); if (!list.length) return null;
+  const fresh = list.filter(p => !(p.key in S.seen));
+  const src = fresh.length ? fresh : list;
+  for (const width of [100, 200, 350, 600, 2000]){
+    const near = src.filter(p => Math.abs(p.rating - S.rating) <= width);
+    if (near.length) return near[(Math.random() * near.length) | 0];
+  }
+  return src[(Math.random() * src.length) | 0];
+}
+
+// ---- puzzle state ----
+let Z = null; // { p, pos, step, solver, status:'play'|'solved'|'failed'|'review', mistakes, hinted, dynamic, flip, lastFrom, lastTo, mark:{sq,cls} }
+function start(p){
+  if (!p){ Z = null; render(); return; }
+  const pos = new Position(p.fen);
+  Z = { p, pos, step: 0, solver: pos.turn, status: 'play', mistakes: 0, hinted: 0, counted: false, dynamic: false, flip: pos.turn === BLACK, lastFrom: -1, lastTo: -1, mark: null, hint: null };
+  if (p.last){ Z.lastFrom = sqFrom(p.last.slice(0, 2)); Z.lastTo = sqFrom(p.last.slice(2, 4)); }
+  S.current = p.key; save();
+  selected = -1; targets = new Map();
+  render();
+}
+const mateLeft = () => { const t = Z.p.themes.find(t => t.startsWith('mateIn')); return t ? +t.slice(6) - Math.floor(Z.step / 2) : 0; };
+
+// ---- board ----
+const squares = [];
+(function build(){
+  for (let i = 0; i < 64; i++){ const d = document.createElement('div'); d.className = 'sq'; $('board').appendChild(d); squares.push(d); }
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'arrowLayer'); svg.setAttribute('viewBox', '0 0 80 80'); svg.id = 'arrow'; $('board').appendChild(svg);
+})();
+const sqAt = i => { const r = i >> 3, c = i & 7; return Z && Z.flip ? r * 16 + (7 - c) : (7 - r) * 16 + c; };
+const idxOf = s => { for (let i = 0; i < 64; i++) if (sqAt(i) === s) return i; return -1; };
+let selected = -1, targets = new Map();
+
+function render(animFrom, animTo){
+  renderFilters(); renderRating();
+  if (!Z){
+    $('pTitle').textContent = 'No puzzles here yet'; $('pSub').textContent = 'Try another puzzle type.';
+    squares.forEach(q => { q.className = 'sq'; q.innerHTML = ''; }); $('actions').innerHTML = ''; return;
+  }
+  const pos = Z.pos, checkSq = pos.inCheck() ? pos.king[pos.turn] : -1;
+  for (let i = 0; i < 64; i++){
+    const s = sqAt(i), el = squares[i], p = pos.b[s];
+    el.dataset.sq = s;
+    let cls = 'sq ' + ((((s >> 4) + (s & 7)) & 1) ? 'l' : 'd');
+    if (s === Z.lastFrom || s === Z.lastTo) cls += ' last';
+    if (s === selected) cls += ' sel';
+    if (Z.mark && s === Z.mark.sq) cls += ' ' + Z.mark.cls;
+    if (Z.hint && s === Z.hint.from) cls += ' hint';
+    if (s === checkSq) cls += ' check';
+    el.className = cls;
+    let html = p ? pieceSVG(TYPE_LETTER[typeOf(p)], colorOf(p) ? 'b' : 'w') : '';
+    if (targets.has(s)) html += `<span class="mv${p ? ' cap' : ''}"></span>`;
+    if ((i & 7) === 0) html += `<span class="rk">${(s >> 4) + 1}</span>`;
+    if ((i >> 3) === 7) html += `<span class="fl">${'abcdefgh'[s & 7]}</span>`;
+    el.innerHTML = html;
+  }
+  // hint arrow
+  const a = $('arrow');
+  if (Z.hint && Z.hint.to != null){ const xy = s => { const i = idxOf(s); return [(i & 7) * 10 + 5, (i >> 3) * 10 + 5]; }; const [x1, y1] = xy(Z.hint.from), [x2, y2] = xy(Z.hint.to); a.innerHTML = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><circle cx="${x2}" cy="${y2}" r="2.4"/>`; }
+  else a.innerHTML = '';
+  if (animFrom != null && !reduced){
+    const fi = idxOf(animFrom), ti = idxOf(animTo), pc = ti >= 0 && squares[ti].querySelector('.pc');
+    if (pc && fi >= 0){ const A = squares[fi].getBoundingClientRect(), B = squares[ti].getBoundingClientRect(); pc.animate([{ transform: `translate(${A.left - B.left}px,${A.top - B.top}px)` }, { transform: 'none' }], { duration: 200, easing: 'ease-out' }); }
+  }
+  renderPrompt(); renderActions();
+}
+function renderPrompt(){
+  const side = Z.solver === WHITE ? 'White' : 'Black', pr = $('prompt');
+  $('side').className = 'side ' + (Z.solver === WHITE ? 'w' : 'b');
+  pr.className = 'prompt' + (Z.status === 'solved' ? ' good' : Z.status === 'failed' ? ' bad' : '');
+  const goal = Z.p.themes[0] === 'material' ? 'win material' : `mate in ${+Z.p.themes[0].slice(6)}`;
+  const tags = Z.p.themes.filter(t => !t.startsWith('mateIn') && t !== 'material' && THEME_TEXT[t]).map(t => THEME_TEXT[t]);
+  if (Z.status === 'play'){
+    $('pTitle').textContent = Z.feedback || `${side} to move: ${goal}`;
+    $('pSub').innerHTML = `Puzzle rated <b>${Z.p.rating}</b>` + (Z.step ? '' : '. The highlighted move was your opponent’s.');
+  } else if (Z.status === 'solved'){
+    $('pTitle').textContent = Z.mistakes || Z.hinted ? 'Solved' : 'Solved!';
+    $('pSub').innerHTML = `Puzzle rated <b>${Z.p.rating}</b>${tags.length ? '. ' + tags.join(', ') : ''}.`;
+  } else if (Z.status === 'failed'){
+    $('pTitle').textContent = Z.feedback || 'Not the best move';
+    $('pSub').innerHTML = 'Try again, or show the solution.';
+  } else { // review
+    $('pTitle').textContent = 'Solution';
+    $('pSub').innerHTML = `${goal[0].toUpperCase() + goal.slice(1)}${tags.length ? '. ' + tags.join(', ') : ''}. Puzzle rated <b>${Z.p.rating}</b>.`;
+  }
+}
+function renderActions(){
+  let html = '';
+  if (Z.status === 'play') html = `<button class="btn" id="hintBtn" type="button">${Z.hint ? 'Show the move' : 'Hint'}</button><button class="btn" id="solBtn" type="button">Show solution</button><button class="btn" id="skipBtn" type="button">Skip</button>`;
+  else if (Z.status === 'failed') html = `<button class="btn" id="retryBtn" type="button">Try again</button><button class="btn" id="solBtn" type="button">Show solution</button><button class="btn primary" id="nextBtn" type="button">Next puzzle</button>`;
+  else html = `<button class="btn primary" id="nextBtn" type="button">Next puzzle</button>`;
+  $('actions').innerHTML = html;
+  if ($('hintBtn')) $('hintBtn').onclick = hint;
+  if ($('solBtn')) $('solBtn').onclick = showSolution;
+  if ($('skipBtn')) $('skipBtn').onclick = () => start(pick());
+  if ($('retryBtn')) $('retryBtn').onclick = retry;
+  if ($('nextBtn')) $('nextBtn').onclick = () => start(pick());
+}
+function renderFilters(){
+  $('filters').innerHTML = FILTERS.map(([k, t]) => { const n = k === 'all' ? PUZ.length : PUZ.filter(p => p.themes.includes(k)).length; return n ? `<button type="button" data-k="${k}" aria-pressed="${S.filter === k}">${t}</button>` : ''; }).join('');
+}
+let lastDelta = 0;
+function renderRating(){
+  $('rating').textContent = Math.round(S.rating);
+  const d = $('delta'); d.textContent = lastDelta ? (lastDelta > 0 ? '+' : '') + lastDelta : ''; d.className = 'delta ' + (lastDelta > 0 ? 'up' : lastDelta < 0 ? 'down' : '');
+}
+$('filters').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.filter = b.dataset.k; save(); start(pick()); });
+
+// ---- rating ----
+function score(win){
+  if (Z.counted) return; Z.counted = true;
+  const k = S.games < 15 ? 48 : S.games < 50 ? 32 : 24, exp = 1 / (1 + Math.pow(10, (Z.p.rating - S.rating) / 400));
+  const d = Math.round(k * ((win ? 1 : 0) - exp));
+  S.rating = Math.max(400, S.rating + d); lastDelta = d; S.games++;
+  if (win){ S.solved++; S.streak++; S.best = Math.max(S.best, S.streak); } else { S.failed++; S.streak = 0; }
+  S.history.push(Math.round(S.rating)); if (S.history.length > 200) S.history = S.history.slice(-200);
+  S.seen[Z.p.key] = win ? 1 : 0;
+  save();
+}
+
+// ---- moves ----
+function legalFrom(s){ targets = new Map(); if (s < 0) return; for (const m of Z.pos.legal()) if (mFrom(m) === s){ const t = mTo(m); targets.set(t, (targets.get(t) || []).concat(m)); } }
+function select(s){ selected = s; legalFrom(s); render(); }
+function deselect(){ selected = -1; targets = new Map(); render(); }
+const canMove = () => Z && Z.status === 'play' && Z.pos.turn === Z.solver && !busy;
+let busy = false;
+function tryMove(to){
+  const ms = targets.get(to); if (!ms) return;
+  if (ms.length > 1 || (mFlags(ms[0]) & F_PROMO)){
+    const color = Z.pos.turn ? 'b' : 'w';
+    $('promoChoices').innerHTML = ['q', 'r', 'b', 'n'].map(t => `<button type="button" data-t="${t}">${pieceSVG(t, color)}</button>`).join('');
+    $('promo').hidden = false;
+    $('promoChoices').onclick = e => { const b = e.target.closest('button'); if (!b) return; $('promo').hidden = true; attempt(ms.find(m => TYPE_LETTER[mPromo(m)] === b.dataset.t)); };
+    $('promo').onclick = e => { if (e.target === $('promo')){ $('promo').hidden = true; deselect(); } };
+    return;
+  }
+  attempt(ms[0]);
+}
+function attempt(m){
+  const uci = Position.uci(m), expected = Z.p.line[Z.step];
+  selected = -1; targets = new Map(); Z.hint = null; Z.feedback = '';
+  let ok = !Z.dynamic && uci === expected;
+  // Any move that keeps a forced mate on track (or mates now) is also correct.
+  if (!ok && Z.p.themes[0].startsWith('mateIn')){
+    Z.pos.make(m);
+    const left = mateLeft() - 1;
+    const mated = Z.pos.legal().length === 0 && Z.pos.inCheck();
+    const still = mated || (left >= 1 && Chess.isMated(Z.pos, left, { nodes: 400000 }) === true);
+    Z.pos.unmake();
+    if (still){ ok = true; if (uci !== expected) Z.dynamic = true; }
+  }
+  if (!ok){
+    Z.mistakes++;
+    Z.pos.make(m); Z.lastFrom = mFrom(m); Z.lastTo = mTo(m); Z.mark = { sq: mTo(m), cls: 'bad' };
+    render(mFrom(m), mTo(m));
+    score(false);
+    try{ navigator.vibrate && navigator.vibrate(60); }catch(_){}
+    setTimeout(() => { Z.pos.unmake(); Z.status = 'failed'; Z.feedback = 'That’s not it'; restoreLast(); render(); }, reduced ? 0 : 650);
+    return;
+  }
+  playMove(m, 'good');
+  if (Z.pos.status() || Z.step >= Z.p.line.length && !Z.dynamic){ return finish(); }
+  // opponent replies
+  busy = true; render();
+  setTimeout(() => {
+    let reply;
+    if (!Z.dynamic) reply = Z.pos.fromUci(Z.p.line[Z.step]);
+    else { // after an alternative mate, defend as long as possible
+      let best = null, bestK = -1; const left = mateLeft();
+      for (const d of Z.pos.legal()){ Z.pos.make(d); let k = 0; for (let j = 1; j <= left; j++){ const r = Chess.mateIn(Z.pos, j, { nodes: 200000 }); if (r && r !== -1){ k = j; break; } } Z.pos.unmake(); if (k > bestK){ bestK = k; best = d; } }
+      reply = best;
+    }
+    busy = false;
+    if (!reply) return finish();
+    playMove(reply, null);
+    Z.feedback = 'Good. Keep going'; render(mFrom(reply), mTo(reply));
+  }, reduced ? 50 : 520);
+}
+function playMove(m, mark){
+  Z.pos.make(m); Z.step++;
+  Z.lastFrom = mFrom(m); Z.lastTo = mTo(m); Z.mark = mark ? { sq: mTo(m), cls: mark } : null;
+  render(mFrom(m), mTo(m));
+}
+function restoreLast(){
+  // highlight whatever move led to the current position
+  const n = Z.step;
+  if (n === 0 && Z.p.last){ Z.lastFrom = sqFrom(Z.p.last.slice(0, 2)); Z.lastTo = sqFrom(Z.p.last.slice(2, 4)); }
+  else if (n > 0){ const u = Z.p.line[n - 1]; Z.lastFrom = sqFrom(u.slice(0, 2)); Z.lastTo = sqFrom(u.slice(2, 4)); }
+  Z.mark = null;
+}
+function finish(){
+  Z.status = 'solved';
+  score(!Z.mistakes && !Z.hinted);
+  try{ navigator.vibrate && navigator.vibrate(20); }catch(_){}
+  render();
+}
+function retry(){
+  // replay from the start; the result already counted
+  const p = Z.p, counted = Z.counted, mistakes = Z.mistakes, hinted = Z.hinted;
+  start(p); Z.counted = counted; Z.mistakes = mistakes; Z.hinted = hinted; render();
+}
+function hint(){
+  if (!canMove()) return;
+  if (!Z.hinted){ Z.hinted = 1; score(false); }
+  const u = Z.dynamic ? null : Z.p.line[Z.step];
+  let from, to;
+  if (u){ from = sqFrom(u.slice(0, 2)); to = sqFrom(u.slice(2, 4)); }
+  else { const m = Chess.mateIn(Z.pos, mateLeft(), { nodes: 400000 }); if (m && m !== -1){ from = mFrom(m); to = mTo(m); } }
+  Z.hint = Z.hint ? { from, to } : { from };
+  render();
+}
+function showSolution(){
+  if (!Z.counted) score(false);
+  const p = Z.p; start(p); Z.counted = true; Z.status = 'review'; busy = true; render();
+  let k = 0;
+  const stepFn = () => {
+    if (k >= p.line.length){ busy = false; render(); return; }
+    const m = Z.pos.fromUci(p.line[k++]); playMove(m, k % 2 ? 'good' : null); Z.status = 'review';
+    setTimeout(stepFn, reduced ? 200 : 750);
+  };
+  setTimeout(stepFn, 400);
+}
+
+// ---- input (tap or drag) ----
+let drag = null;
+$('board').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.sq'); if (!el || !canMove()) return;
+  const s = +el.dataset.sq, p = Z.pos.b[s];
+  if (selected >= 0 && targets.has(s)){ tryMove(s); return; }
+  if (p && colorOf(p) === Z.pos.turn){
+    const was = selected === s; select(s);
+    drag = { s, was, x: e.clientX, y: e.clientY, moved: false, ghost: null, id: e.pointerId };
+    try { $('board').setPointerCapture(e.pointerId); } catch(_){}
+  } else deselect();
+});
+$('board').addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+  if (!drag.moved){
+    drag.moved = true;
+    const from = squares.find(q => +q.dataset.sq === drag.s), pc = from.querySelector('.pc'), size = from.getBoundingClientRect().width;
+    if (pc){ pc.classList.add('lift'); const g = document.createElement('div'); g.className = 'ghost'; g.style.width = g.style.height = size + 'px'; g.innerHTML = pc.outerHTML.replace('lift', ''); document.body.appendChild(g); drag.ghost = g; }
+  }
+  if (drag.ghost){ drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px'; }
+});
+$('board').addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null; if (d.ghost) d.ghost.remove();
+  if (d.moved){ const under = document.elementFromPoint(e.clientX, e.clientY), el = under && under.closest('.sq'); if (el && targets.has(+el.dataset.sq)) return tryMove(+el.dataset.sq); render(); }
+  else if (d.was) deselect();
+});
+$('board').addEventListener('pointercancel', () => { if (drag && drag.ghost) drag.ghost.remove(); drag = null; render(); });
+
+// ---- stats ----
+function openStats(){
+  const total = S.solved + S.failed;
+  $('stats4').innerHTML = [[Math.round(S.rating), 'Rating'], [S.solved, 'Solved'], [total ? Math.round(100 * S.solved / total) + '%' : '–', 'Success'], [S.best, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  const h = S.history.slice(-40), sp = $('spark');
+  if (h.length < 2){ sp.innerHTML = '<text x="150" y="44" text-anchor="middle">Solve a few puzzles to see your rating over time</text>'; }
+  else {
+    const lo = Math.min(...h) - 20, hi = Math.max(...h) + 20, x = i => 4 + i * (292 / (h.length - 1)), y = v => 72 - (v - lo) / (hi - lo) * 62;
+    const pts = h.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' L');
+    sp.innerHTML = `<path class="a" d="M${x(0)},76 L${pts} L${x(h.length - 1)},76 Z"/><path class="l" d="M${pts}"/><text x="4" y="10">${Math.round(hi - 20)}</text><text x="4" y="78">${Math.round(lo + 20)}</text>`;
+  }
+  document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== 'statsSheet');
+}
+$('ratingBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', () => $('statsSheet').hidden = true);
+$('statsSheet').addEventListener('click', e => { if (e.target === $('statsSheet')) $('statsSheet').hidden = true; });
+
+// ---- boot: resume the puzzle you were on, if it wasn't finished ----
+{
+  const cur = S.current && PUZ.find(p => p.key === S.current);
+  start(cur && !(cur.key in S.seen) ? cur : pick());
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

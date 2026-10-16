@@ -70,6 +70,14 @@ A five-letter word-guessing game in the style of Wordle.
 - The engine is written for this app: alpha-beta search with a transposition table, quiescence search, null-move pruning and late-move reductions. It runs in a Web Worker so the board never freezes. The move generator passes the standard perft test positions.
 - Original pencil-outline piece set drawn for this app
 
+### Chess Puzzles
+- Positions mined from engine self-play right after a blunder: find the move that wins
+- Mate in 1, 2 and 3 (checked with an exact mate solver: the key move is the only one, and no shorter mate exists) and winning material (the best move must beat every alternative by at least 1.5 pawns, and the material can't be won straight back)
+- Any move that still forces mate is accepted, not just the stored line
+- Adaptive puzzle rating that serves puzzles near your level; hints and "show solution" count as misses
+- Filter by Mate in 1/2/3, Win material, Forks or Sacrifices; stats with a rating chart
+- Regenerate with `node tools/generate-chess-puzzles.js 500` and check with `node tools/verify-chess-puzzles.js`
+
 ### Word Trail
 A letter-grid word search in the style of Squares.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
@@ -102,6 +110,7 @@ A word-grouping puzzle in the style of Connections.
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-data.js` | Four Groups page and its hand-written puzzles |
+| `chess-puzzles.html`, `chess-puzzles.js` | Chess Puzzles page and its verified puzzle set |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |
