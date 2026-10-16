@@ -65,6 +65,10 @@
 .tile.on{background:var(--hit);border-color:var(--hit);color:var(--paper)}
 .tile.on .n{color:var(--paper);opacity:.7}
 .tile.hint{box-shadow:0 0 0 3px var(--present)}
+.icon-chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px}
+.icon-chip svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.grid.spinning{transition:transform .38s cubic-bezier(.3,.7,.3,1)}
+.grid.spinning .tile{transition:transform .38s cubic-bezier(.3,.7,.3,1)}
 .tile .hn{position:absolute;bottom:5%;left:8%;font-family:var(--mono);font-size:3.2cqw;font-weight:700;color:var(--present);pointer-events:none}
 .grid.s5 .tile .hn{font-size:2.8cqw}
 .trailLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
@@ -118,6 +122,7 @@
   <div class="progress">
     <div class="count" id="count"></div>
     <div class="meter"><i id="meter"></i></div>
+    <button class="chipBtn icon-chip" id="rotateBtn" type="button" aria-label="Rotate grid" title="Rotate grid (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
     <button class="chipBtn" id="hintBtn" type="button">Hint</button>
     <button class="chipBtn" id="newBtn" type="button" hidden>New grid</button>
   </div>
@@ -137,6 +142,7 @@
       <li>Words need <b>4 or more letters</b> and can't reuse a tile.</li>
       <li>Find every <b>target word</b> to finish the grid. Targets are everyday words. Plurals, other word forms and rarer words still count as <b>bonus words</b>.</li>
       <li>The small number on a tile shows how many target words still to find <b>start</b> there. A tile is inked in once every target word that uses it has been found.</li>
+      <li>Turn the grid with <b>Rotate</b> to see the letters from a new angle. The words don't change.</li>
       <li>Stuck? <b>Hint</b> shows the first three letters of a word and outlines them on the grid.</li>
     </ol>
     <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
@@ -215,6 +221,11 @@ const save = () => store.set(mode === 'daily' ? 'trail-daily' : 'trail-practice'
 
 // ---- grid DOM ----
 let tiles = [];
+// Rotation is a view change only: logical tile i keeps its letter and neighbours; we just place it elsewhere.
+// display position of logical (r,c) after k quarter-turns clockwise: (r,c) -> (c, n-1-r) repeated k times.
+function toDisplay(i){ const n = P.size; let r = Math.floor(i / n), c = i % n; for (let k = 0; k < (S.rot || 0); k++){ [r, c] = [c, n - 1 - r]; } return [r, c]; }
+function fromDisplay(r, c){ const n = P.size; for (let k = 0; k < (S.rot || 0); k++){ [r, c] = [n - 1 - c, r]; } return r * n + c; }
+function place(){ tiles.forEach((t, i) => { const [r, c] = toDisplay(i); t.style.gridRow = r + 1; t.style.gridColumn = c + 1; }); }
 function build(){
   const g = $('grid'); g.innerHTML = '';
   g.className = 'grid s' + P.size;
@@ -223,6 +234,7 @@ function build(){
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'trailLayer'); svg.setAttribute('viewBox', `0 0 ${P.size * 10} ${P.size * 10}`); svg.id = 'trailLayer';
   g.appendChild(svg);
+  place();
 }
 // Number shown on a tile: unfound target words that start there (each word counted on exactly one tile, so the numbers add up to the words left).
 function startsOn(i){ let n = 0; for (const w of P.targets) if (!S.found.includes(w) && P.start[w] === i) n++; return n; }
@@ -266,7 +278,7 @@ function hintTiles(){
 }
 const hintText = w => w.slice(0, HINT_LETTERS).toUpperCase() + '·'.repeat(Math.max(0, w.length - HINT_LETTERS));
 function drawTrail(){
-  const pts = path.map(i => `${(i % P.size) * 10 + 5},${Math.floor(i / P.size) * 10 + 5}`).join(' ');
+  const pts = path.map(i => { const [r, c] = toDisplay(i); return `${c * 10 + 5},${r * 10 + 5}`; }).join(' ');
   $('trailLayer').innerHTML = path.length > 1 ? `<polyline points="${pts}"/>` : '';
 }
 function drawCurrent(){
@@ -304,7 +316,7 @@ function tileAt(x, y, strict){
   const cx = (x - r.left) / cell, cy = (y - r.top) / cell, c = Math.floor(cx), rr = Math.floor(cy);
   if (c < 0 || rr < 0 || c >= size || rr >= size) return -1;
   if (strict){ const dx = cx - c - .5, dy = cy - rr - .5; if (Math.hypot(dx, dy) > .38) return -1; } // forgiving diagonals
-  return rr * size + c;
+  return fromDisplay(rr, c);
 }
 const adjacent = (a, b) => Math.abs((a % P.size) - (b % P.size)) <= 1 && Math.abs(Math.floor(a / P.size) - Math.floor(b / P.size)) <= 1 && a !== b;
 function extend(i){
@@ -316,6 +328,7 @@ function extend(i){
 }
 let downTile = -1, moved = false;
 $('grid').addEventListener('pointerdown', e => {
+  if (spinning) return;
   const i = tileAt(e.clientX, e.clientY, false); if (i < 0) return;
   try { $('grid').setPointerCapture(e.pointerId); } catch(_){}
   dragging = true; moved = false; downTile = i; lastFeedback = null;
@@ -358,6 +371,24 @@ function submit(){
 }
 function bump(){ const c = $('current'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
 
+let spinning = false;
+function rotate(){
+  if (spinning || !P) return;
+  path = []; tapMode = false;
+  const g = $('grid'), finish = () => {
+    g.classList.remove('spinning'); g.style.transform = ''; tiles.forEach(t => t.style.transform = '');
+    S.rot = ((S.rot || 0) + 1) % 4; place(); save(); spinning = false; render();
+  };
+  if (reduced){ return finish(); }
+  spinning = true; render();
+  g.classList.add('spinning'); void g.offsetWidth;
+  g.style.transform = 'rotate(90deg)'; tiles.forEach(t => t.style.transform = 'rotate(-90deg)'); // letters stay upright while the grid turns
+  let done = false; const end = () => { if (done) return; done = true; finish(); };
+  g.addEventListener('transitionend', e => { if (e.target === g) end(); }, { once: true });
+  setTimeout(end, 500); // in case transitionend never fires
+}
+$('rotateBtn').addEventListener('click', rotate);
+
 $('hintBtn').addEventListener('click', () => {
   if (S.done) return;
   const open = P.targets.filter(w => !S.found.includes(w) && !S.hints.includes(w));
@@ -372,6 +403,7 @@ $('hintBtn').addEventListener('click', () => {
 document.addEventListener('keydown', e => {
   if (anySheet()) return;
   if (e.key === 'Escape'){ path = []; tapMode = false; render(); }
+  if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) rotate();
   if (e.key === 'Enter' && path.length) submit();
   if (e.key === 'Backspace' && path.length){ path.pop(); tapMode = path.length > 0; render(); }
 });
