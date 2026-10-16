@@ -200,6 +200,7 @@ function loadMode(m){
     if (!S || !S.grid) S = practiceGrid(4);
   }
   P = Trail.analyze(S.grid, DICT);
+  S.total = P.targets.length;
   path = []; tapMode = false; lastFeedback = null;
   build(); render(); save();
 }

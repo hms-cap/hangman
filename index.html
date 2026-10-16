@@ -12,122 +12,166 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>Paper Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
 <style>
-.app{gap:22px;justify-content:center}
-.masthead{display:flex;flex-direction:column;gap:4px;padding-inline:4px}
-.masthead h1{font-family:var(--hand);font-weight:400;font-size:clamp(2.6rem,12vw,3.4rem);margin:0;line-height:.95}
-.masthead p{margin:0;color:var(--muted);font-size:.95rem}
-.games{display:flex;flex-direction:column;gap:14px}
-.game{
-  display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:center;
-  padding:16px;border-radius:16px;background:var(--key);border:1px solid var(--key-edge);border-bottom-width:4px;
-  color:var(--ink);text-decoration:none;transition:transform .1s;
+/* Game hub: graph-paper ground, one solid color per game, chunky pressable tiles whose art is the player's live game state.
+   Layout: header with streak, "Today" pair of tall daily tiles, then a library of wide tiles; 3 columns on wide screens. */
+:root{
+  --five:#d38c1f; --five-edge:#a86a0e;
+  --trail:#2e5ea6; --trail-edge:#1f4580;
+  --sudoku:#1f7a63; --sudoku-edge:#145846;
+  --chess:#33424f; --chess-edge:#1f2a33;
+  --hang:#c0393f; --hang-edge:#91262b;
+  --on:#ffffff; --on-soft:rgba(255,255,255,.78); --on-faint:rgba(255,255,255,.22); --on-line:rgba(255,255,255,.4);
+  --flame:#e0782a;
 }
-.game:active{transform:translateY(2px)}
-.game svg{width:96px;height:96px;display:block}
-.game h2{font-family:var(--hand);font-weight:400;font-size:2rem;margin:0;line-height:1}
-.game .about{margin:4px 0 8px;color:var(--muted);font-size:.88rem;line-height:1.4}
-.game .now{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-family:var(--mono);font-size:.72rem;padding:3px 8px;border-radius:999px;background:var(--peer);border:1px solid var(--line);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
-.chip.go{background:var(--hit);border-color:var(--hit);color:var(--paper)}
-.ink{fill:none;stroke:var(--ink);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.red{fill:none;stroke:var(--miss);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.g-line{stroke:var(--line);stroke-width:1}
-.g-box{fill:none;stroke:var(--ink);stroke-width:2.2}
-.g-given{font-family:var(--mono);font-weight:600;font-size:15px;fill:var(--ink)}
-.g-pencil{font-family:var(--hand);font-size:19px;fill:var(--hit)}
-.t-c{fill:var(--correct)}.t-p{fill:var(--present)}.t-a{fill:var(--absent)}.t-e{fill:none;stroke:var(--line);stroke-width:1.5}
-.t-l{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--on-tile);text-transform:uppercase}
-.install{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:14px;border:1.5px dashed var(--line)}
-.install h3{font-family:var(--hand);font-weight:400;font-size:1.45rem;margin:0;line-height:1}
-.install .lead{margin:0;color:var(--muted);font-size:.85rem;line-height:1.45}
-.howto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --flame:#f08c3c}}
+:root[data-theme="dark"]{
+  --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --flame:#f08c3c}
+
+html,body{height:auto;min-height:100%}
+.hub{max-width:820px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--hand);font-weight:400;font-size:2.3rem;line-height:1;margin:0}
+.streak{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border-radius:999px;background:var(--key);border:1px solid var(--key-edge);font-family:var(--mono);font-weight:600;font-size:1rem;font-variant-numeric:tabular-nums}
+.streak svg{width:20px;height:20px}
+.streak .fl{fill:var(--flame)} .streak .fl2{fill:#ffd27a}
+.streak.cold .fl{fill:var(--line)} .streak.cold .fl2{fill:var(--paper)}
+.greet{margin:-8px 0 0;color:var(--muted);font-size:1rem;line-height:1.4}
+.greet b{color:var(--ink);font-weight:600}
+
+h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6px;line-height:1}
+
+/* Tiles */
+.tile{
+  position:relative;display:flex;color:var(--on);text-decoration:none;border-radius:22px;overflow:hidden;
+  border-bottom:6px solid var(--edge);background:var(--bg);
+  transition:transform .08s ease-out,border-bottom-width .08s ease-out;-webkit-tap-highlight-color:transparent;
+}
+.tile:active{transform:translateY(4px);border-bottom-width:2px}
+.tile:focus-visible{outline:3px solid var(--hit);outline-offset:3px}
+.tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
+  background-image:linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px);background-size:16px 16px}
+.t-five{--bg:var(--five);--edge:var(--five-edge)} .t-trail{--bg:var(--trail);--edge:var(--trail-edge)}
+.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)}
+.tile h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.65rem;line-height:1;text-wrap:balance}
+.tile .status{margin:0;font-size:.86rem;line-height:1.35;color:var(--on-soft)}
+.tile .status b{color:var(--on);font-weight:600}
+.cta{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;padding:7px 16px;border-radius:999px;background:var(--on);color:var(--edge);font-weight:700;font-size:.88rem;white-space:nowrap}
+.cta.ghost{background:transparent;color:var(--on);box-shadow:inset 0 0 0 2px var(--on-line)}
+.prog{height:6px;border-radius:999px;background:var(--on-faint);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--on);border-radius:999px}
+
+/* Today: tall tiles */
+.today{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.daily{flex-direction:column;gap:10px;padding:14px 14px 16px}
+.daily .art{display:flex;justify-content:center;align-items:center;min-height:132px}
+.daily .art > svg{width:100%;max-width:150px;height:auto;display:block}
+.daily .meta{display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
+.done-badge{position:absolute;top:12px;right:12px;z-index:2;width:30px;height:30px;border-radius:50%;background:var(--on);display:flex;align-items:center;justify-content:center}
+.done-badge svg{width:18px;height:18px;fill:none;stroke:var(--edge);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* Library: wide tiles */
+.library{display:grid;grid-template-columns:1fr;gap:12px}
+.wide{align-items:center;gap:14px;padding:12px 14px 12px 12px;min-height:118px}
+.wide .art{flex:none;width:96px;height:96px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
+.wide .art > svg{width:96px;height:96px;display:block}
+.wide .meta{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1;position:relative;z-index:1}
+
+@media (min-width:640px){
+  .library{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .wide{flex-direction:column;align-items:stretch;padding:14px 14px 16px}
+  .wide .art{width:auto;height:120px} .wide .art > svg{width:120px;height:120px}
+}
+
+/* art details */
+.a-cell{fill:var(--on-faint)}
+.a-line{fill:none;stroke:var(--on);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.a-soft{fill:none;stroke:var(--on-line);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:3 3}
+.a-txt{font-family:var(--mono);font-weight:700;fill:var(--on);text-anchor:middle;text-transform:uppercase}
+.f-correct{fill:var(--on)} .f-present{fill:rgba(255,255,255,.55)} .f-absent{fill:rgba(0,0,0,.22)} .f-empty{fill:none;stroke:var(--on-line);stroke-width:1.6}
+.su-given{fill:var(--on)} .su-user{fill:rgba(255,255,255,.55)} .su-empty{fill:var(--on-faint)}
+.ch-l{fill:rgba(255,255,255,.88)} .ch-d{fill:rgba(255,255,255,.45)}
+.pc .pb{stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.pc.w .pb{fill:#fbfbf6;stroke:#1d262d} .pc.b .pb{fill:#27323b;stroke:#10171c}
+.pc .pl{fill:none;stroke-width:1.3} .pc.w .pl{stroke:#1d262d} .pc.b .pl{stroke:#e9eef2}
+.pc .px{fill:none;stroke-width:2.3} .pc.w .px{stroke:#1d262d} .pc.b .px{stroke:#27323b}
+.tr-tile{fill:var(--on-faint)} .tr-tile.on{fill:var(--on)} .tr-l{font-family:var(--mono);font-weight:700;font-size:12px;text-anchor:middle;fill:var(--on);text-transform:uppercase} .tr-l.on{fill:var(--trail-edge)}
+
+/* entrance: one staggered moment */
+@media (prefers-reduced-motion:no-preference){
+  .tile{animation:rise .45s cubic-bezier(.2,.8,.2,1.15) both}
+  .today .tile:nth-child(2){animation-delay:.06s}
+  .library .tile:nth-child(1){animation-delay:.12s} .library .tile:nth-child(2){animation-delay:.17s} .library .tile:nth-child(3){animation-delay:.22s}
+}
+@keyframes rise{from{transform:translateY(14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+
+/* Install */
+.install{border-radius:18px;border:1.5px dashed var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--paper)}
+.install summary{cursor:pointer;font-family:var(--hand);font-size:1.4rem;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.install summary::-webkit-details-marker{display:none}
+.install summary::after{content:"+";font-family:var(--mono);font-size:1.2rem;color:var(--muted)}
+.install[open] summary::after{content:"−"}
+.install p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45}
+.howto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:10px}
 .howto section{display:flex;flex-direction:column;gap:6px;min-width:0}
-.howto h4{margin:0;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
-.howto h4 .you{font-size:.62rem;letter-spacing:.04em;text-transform:none;padding:1px 7px;border-radius:999px;background:var(--hit);color:var(--paper)}
-.howto ol{margin:0;padding-left:1.15em;font-size:.86rem;line-height:1.45;color:var(--ink)}
-.howto li{padding-left:2px}
-.howto li + li{margin-top:3px}
-.howto b{font-weight:600}
+.howto h4{margin:0;font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:6px}
+.howto h4 .you{font-size:.7rem;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--hit);color:var(--paper)}
+.howto ol{margin:0;padding-left:1.15em;font-size:.88rem;line-height:1.45}
 .howto svg{width:14px;height:14px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .howto .mine{order:-1}
 #installBtn{align-self:flex-start}
 @media (max-width:420px){.howto{grid-template-columns:1fr}}
-.c-l{fill:var(--sheet)}.c-d{fill:var(--line)}.c-b{fill:none;stroke:var(--ink);stroke-width:2}
-.game #chessMini svg{width:28px;height:28px}
-#chessMini .pb{stroke-width:1.5;stroke-linejoin:round}#chessMini .w .pb{fill:#fbfbf6;stroke:#1d262d}#chessMini .b .pb{fill:#27323b;stroke:#10171c}#chessMini .pl{fill:none;stroke-width:1.3}#chessMini .w .pl{stroke:#1d262d}#chessMini .b .pl{stroke:#e9eef2}#chessMini .px{fill:none;stroke-width:2.3}#chessMini .w .px{stroke:#1d262d}
-.tr-t{fill:var(--key);stroke:var(--key-edge);stroke-width:1.5}.tr-d{fill:var(--ink)}.tr-on{fill:var(--hit)}.tr-l{font-family:var(--mono);font-weight:700;font-size:13px;text-transform:uppercase}.tr-l.dark{fill:var(--paper)}.tr-l.lt{fill:var(--ink)}.tr-line{fill:none;stroke:var(--hit);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
-.foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
+.foot{color:var(--muted);font-size:.8rem;text-align:center;margin:0}
 </style>
 </head>
 <body>
-<main class="app">
-  <div class="masthead">
-    <h1>Paper Games</h1>
-    <p>Five pencil-and-paper games. Your progress stays on this device.</p>
-  </div>
+<main class="hub">
+  <header class="top">
+    <h1 class="brand">Paper Games</h1>
+    <div class="streak cold" id="streak" title="Days in a row you've finished a daily puzzle">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fl" d="M12 2c1 3.4 5.8 5.6 5.8 11.2A5.8 5.8 0 016.2 13.6c0-2.4 1.1-4 2.6-5.4c.2 1.6.9 2.8 2.1 3.4C11.2 8.2 10.4 5 12 2z"/><path class="fl2" d="M12 12.4c1.3 1.4 2.6 2.5 2.6 4.4a2.6 2.6 0 01-5.2 0c0-1.5.9-2.4 2.6-4.4z"/></svg>
+      <span id="streakN">0</span>
+    </div>
+  </header>
+  <p class="greet" id="greet"></p>
 
-  <nav class="games">
-    <a class="game" href="hangman.html">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <path class="ink" d="M12 92 Q34 90 58 92"/><path class="ink" d="M26 91 L27 10"/><path class="ink" d="M25 11 Q50 9 72 10"/><path class="ink" d="M27 30 L45 11"/><path class="ink" d="M71 10 L71 22"/>
-        <circle class="red" cx="71" cy="31" r="9"/><path class="red" d="M71 40 Q72 54 71 66"/><path class="red" d="M71 47 L62 57 M71 47 L80 57 M71 66 L64 80 M71 66 L78 80"/>
-      </svg>
-      <div>
-        <h2>Hangman</h2>
-        <p class="about" id="hAbout">Guess the word one letter at a time before the drawing is finished.</p>
-        <div class="now" id="hNow"></div>
-      </div>
+  <h2 class="sec">Today</h2>
+  <section class="today" aria-label="Today's puzzles">
+    <a class="tile daily t-five" href="fiveletters.html" id="tFive">
+      <div class="art" id="artFive"></div>
+      <div class="meta"><h3>Five Letters</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
     </a>
+    <a class="tile daily t-trail" href="trail.html" id="tTrail">
+      <div class="art" id="artTrail"></div>
+      <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
+    </a>
+  </section>
 
-    <a class="game" href="sudoku.html">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <g id="mini"></g>
-        <rect class="g-box" x="5" y="5" width="90" height="90" rx="4"/>
-      </svg>
-      <div>
-        <h2>Sudoku</h2>
-        <p class="about">4,000 puzzles, each with a single solution, from Easy to Expert. Includes notes, hints and undo.</p>
-        <div class="now" id="sNow"></div>
-      </div>
+  <h2 class="sec">Your games</h2>
+  <section class="library" aria-label="All games">
+    <a class="tile wide t-sudoku" href="sudoku.html">
+      <div class="art" id="artSudoku"></div>
+      <div class="meta"><h3>Sudoku</h3><p class="status" id="sSudoku"></p><div class="prog" id="bSudoku" hidden><i></i></div><span class="cta" id="cSudoku">Play</span></div>
     </a>
-    <a class="game" href="fiveletters.html">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <g id="tiles"></g>
-      </svg>
-      <div>
-        <h2>Five Letters</h2>
-        <p class="about">Guess the hidden five-letter word in six tries. A new daily word, plus unlimited practice.</p>
-        <div class="now" id="fNow"></div>
-      </div>
+    <a class="tile wide t-chess" href="chess.html">
+      <div class="art" id="artChess"></div>
+      <div class="meta"><h3>Chess</h3><p class="status" id="sChess"></p><span class="cta" id="cChess">Play</span></div>
     </a>
-    <a class="game" href="chess.html">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <g id="chessMini"></g>
-      </svg>
-      <div>
-        <h2>Chess</h2>
-        <p class="about">Play the computer at five strengths, from Beginner to Expert, or pass the phone to a friend.</p>
-        <div class="now" id="cNow"></div>
-      </div>
+    <a class="tile wide t-hang" href="hangman.html">
+      <div class="art" id="artHang"></div>
+      <div class="meta"><h3>Hangman</h3><p class="status" id="sHang"></p><span class="cta" id="cHang">Play</span></div>
     </a>
-    <a class="game" href="trail.html">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <g id="trailMini"></g>
-      </svg>
-      <div>
-        <h2>Word Trail</h2>
-        <p class="about">Swipe through a grid of letters to find every hidden word. A new grid every day, plus practice.</p>
-        <div class="now" id="tNow"></div>
-      </div>
-    </a>
-  </nav>
+  </section>
 
-  <aside class="install" id="install">
-    <h3>Install on your phone</h3>
-    <p class="lead">Add Paper Games to your home screen and it opens full-screen like an app. After the first visit every game works offline.</p>
+  <details class="install" id="install">
+    <summary>Install on your phone</summary>
+    <p>Add Paper Games to your home screen and it opens full-screen like an app. After the first visit every game works offline.</p>
     <button class="btn primary" id="installBtn" type="button" hidden>Install app</button>
     <div class="howto">
       <section id="howIos">
@@ -147,112 +191,162 @@
         </ol>
       </section>
     </div>
-  </aside>
+  </details>
+  <p class="foot">Your progress and stats stay on this device.</p>
 </main>
 
-<script src="words.js"></script>
-<script src="fivewords.js"></script>
+<script src="trail-daily.js"></script>
+<script src="chess-core.js"></script>
 <script src="chess-pieces.js"></script>
 <script>
 'use strict';
+const $ = id => document.getElementById(id);
 const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } };
-const fmt = s => { const m = Math.floor(s/60), x = s%60; return String(m).padStart(2,'0') + ':' + String(x).padStart(2,'0'); };
-const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
+const fmt = ms => { const s = Math.floor(ms / 1000), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
+const today = new Date(), midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+const dayFrom = (y, m, d) => Math.round((midnight - new Date(y, m, d)) / 864e5);
+const fiveDay = dayFrom(2026, 9, 14), trailDay = dayFrom(2026, 9, 16);
+const svg = (vb, body) => `<svg viewBox="${vb}" aria-hidden="true">${body}</svg>`;
+const setBar = (id, frac) => { const b = $(id); b.hidden = false; b.firstElementChild.style.width = Math.round(100 * Math.min(1, frac)) + '%'; };
+const badge = el => el.insertAdjacentHTML('afterbegin', '<span class="done-badge" aria-label="Done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>');
 
-// Mini sudoku box drawing
+// ---- Five Letters: today's board as colors only (no spoilers) ----
+let fiveDone = false;
 (function(){
-  const g = document.getElementById('mini'), cells = [[5,'g'],[0],[3,'p'],[0],[7,'g'],[0],[8,'p'],[0],[1,'g']];
-  let s = '';
-  for (let k = 1; k < 3; k++) s += `<line class="g-line" x1="${5+k*30}" y1="5" x2="${5+k*30}" y2="95"/><line class="g-line" x1="5" y1="${5+k*30}" x2="95" y2="${5+k*30}"/>`;
-  cells.forEach(([d, t], i) => { if (!d) return; const x = 20 + (i%3)*30, y = 26 + Math.floor(i/3)*30; s += `<text x="${x}" y="${y}" text-anchor="middle" class="${t === 'g' ? 'g-given' : 'g-pencil'}">${d}</text>`; });
-  g.innerHTML = s;
-})();
-
-// Hangman status
-(function(){
-  const st = get('hangman-stats', {}), game = get('hangman-game', null);
-  const total = Object.values(window.HANGMAN_WORDS || {}).reduce((n, s) => n + s.trim().split(/\s+/).length, 0);
-  const out = [];
-  if (game && game.word) out.push(chip('Word in progress', true));
-  if (st.w || st.l) out.push(chip(`${st.w || 0} won`), chip(`streak ${st.s || 0}`));
-  else out.push(chip(`${total.toLocaleString()} words`), chip(`${Object.keys(window.HANGMAN_WORDS || {}).length} categories`));
-  document.getElementById('hNow').innerHTML = out.join('');
-})();
-
-// Sudoku status
-(function(){
-  const g = get('sudoku-game', null), st = get('sudoku-stats', {}), out = [];
-  const names = { easy:'Easy', medium:'Medium', hard:'Hard', expert:'Expert' };
-  if (g && g.puzzle && !g.done) out.push(chip(`Continue ${names[g.level]} #${g.idx + 1} · ${fmt(Math.floor((g.elapsed || 0)/1000))}`, true));
-  const solved = Object.values(st).reduce((n, s) => n + ((s.done && s.done.length) || 0), 0);
-  out.push(chip(solved ? `${solved} solved` : 'Easy · Medium · Hard · Expert'));
-  document.getElementById('sNow').innerHTML = out.join('');
-})();
-
-// Five Letters status + mini board
-(function(){
-  const rows = [['pence','aaapa'],['storm','acaaa'],['tiger','pccaa'],['',''],['','']];
-  const cls = { c:'t-c', p:'t-p', a:'t-a' }; let s = '';
-  rows.slice(0,4).forEach(([w, r], y) => { for (let x = 0; x < 5; x++){
-    const X = 6 + x*18, Y = 14 + y*18;
-    s += w ? `<rect x="${X}" y="${Y}" width="16" height="16" rx="2.5" class="${cls[r[x]]}"/><text x="${X+8}" y="${Y+12}" text-anchor="middle" class="t-l">${w[x]}</text>` : `<rect x="${X}" y="${Y}" width="16" height="16" rx="2.5" class="t-e"/>`; } });
-  document.getElementById('tiles').innerHTML = s;
-  const day = Math.round((new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) - new Date(2026, 9, 14)) / 864e5);
-  const d = get('five-daily', null), st = get('five-stats', {}), out = [];
-  if (d && d.day === day && d.done) out.push(chip(d.won ? `No. ${day + 1} solved in ${d.guesses.length}` : `No. ${day + 1} missed`));
-  else out.push(chip(`Play daily No. ${day + 1}`, true));
-  if (st.daily && st.daily.cur) out.push(chip(`streak ${st.daily.cur}`));
-  document.getElementById('fNow').innerHTML = out.join('');
-})();
-
-// Chess status + mini board
-(function(){
-  let s = '';
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) s += `<rect x="${8 + c*28}" y="${8 + r*28}" width="28" height="28" class="${(r + c) % 2 ? 'c-d' : 'c-l'}"/>`;
-  s += '<rect x="8" y="8" width="84" height="84" class="c-b" rx="2"/>';
-  const put = (svg, x, y) => svg.replace('<svg ', `<svg x="${x}" y="${y}" width="28" height="28" `);
-  s += put(ChessPieces.pieceSVG('n', 'w'), 36, 36) + put(ChessPieces.pieceSVG('k', 'b'), 64, 8) + put(ChessPieces.pieceSVG('p', 'w'), 8, 64) + put(ChessPieces.pieceSVG('q', 'b'), 8, 8);
-  document.getElementById('chessMini').innerHTML = s;
-  const g = get('chess-game', null), st = get('chess-stats', {}), out = [];
-  if (g && Array.isArray(g.moves) && g.moves.length && !g.over) out.push(chip(`Continue · move ${Math.floor(g.moves.length / 2) + 1}`, true));
-  const wins = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
-  out.push(chip(wins ? `${wins} win${wins > 1 ? 's' : ''} vs computer` : 'Beginner to Expert'));
-  document.getElementById('cNow').innerHTML = out.join('');
-})();
-
-// Word Trail status + mini grid
-(function(){
-  const on = [0, 1, 2, 3], done = [9, 14]; let s = '';
-  for (let i = 0; i < 16; i++){
-    const x = 6 + (i % 4) * 22.5, y = 6 + Math.floor(i / 4) * 22.5, cls = on.includes(i) ? 'tr-on' : done.includes(i) ? 'tr-d' : 'tr-t';
-    s += `<rect x="${x}" y="${y}" width="20" height="20" rx="3.5" class="${cls}"/><text x="${x + 10}" y="${y + 14.5}" text-anchor="middle" class="tr-l ${cls === 'tr-t' ? 'lt' : 'dark'}">${'wordtrailspenkey'[i]}</text>`;
+  const d = get('five-daily', null), playing = d && d.day === fiveDay;
+  const score = (g, a) => { const r = Array(5).fill('absent'), left = {};
+    for (let i = 0; i < 5; i++){ if (g[i] === a[i]) r[i] = 'correct'; else left[a[i]] = (left[a[i]] || 0) + 1; }
+    for (let i = 0; i < 5; i++) if (r[i] !== 'correct' && left[g[i]] > 0){ r[i] = 'present'; left[g[i]]--; } return r; };
+  let body = '';
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
+    const x = c * 21 + 2, y = r * 21 + 2, g = playing && d.guesses[r];
+    body += g ? `<rect x="${x}" y="${y}" width="18" height="18" rx="3.5" class="f-${score(g, d.answer)[c]}"/>` : `<rect x="${x + .8}" y="${y + .8}" width="16.4" height="16.4" rx="3" class="f-empty"/>`;
   }
-  const c = i => [6 + (i % 4) * 22.5 + 10, 6 + Math.floor(i / 4) * 22.5 + 10].join(',');
-  s += `<polyline class="tr-line" points="${on.map(c).join(' ')}"/>`;
-  document.getElementById('trailMini').innerHTML = s;
-  const day = Math.round((new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) - new Date(2026, 9, 16)) / 864e5);
-  const d = get('trail-daily', null), stt = get('trail-stats', {}), out = [];
-  if (d && d.day === day && d.done) out.push(chip(`No. ${day + 1} complete`));
-  else if (d && d.day === day && d.found && d.found.length) out.push(chip(`No. ${day + 1} · ${d.found.length} words found`, true));
-  else out.push(chip(`Play daily No. ${day + 1}`, true));
-  if (stt.daily && stt.daily.cur) out.push(chip(`streak ${stt.daily.cur}`));
-  document.getElementById('tNow').innerHTML = out.join('');
+  $('artFive').innerHTML = svg('0 0 107 128', body);
+  const st = get('five-stats', {}).daily;
+  if (playing && d.done){
+    fiveDone = true; badge($('tFive'));
+    $('sFive').innerHTML = d.won ? `No. ${fiveDay + 1} solved in <b>${d.guesses.length}</b>` : `No. ${fiveDay + 1}: not this time`;
+    $('cFive').textContent = 'See stats'; $('cFive').classList.add('ghost');
+  } else if (playing && d.guesses.length){
+    $('sFive').innerHTML = `No. ${fiveDay + 1}, <b>${6 - d.guesses.length}</b> guess${6 - d.guesses.length > 1 ? 'es' : ''} left`;
+    $('cFive').textContent = 'Continue';
+  } else $('sFive').innerHTML = `No. ${fiveDay + 1} is ready`;
 })();
 
-// Install help: hide once installed, show this device's steps first, offer Chrome's one-tap install when available
+// ---- Word Trail: today's grid, letters only ----
+let trailDone = false;
+(function(){
+  const grids = (window.TRAIL_DAILY || '').match(/.{16}/g) || [], grid = grids.length ? grids[((trailDay % grids.length) + grids.length) % grids.length] : '';
+  const d = get('trail-daily', null), playing = d && d.day === trailDay;
+  let body = '';
+  for (let i = 0; i < 16; i++){
+    const x = (i % 4) * 36 + 2, y = Math.floor(i / 4) * 36 + 2, done = playing && d.done;
+    body += `<rect x="${x}" y="${y}" width="32" height="32" rx="6" class="tr-tile${done ? ' on' : ''}"/><text x="${x + 16}" y="${y + 21}" class="tr-l${done ? ' on' : ''}" style="font-size:15px">${grid[i] || ''}</text>`;
+  }
+  $('artTrail').innerHTML = svg('0 0 146 146', body);
+  if (playing && d.done){
+    trailDone = true; badge($('tTrail'));
+    $('sTrail').innerHTML = `No. ${trailDay + 1} complete in <b>${fmt(d.elapsed || 0)}</b>`;
+    $('cTrail').textContent = 'See stats'; $('cTrail').classList.add('ghost');
+  } else if (playing && d.found && d.found.length){
+    $('sTrail').innerHTML = `<b>${d.found.length}</b>${d.total ? ` of ${d.total}` : ''} words found`;
+    if (d.total) setBar('bTrail', d.found.length / d.total);
+    $('cTrail').textContent = 'Continue';
+  } else $('sTrail').innerHTML = `No. ${trailDay + 1} is ready`;
+})();
+
+// ---- Sudoku: the saved board ----
+(function(){
+  const g = get('sudoku-game', null), names = { easy: 'Easy', medium: 'Medium', hard: 'Hard', expert: 'Expert' };
+  let body = '';
+  for (let i = 0; i < 81; i++){
+    const r = (i / 9) | 0, c = i % 9, x = c * 10.6 + Math.floor(c / 3) * 1.6 + 1, y = r * 10.6 + Math.floor(r / 3) * 1.6 + 1;
+    let cls = 'su-empty';
+    if (g && g.puzzle){ if (g.puzzle[i]) cls = 'su-given'; else if (g.values && g.values[i]) cls = 'su-user'; }
+    else if ((i * 7 + 3) % 5 === 0) cls = 'su-given';
+    body += `<rect x="${x}" y="${y}" width="9.2" height="9.2" rx="1.6" class="${cls}"/>`;
+  }
+  $('artSudoku').innerHTML = svg('0 0 100 100', body);
+  if (g && g.puzzle && !g.done){
+    const blanks = g.puzzle.filter(v => !v).length, filled = g.values ? g.values.filter((v, i) => v && !g.puzzle[i]).length : 0;
+    $('sSudoku').innerHTML = `${names[g.level] || ''} #${g.idx + 1}, <b>${fmt(g.elapsed || 0)}</b> so far`;
+    setBar('bSudoku', blanks ? filled / blanks : 0);
+    $('cSudoku').textContent = 'Continue';
+  } else {
+    const st = get('sudoku-stats', {}), solved = Object.values(st).reduce((n, s) => n + ((s.done && s.done.length) || 0), 0);
+    $('sSudoku').innerHTML = solved ? `<b>${solved}</b> solved. 4,000 puzzles from Easy to Expert` : '4,000 puzzles from Easy to Expert';
+  }
+})();
+
+// ---- Chess: the current position ----
+(function(){
+  const g = get('chess-game', null), C = window.Chess, P = window.ChessPieces;
+  let pos = null;
+  try { pos = g && Array.isArray(g.moves) ? C.Position.fromMoves(C.START, g.moves) : new C.Position(); } catch(e){ pos = C ? new C.Position() : null; }
+  let body = '';
+  const flip = g && g.mode === 'ai' && g.human === 1;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++){
+    const x = c * 12.5, y = r * 12.5, rank = flip ? r : 7 - r, file = flip ? 7 - c : c, s = rank * 16 + file;
+    body += `<rect x="${x}" y="${y}" width="12.5" height="12.5" class="${(rank + file) % 2 ? 'ch-l' : 'ch-d'}"/>`;
+    const p = pos && pos.b[s];
+    if (p) body += P.pieceSVG(' pnbrqk'[p & 7], p >> 3 ? 'b' : 'w').replace('<svg ', `<svg x="${x}" y="${y}" width="12.5" height="12.5" `);
+  }
+  $('artChess').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="cb"><rect width="100" height="100" rx="6"/></clipPath><g clip-path="url(#cb)">${body}</g></svg>`;
+  const levels = ['', 'Beginner', 'Casual', 'Intermediate', 'Advanced', 'Expert'];
+  if (g && g.moves && g.moves.length && !g.over){
+    const who = g.mode === 'two' ? 'Two players' : `vs ${levels[g.level]}`;
+    $('sChess').innerHTML = `${who}, move <b>${Math.floor(g.moves.length / 2) + 1}</b>`;
+    $('cChess').textContent = 'Continue';
+  } else {
+    const st = get('chess-stats', {}), w = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
+    $('sChess').innerHTML = w ? `<b>${w}</b> win${w > 1 ? 's' : ''} against the computer` : 'Play the computer or a friend';
+  }
+})();
+
+// ---- Hangman: the drawing so far ----
+(function(){
+  const g = get('hangman-game', null), st = get('hangman-stats', {});
+  let wrong = 0;
+  if (g && g.word) wrong = (g.guessed || []).filter(c => !g.word.includes(c)).length + (g.hinted || []).length;
+  const parts = ['<circle cx="70" cy="34" r="9" class="a-line"/>', '<path d="M70 43v24" class="a-line"/>', '<path d="M70 50l-10 10" class="a-line"/>', '<path d="M70 50l10 10" class="a-line"/>', '<path d="M70 67l-8 14" class="a-line"/>', '<path d="M70 67l8 14" class="a-line"/>'];
+  const ghost = ['<circle cx="70" cy="34" r="9" class="a-soft"/>', '<path d="M70 43v24M70 50l-10 10M70 50l10 10M70 67l-8 14M70 67l8 14" class="a-soft"/>'];
+  let body = '<path d="M14 92h46M28 92V10h42v15M28 26l14-16" class="a-line"/>';
+  body += wrong ? parts.slice(0, wrong).join('') : ghost.join('');
+  $('artHang').innerHTML = svg('0 0 100 100', body);
+  if (g && g.word){
+    $('sHang').innerHTML = `A word in progress, <b>${6 - wrong}</b> guess${6 - wrong === 1 ? '' : 'es'} left`;
+    $('cHang').textContent = 'Continue';
+  } else $('sHang').innerHTML = st.w ? `<b>${st.w}</b> won, best streak ${st.b || 0}` : '1,335 words in 22 categories';
+})();
+
+// ---- Header: streak and greeting ----
+(function(){
+  const live = (s, day) => s && s.cur && (s.last === day || s.last === day - 1) ? s.cur : 0;
+  const n = Math.max(live((get('five-stats', {}) || {}).daily, fiveDay), live((get('trail-stats', {}) || {}).daily, trailDay));
+  $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
+  $('streak').setAttribute('aria-label', `${n}-day streak`);
+  const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail'].filter(Boolean);
+  $('greet').innerHTML = `${part}. ` + (left.length === 2 ? 'Two daily puzzles are waiting.' : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'Both daily puzzles are done. See you tomorrow.');
+})();
+
+// ---- Install help: hide once installed, show this device's steps first, one-tap install where Chrome offers it ----
 (function(){
   const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  if (installed){ document.getElementById('install').hidden = true; return; }
+  if (installed){ $('install').hidden = true; return; }
   const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
   const mine = ios ? 'howIos' : android ? 'howAndroid' : null;
-  if (mine){ const el = document.getElementById(mine); el.classList.add('mine'); el.querySelector('h4').insertAdjacentHTML('beforeend', '<span class="you">this device</span>'); }
-  let deferred = null; const btn = document.getElementById('installBtn');
-  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; btn.hidden = false; });
+  if (mine){ const el = $(mine); el.classList.add('mine'); el.querySelector('h4').insertAdjacentHTML('beforeend', '<span class="you">this device</span>'); $('install').open = true; }
+  let deferred = null; const btn = $('installBtn');
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; btn.hidden = false; $('install').open = true; });
   btn.addEventListener('click', async () => { if (!deferred) return; deferred.prompt(); try{ await deferred.userChoice; }catch(e){} deferred = null; btn.hidden = true; });
-  addEventListener('appinstalled', () => { document.getElementById('install').hidden = true; });
+  addEventListener('appinstalled', () => { $('install').hidden = true; });
 })();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// Refresh tiles when returning to the hub (e.g. back from a game)
+addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 </script>
 </body>
 </html>
