@@ -31,20 +31,23 @@ function neighbors(size) {
   return n;
 }
 
-// Every word (4-8 letters) that can be traced in the grid. Returns Map word -> Set of tiles on any of its paths.
+// Every word (4-8 letters) that can be traced in the grid. Returns Map word -> Set of tiles on any of its paths;
+// .starts maps word -> Set of tiles where one of its paths begins.
 function solve(grid, size, dict) {
-  const nb = neighbors(size), found = new Map(), used = new Uint8Array(size * size), path = [];
+  const nb = neighbors(size), found = new Map(), starts = new Map(), used = new Uint8Array(size * size), path = [];
   const dfs = (i, w) => {
     used[i] = 1; path.push(i);
     const word = w + grid[i];
     if (word.length >= 4 && dict.set.has(word)) {
       let s = found.get(word); if (!s) found.set(word, s = new Set());
       for (const t of path) s.add(t);
+      (starts.get(word) || starts.set(word, new Set()).get(word)).add(path[0]);
     }
     if (word.length < 8 && hasPrefix(dict.words, word)) for (const j of nb[i]) if (!used[j]) dfs(j, word);
     used[i] = 0; path.pop();
   };
   for (let i = 0; i < size * size; i++) dfs(i, '');
+  found.starts = starts; // word -> Set of tiles a path can begin on
   return found;
 }
 
@@ -93,8 +96,10 @@ function analyze(gridStr, dict) {
   const size = Math.round(Math.sqrt(gridStr.length)), g = gridStr.split(''), all = solve(g, size, dict);
   const targets = [], bonus = [];
   for (const w of [...all.keys()].sort((a, b) => a.length - b.length || (a < b ? -1 : 1))) (dict.targets.has(w) ? targets : bonus).push(w);
-  const tiles = {}; for (const [w, s] of all) tiles[w] = [...s];
-  return { size, grid: g, targets, bonus, tiles };
+  const tiles = {}, start = {};
+  for (const [w, s] of all){ tiles[w] = [...s]; start[w] = Math.min(...all.starts.get(w)); }
+  // tiles[w]: every tile the word can use; start[w]: the one tile it is counted on (lowest index that can begin it)
+  return { size, grid: g, targets, bonus, tiles, start };
 }
 
 const api = { decode, solve, generate, analyze, neighbors, mulberry, RULES };

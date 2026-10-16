@@ -134,7 +134,7 @@
       <li><b>Swipe</b> through neighboring letters to spell a word, in any direction, diagonals included. You can also tap letters one at a time, then tap the last letter again to enter the word.</li>
       <li>Words need <b>4 or more letters</b> and can't reuse a tile.</li>
       <li>Find every <b>target word</b> to finish the grid. Targets are everyday words. Plurals, other word forms and rarer words still count as <b>bonus words</b>.</li>
-      <li>The small number on each tile shows how many target words still pass through it. When it reaches zero, the tile is inked in.</li>
+      <li>The small number on a tile shows how many target words still to find <b>start</b> there. A tile is inked in once every target word that uses it has been found.</li>
     </ol>
     <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
     <p>A new daily grid starts at midnight. Practice gives you as many fresh grids as you like, in 4×4 or 5×5.</p>
@@ -221,14 +221,17 @@ function build(){
   svg.setAttribute('class', 'trailLayer'); svg.setAttribute('viewBox', `0 0 ${P.size * 10} ${P.size * 10}`); svg.id = 'trailLayer';
   g.appendChild(svg);
 }
-function remainingOn(i){ let n = 0; for (const w of P.targets) if (!S.found.includes(w) && P.tiles[w].includes(i)) n++; return n; }
+// Number shown on a tile: unfound target words that start there (each word counted on exactly one tile, so the numbers add up to the words left).
+function startsOn(i){ let n = 0; for (const w of P.targets) if (!S.found.includes(w) && P.start[w] === i) n++; return n; }
+// A tile is inked in once no unfound target word can pass through it.
+function stillNeeded(i){ for (const w of P.targets) if (!S.found.includes(w) && P.tiles[w].includes(i)) return true; return false; }
 function render(){
   const found = new Set(S.found);
   tiles.forEach((t, i) => {
-    const n = remainingOn(i);
-    t.className = 'tile' + (n === 0 ? ' done' : '') + (path.includes(i) ? ' on' : '') + (hintTile() === i ? ' hint' : '');
+    const n = startsOn(i), needed = stillNeeded(i);
+    t.className = 'tile' + (needed ? '' : ' done') + (path.includes(i) ? ' on' : '') + (hintTile() === i ? ' hint' : '');
     t.lastChild.textContent = n || '';
-    t.setAttribute('aria-label', P.grid[i].toUpperCase() + (n ? `, ${n} word${n > 1 ? 's' : ''} left` : ', finished'));
+    t.setAttribute('aria-label', P.grid[i].toUpperCase() + (!needed ? ', finished' : n ? `, ${n} word${n > 1 ? 's' : ''} start here` : ''));
   });
   drawTrail();
   const total = P.targets.length, got = P.targets.filter(w => found.has(w)).length;
@@ -240,13 +243,7 @@ function render(){
 function hintTile(){
   const w = S.hints.find(h => !S.found.includes(h));
   if (!w) return -1;
-  return firstTile(w);
-}
-function firstTile(word){ // a start tile for one valid path of the word
-  const nb = Trail.neighbors(P.size), g = P.grid;
-  const go = (i, k, used) => { if (g[i] !== word[k]) return false; if (k === word.length - 1) return true; used.add(i); for (const j of nb[i]) if (!used.has(j) && go(j, k + 1, used)) return true; used.delete(i); return false; };
-  for (let i = 0; i < g.length; i++) if (go(i, 0, new Set())) return i;
-  return -1;
+  return P.start[w]; // the same tile the word is counted on
 }
 function drawTrail(){
   const pts = path.map(i => `${(i % P.size) * 10 + 5},${Math.floor(i / P.size) * 10 + 5}`).join(' ');
@@ -303,7 +300,7 @@ $('grid').addEventListener('pointerdown', e => {
   try { $('grid').setPointerCapture(e.pointerId); } catch(_){}
   dragging = true; moved = false; downTile = i; lastFeedback = null;
   if (tapMode && path.length){
-    if (i === path[path.length - 1]){ dragging = false; return submit(); }
+    if (i === path[path.length - 1]){ dragging = false; if (path.length === 1){ path = []; tapMode = false; return render(); } return submit(); }
     if (path.includes(i)){ path = path.slice(0, path.indexOf(i) + 1); render(); return; }
     if (adjacent(path[path.length - 1], i)){ path.push(i); render(); return; }
   }
