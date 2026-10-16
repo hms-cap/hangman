@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters and Chess on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess and Word Trail on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -70,6 +70,17 @@ A five-letter word-guessing game in the style of Wordle.
 - The engine is written for this app: alpha-beta search with a transposition table, quiescence search, null-move pruning and late-move reductions. It runs in a Web Worker so the board never freezes. The move generator passes the standard perft test positions.
 - Original pencil-outline piece set drawn for this app
 
+### Word Trail
+A letter-grid word search in the style of Squares.
+- Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
+- Find every target word to finish the grid; each tile shows how many target words still pass through it, and inks in at zero
+- Target words are everyday words (5,843 hand-reviewed); 53,000+ other words from the Hunspell dictionary count as bonus words
+- **Daily** grid (No. 1 = 16 Oct 2026; 730 pre-made grids), the same for everyone, with streaks and a countdown
+- **Practice**: unlimited fresh 4×4 or 5×5 grids made on the phone
+- Every grid is checked so all tiles are covered by target words and at least one longer word is hidden
+- Hints outline the first tile of a word and show its first two letters
+- Share your result, saves progress
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -78,6 +89,7 @@ A five-letter word-guessing game in the style of Wordle.
 | `sudoku.html`, `puzzles.js` | Sudoku game and puzzle set |
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; piece drawings |
+| `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

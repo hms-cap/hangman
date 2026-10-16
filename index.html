@@ -58,6 +58,7 @@
 .c-l{fill:var(--sheet)}.c-d{fill:var(--line)}.c-b{fill:none;stroke:var(--ink);stroke-width:2}
 .game #chessMini svg{width:28px;height:28px}
 #chessMini .pb{stroke-width:1.5;stroke-linejoin:round}#chessMini .w .pb{fill:#fbfbf6;stroke:#1d262d}#chessMini .b .pb{fill:#27323b;stroke:#10171c}#chessMini .pl{fill:none;stroke-width:1.3}#chessMini .w .pl{stroke:#1d262d}#chessMini .b .pl{stroke:#e9eef2}#chessMini .px{fill:none;stroke-width:2.3}#chessMini .w .px{stroke:#1d262d}
+.tr-t{fill:var(--key);stroke:var(--key-edge);stroke-width:1.5}.tr-d{fill:var(--ink)}.tr-on{fill:var(--hit)}.tr-l{font-family:var(--mono);font-weight:700;font-size:13px;text-transform:uppercase}.tr-l.dark{fill:var(--paper)}.tr-l.lt{fill:var(--ink)}.tr-line{fill:none;stroke:var(--hit);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
 .foot{color:var(--muted);font-size:.82rem;line-height:1.5;text-align:center;margin:0;text-wrap:balance}
 </style>
 </head>
@@ -65,7 +66,7 @@
 <main class="app">
   <div class="masthead">
     <h1>Paper Games</h1>
-    <p>Four pencil-and-paper games. Your progress stays on this device.</p>
+    <p>Five pencil-and-paper games. Your progress stays on this device.</p>
   </div>
 
   <nav class="games">
@@ -110,6 +111,16 @@
         <h2>Chess</h2>
         <p class="about">Play the computer at five strengths, from Beginner to Expert, or pass the phone to a friend.</p>
         <div class="now" id="cNow"></div>
+      </div>
+    </a>
+    <a class="game" href="trail.html">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g id="trailMini"></g>
+      </svg>
+      <div>
+        <h2>Word Trail</h2>
+        <p class="about">Swipe through a grid of letters to find every hidden word. A new grid every day, plus practice.</p>
+        <div class="now" id="tNow"></div>
       </div>
     </a>
   </nav>
@@ -207,6 +218,25 @@ const chip = (t, go) => `<span class="chip${go ? ' go' : ''}">${t}</span>`;
   const wins = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
   out.push(chip(wins ? `${wins} win${wins > 1 ? 's' : ''} vs computer` : 'Beginner to Expert'));
   document.getElementById('cNow').innerHTML = out.join('');
+})();
+
+// Word Trail status + mini grid
+(function(){
+  const on = [0, 1, 2, 3], done = [9, 14]; let s = '';
+  for (let i = 0; i < 16; i++){
+    const x = 6 + (i % 4) * 22.5, y = 6 + Math.floor(i / 4) * 22.5, cls = on.includes(i) ? 'tr-on' : done.includes(i) ? 'tr-d' : 'tr-t';
+    s += `<rect x="${x}" y="${y}" width="20" height="20" rx="3.5" class="${cls}"/><text x="${x + 10}" y="${y + 14.5}" text-anchor="middle" class="tr-l ${cls === 'tr-t' ? 'lt' : 'dark'}">${'wordtrailspenkey'[i]}</text>`;
+  }
+  const c = i => [6 + (i % 4) * 22.5 + 10, 6 + Math.floor(i / 4) * 22.5 + 10].join(',');
+  s += `<polyline class="tr-line" points="${on.map(c).join(' ')}"/>`;
+  document.getElementById('trailMini').innerHTML = s;
+  const day = Math.round((new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()) - new Date(2026, 9, 16)) / 864e5);
+  const d = get('trail-daily', null), stt = get('trail-stats', {}), out = [];
+  if (d && d.day === day && d.done) out.push(chip(`No. ${day + 1} complete`));
+  else if (d && d.day === day && d.found && d.found.length) out.push(chip(`No. ${day + 1} · ${d.found.length} words found`, true));
+  else out.push(chip(`Play daily No. ${day + 1}`, true));
+  if (stt.daily && stt.daily.cur) out.push(chip(`streak ${stt.daily.cur}`));
+  document.getElementById('tNow').innerHTML = out.join('');
 })();
 
 // Install help: hide once installed, show this device's steps first, offer Chrome's one-tap install when available

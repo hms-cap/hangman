@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Word Trail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+.app{gap:9px}
+.icons{display:flex;gap:2px;justify-self:end}
+.icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.85rem}
+@media (max-width:440px){.back .txt{display:none}}
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted)}
+.mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+
+.progress{display:flex;align-items:center;gap:10px}
+.meter{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--correct);border-radius:999px;transition:width .3s}
+.progress .count{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.progress .count b{font-weight:600}
+.chipBtn{border:1px solid var(--line);background:var(--key);border-radius:999px;padding:5px 11px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink);white-space:nowrap}
+.chipBtn:disabled{opacity:.4;cursor:default}
+
+.current{position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;gap:10px}
+.current .w{font-family:var(--mono);font-weight:700;font-size:1.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--hit)}
+.current .w.good{color:var(--correct)} .current .w.bonus{color:var(--present)} .current .w.bad{color:var(--miss)}
+.current .msg{font-family:var(--hand);font-size:1.4rem;color:var(--muted)}
+.current .msg.good{color:var(--correct)} .current .msg.bonus{color:var(--present)} .current .msg.bad{color:var(--miss)}
+.current .acts{display:flex;gap:6px}
+.current .acts button{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--ink);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.current .acts button.ok{background:var(--ink);color:var(--paper)}
+.current .acts svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.gridWrap{display:flex;justify-content:center}
+.grid{
+  position:relative;width:min(100%,46vh,380px);aspect-ratio:1;container-type:inline-size;touch-action:none;
+  display:grid;gap:2.4cqw;
+}
+.tile{
+  position:relative;border-radius:2.6cqw;background:var(--key);border:1.5px solid var(--key-edge);border-bottom-width:3px;
+  display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;contain:strict;transition:background .25s,color .25s;
+}
+.tile .l{font-family:var(--mono);font-weight:700;text-transform:uppercase;line-height:1;pointer-events:none}
+.grid.s4 .tile .l{font-size:10.5cqw} .grid.s5 .tile .l{font-size:8.6cqw}
+.tile .n{position:absolute;top:5%;right:8%;font-family:var(--mono);font-size:3.2cqw;font-weight:600;color:var(--muted);pointer-events:none;font-variant-numeric:tabular-nums}
+.grid.s5 .tile .n{font-size:2.8cqw}
+.tile.done{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.tile.done .n{display:none}
+.tile.on{background:var(--hit);border-color:var(--hit);color:var(--paper)}
+.tile.on .n{color:var(--paper);opacity:.7}
+.tile.hint{box-shadow:0 0 0 3px var(--present)}
+.trailLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.trailLayer polyline{fill:none;stroke:var(--hit);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.45}
+
+.words{flex:1 1 auto;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:4px;-webkit-user-select:none}
+.group h3{margin:0 0 5px;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
+.group .list{display:flex;flex-wrap:wrap;gap:5px}
+.word{font-family:var(--mono);font-size:.84rem;font-weight:600;text-transform:uppercase;padding:3px 8px;border-radius:6px;background:var(--peer);border:1px solid var(--line);letter-spacing:.04em}
+.word.blank{color:var(--muted);font-weight:500;letter-spacing:.12em;background:transparent;border-style:dashed}
+.word.new{animation:pop .4s ease-out}
+.bonusList .word{background:transparent;color:var(--muted);font-weight:500}
+@keyframes pop{0%{transform:scale(.7);opacity:0}100%{transform:none;opacity:1}}
+
+.howto ol{margin:0;padding-left:1.15em;line-height:1.5;color:var(--muted)}
+.howto ol b{color:var(--ink)}
+.demo{display:grid;grid-template-columns:repeat(3,44px);gap:5px;justify-content:center}
+.demo span{height:44px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;background:var(--key);border:1px solid var(--key-edge);position:relative}
+.demo span.on{background:var(--hit);color:var(--paper);border-color:var(--hit)}
+.demo span.done{background:var(--ink);color:var(--paper)}
+.demo span i{position:absolute;top:2px;right:4px;font-size:.6rem;font-style:normal;color:var(--muted)}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.3rem;font-weight:500;font-variant-numeric:tabular-nums}
+.shareText{font-family:var(--mono);white-space:pre;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;font-size:.9rem}
+.seg2{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.seg2 button{border:0;background:transparent;border-radius:9px;padding:8px 2px;font-weight:600;font-size:.9rem;cursor:pointer;color:var(--muted)}
+.seg2 button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.loading{display:flex;align-items:center;justify-content:center;font-family:var(--hand);font-size:1.4rem;color:var(--muted)}
+@media (max-height:680px){.grid{width:min(100%,40vh,380px)} .current{min-height:38px} .current .w{font-size:1.4rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Word Trail</h1>
+    <div class="icons">
+      <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
+      <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="mode" id="mode">
+    <button type="button" data-m="daily" aria-pressed="true">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="practice" aria-pressed="false">Practice</button>
+  </div>
+
+  <div class="progress">
+    <div class="count" id="count"></div>
+    <div class="meter"><i id="meter"></i></div>
+    <button class="chipBtn" id="hintBtn" type="button">Hint</button>
+    <button class="chipBtn" id="newBtn" type="button" hidden>New grid</button>
+  </div>
+
+  <div class="current" id="current" aria-live="polite"></div>
+
+  <div class="gridWrap"><div class="grid" id="grid" role="grid" aria-label="Letter grid"><div class="loading">Loading words…</div></div></div>
+
+  <div class="words" id="words"></div>
+</div>
+
+<div class="sheet" id="helpSheet" hidden>
+  <div class="panel howto" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">How to play</h2>
+    <ol>
+      <li><b>Swipe</b> through neighboring letters to spell a word, in any direction, diagonals included. You can also tap letters one at a time, then tap the last letter again to enter the word.</li>
+      <li>Words need <b>4 or more letters</b> and can't reuse a tile.</li>
+      <li>Find every <b>target word</b> to finish the grid. Targets are everyday words. Plurals, other word forms and rarer words still count as <b>bonus words</b>.</li>
+      <li>The small number on each tile shows how many target words still pass through it. When it reaches zero, the tile is inked in.</li>
+    </ol>
+    <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
+    <p>A new daily grid starts at midnight. Practice gives you as many fresh grids as you like, in 4×4 or 5×5.</p>
+    <button class="btn primary" id="helpClose" type="button">Start</button>
+  </div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Statistics</h2>
+    <p id="result"></p>
+    <div class="stats4" id="stats4"></div>
+    <div id="after"></div>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="newSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="newTitle">
+    <h2 id="newTitle">New practice grid</h2>
+    <div class="seg2" id="sizeSeg"><button type="button" data-s="4">4 × 4</button><button type="button" data-s="5">5 × 5</button></div>
+    <p id="sizeNote"></p>
+    <button class="btn primary" id="newGo" type="button">Make a grid</button>
+    <button class="btn" id="newCancel" type="button">Keep this grid</button>
+  </div>
+</div>
+
+<script src="trailwords.js"></script>
+<script src="trail-daily.js"></script>
+<script src="trail-core.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const DICT = Trail.decode(window.TRAIL_WORDS);
+const DAILY = window.TRAIL_DAILY.match(/.{16}/g);
+const EPOCH = new Date(2026, 9, 16);
+const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
+const PRAISE = { 4: ['Good', 'Nice', 'Got it'], 5: ['Great', 'Nice one'], 6: ['Excellent', 'Superb'], 7: ['Brilliant!', 'Wonderful!'], 8: ['Outstanding!', 'Incredible!'] };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let mode = store.get('trail-mode', 'daily');
+let stats = store.get('trail-stats', {});
+const st = m => (stats[m] ||= { played: 0, done: 0, cur: 0, max: 0, last: null, best: null, bonus: 0 });
+let S = null, P = null; // S = saved progress, P = analyzed puzzle
+let path = [], tapMode = false, dragging = false, lastFeedback = null;
+
+// ---- puzzle state ----
+function loadMode(m){
+  mode = m; store.set('trail-mode', m);
+  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
+  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+  $('newBtn').hidden = m !== 'practice';
+  if (m === 'daily'){
+    const day = dayIndex(), grid = DAILY[((day % DAILY.length) + DAILY.length) % DAILY.length];
+    S = store.get('trail-daily', null);
+    if (!S || S.day !== day) S = { day, grid, found: [], bonus: [], hints: [], elapsed: 0, done: false };
+  } else {
+    S = store.get('trail-practice', null);
+    if (!S || !S.grid) S = practiceGrid(4);
+  }
+  P = Trail.analyze(S.grid, DICT);
+  path = []; tapMode = false; lastFeedback = null;
+  build(); render(); save();
+}
+function practiceGrid(size){
+  const r = Trail.generate(size, DICT, Math.random);
+  return { grid: r.grid, found: [], bonus: [], hints: [], elapsed: 0, done: false };
+}
+const save = () => store.set(mode === 'daily' ? 'trail-daily' : 'trail-practice', S);
+
+// ---- grid DOM ----
+let tiles = [];
+function build(){
+  const g = $('grid'); g.innerHTML = '';
+  g.className = 'grid s' + P.size;
+  g.style.gridTemplateColumns = g.style.gridTemplateRows = `repeat(${P.size}, minmax(0, 1fr))`;
+  tiles = P.grid.map((ch, i) => { const t = document.createElement('div'); t.className = 'tile'; t.dataset.i = i; t.innerHTML = `<span class="l">${ch}</span><span class="n"></span>`; g.appendChild(t); return t; });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'trailLayer'); svg.setAttribute('viewBox', `0 0 ${P.size * 10} ${P.size * 10}`); svg.id = 'trailLayer';
+  g.appendChild(svg);
+}
+function remainingOn(i){ let n = 0; for (const w of P.targets) if (!S.found.includes(w) && P.tiles[w].includes(i)) n++; return n; }
+function render(){
+  const found = new Set(S.found);
+  tiles.forEach((t, i) => {
+    const n = remainingOn(i);
+    t.className = 'tile' + (n === 0 ? ' done' : '') + (path.includes(i) ? ' on' : '') + (hintTile() === i ? ' hint' : '');
+    t.lastChild.textContent = n || '';
+    t.setAttribute('aria-label', P.grid[i].toUpperCase() + (n ? `, ${n} word${n > 1 ? 's' : ''} left` : ', finished'));
+  });
+  drawTrail();
+  const total = P.targets.length, got = P.targets.filter(w => found.has(w)).length;
+  $('count').innerHTML = `<b>${got}</b> of ${total} words`;
+  $('meter').style.width = (100 * got / total) + '%';
+  $('hintBtn').disabled = S.done;
+  drawCurrent(); drawWords();
+}
+function hintTile(){
+  const w = S.hints.find(h => !S.found.includes(h));
+  if (!w) return -1;
+  return firstTile(w);
+}
+function firstTile(word){ // a start tile for one valid path of the word
+  const nb = Trail.neighbors(P.size), g = P.grid;
+  const go = (i, k, used) => { if (g[i] !== word[k]) return false; if (k === word.length - 1) return true; used.add(i); for (const j of nb[i]) if (!used.has(j) && go(j, k + 1, used)) return true; used.delete(i); return false; };
+  for (let i = 0; i < g.length; i++) if (go(i, 0, new Set())) return i;
+  return -1;
+}
+function drawTrail(){
+  const pts = path.map(i => `${(i % P.size) * 10 + 5},${Math.floor(i / P.size) * 10 + 5}`).join(' ');
+  $('trailLayer').innerHTML = path.length > 1 ? `<polyline points="${pts}"/>` : '';
+}
+function drawCurrent(){
+  const c = $('current');
+  if (path.length){
+    const w = path.map(i => P.grid[i]).join('');
+    c.innerHTML = `<span class="w">${w}</span>` + (tapMode ? `<span class="acts"><button type="button" class="ok" id="enterBtn" aria-label="Enter word"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><button type="button" id="clearBtn" aria-label="Clear"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>` : '');
+    if (tapMode){ $('enterBtn').onclick = submit; $('clearBtn').onclick = () => { path = []; tapMode = false; render(); }; }
+  } else if (lastFeedback){
+    c.innerHTML = `<span class="w ${lastFeedback.cls}">${lastFeedback.word}</span><span class="msg ${lastFeedback.cls}">${lastFeedback.msg}</span>`;
+  } else c.innerHTML = `<span class="msg">${S.done ? 'Grid complete!' : 'Swipe across the letters'}</span>`;
+}
+function drawWords(){
+  const found = new Set(S.found), byLen = {};
+  for (const w of P.targets) (byLen[w.length] ||= []).push(w);
+  let html = '';
+  for (const L of Object.keys(byLen).map(Number).sort((a, b) => a - b)){
+    const ws = byLen[L], got = ws.filter(w => found.has(w));
+    html += `<div class="group"><h3><span>${L} letters</span><span>${got.length}/${ws.length}</span></h3><div class="list">`;
+    for (const w of ws.filter(w => found.has(w)).sort()) html += `<span class="word${w === justFound ? ' new' : ''}">${w}</span>`;
+    for (const w of ws.filter(w => !found.has(w))){
+      const h = S.hints.includes(w);
+      html += `<span class="word blank">${h ? w.slice(0, 2).toUpperCase() + '·'.repeat(L - 2) : '·'.repeat(L)}</span>`;
+    }
+    html += '</div></div>';
+  }
+  if (S.bonus.length) html += `<div class="group bonusList"><h3><span>Bonus words</span><span>${S.bonus.length}</span></h3><div class="list">${S.bonus.slice().sort().map(w => `<span class="word${w === justFound ? ' new' : ''}">${w}</span>`).join('')}</div></div>`;
+  $('words').innerHTML = html;
+}
+let justFound = null;
+
+// ---- input ----
+function tileAt(x, y, strict){
+  const r = $('grid').getBoundingClientRect(), size = P.size, cell = r.width / size;
+  const cx = (x - r.left) / cell, cy = (y - r.top) / cell, c = Math.floor(cx), rr = Math.floor(cy);
+  if (c < 0 || rr < 0 || c >= size || rr >= size) return -1;
+  if (strict){ const dx = cx - c - .5, dy = cy - rr - .5; if (Math.hypot(dx, dy) > .38) return -1; } // forgiving diagonals
+  return rr * size + c;
+}
+const adjacent = (a, b) => Math.abs((a % P.size) - (b % P.size)) <= 1 && Math.abs(Math.floor(a / P.size) - Math.floor(b / P.size)) <= 1 && a !== b;
+function extend(i){
+  if (i < 0) return false;
+  const last = path[path.length - 1];
+  if (path.length >= 2 && i === path[path.length - 2]){ path.pop(); return true; } // slide back to undo a letter
+  if (path.includes(i) || (path.length && !adjacent(last, i)) || path.length >= 8) return false;
+  path.push(i); return true;
+}
+let downTile = -1, moved = false;
+$('grid').addEventListener('pointerdown', e => {
+  const i = tileAt(e.clientX, e.clientY, false); if (i < 0) return;
+  try { $('grid').setPointerCapture(e.pointerId); } catch(_){}
+  dragging = true; moved = false; downTile = i; lastFeedback = null;
+  if (tapMode && path.length){
+    if (i === path[path.length - 1]){ dragging = false; return submit(); }
+    if (path.includes(i)){ path = path.slice(0, path.indexOf(i) + 1); render(); return; }
+    if (adjacent(path[path.length - 1], i)){ path.push(i); render(); return; }
+  }
+  path = [i]; tapMode = false; render();
+});
+$('grid').addEventListener('pointermove', e => {
+  if (!dragging) return;
+  const i = tileAt(e.clientX, e.clientY, true);
+  if (i >= 0 && i !== path[path.length - 1] && extend(i)){ moved = true; tapMode = false; render(); }
+});
+function up(e){
+  if (!dragging) return; dragging = false;
+  if (moved && path.length > 1) return submit();
+  if (path.length){ tapMode = true; render(); }
+}
+$('grid').addEventListener('pointerup', up);
+$('grid').addEventListener('pointercancel', () => { dragging = false; path = []; tapMode = false; render(); });
+
+function feedback(word, msg, cls){ lastFeedback = { word, msg, cls }; }
+function submit(){
+  const w = path.map(i => P.grid[i]).join('');
+  const prevPath = path; path = []; tapMode = false; justFound = null;
+  if (w.length < 4){ feedback(w, 'Words need 4+ letters', 'bad'); bump(); return render(); }
+  if (S.found.includes(w) || S.bonus.includes(w)){ feedback(w, 'Already found', ''); return render(); }
+  if (P.targets.includes(w)){
+    S.found.push(w); justFound = w;
+    const p = PRAISE[Math.min(8, w.length)]; feedback(w, p[(Math.random() * p.length) | 0], 'good');
+    try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
+    if (P.targets.every(t => S.found.includes(t))) complete();
+  } else if (P.bonus.includes(w)){
+    S.bonus.push(w); justFound = w; feedback(w, 'Bonus word', 'bonus');
+  } else { feedback(w, 'Not in the word list', 'bad'); bump(); }
+  save(); render();
+  if (!reduced && justFound) prevPath.forEach((i, k) => tiles[i].animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 260, delay: k * 35 }));
+}
+function bump(){ const c = $('current'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+
+$('hintBtn').addEventListener('click', () => {
+  if (S.done) return;
+  const open = P.targets.filter(w => !S.found.includes(w) && !S.hints.includes(w));
+  const pending = S.hints.find(h => !S.found.includes(h));
+  if (pending){ feedback(pending.slice(0, 2).toUpperCase() + '·'.repeat(pending.length - 2), 'Starts at the outlined tile', 'bonus'); render(); return; }
+  if (!open.length) return;
+  open.sort((a, b) => a.length - b.length);
+  const pick = open[Math.floor(Math.random() * Math.min(open.length, 6))]; // a shorter word
+  S.hints.push(pick); save();
+  feedback(pick.slice(0, 2).toUpperCase() + '·'.repeat(pick.length - 2), 'Starts at the outlined tile', 'bonus'); render();
+});
+document.addEventListener('keydown', e => {
+  if (anySheet()) return;
+  if (e.key === 'Escape'){ path = []; tapMode = false; render(); }
+  if (e.key === 'Enter' && path.length) submit();
+  if (e.key === 'Backspace' && path.length){ path.pop(); tapMode = path.length > 0; render(); }
+});
+
+// ---- time, completion, stats ----
+let last = Date.now();
+setInterval(() => { const now = Date.now(), dt = Math.min(now - last, 5000); last = now; if (S && !S.done && !document.hidden && !anySheet()){ S.elapsed += dt; if ((S.elapsed / 1000 | 0) % 10 === 0) save(); } }, 1000);
+document.addEventListener('visibilitychange', () => { last = Date.now(); if (!document.hidden && mode === 'daily' && S && S.day !== dayIndex()) loadMode('daily'); });
+const fmt = ms => { const s = Math.round(ms / 1000), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
+
+function complete(){
+  S.done = true;
+  const s = st(mode); s.played++; s.done++; s.bonus += S.bonus.length;
+  if (mode === 'daily'){ s.cur = s.last === S.day - 1 ? s.cur + 1 : 1; s.last = S.day; s.max = Math.max(s.max, s.cur); }
+  if (s.best == null || S.elapsed < s.best) s.best = S.elapsed;
+  store.set('trail-stats', stats);
+  if (!reduced) tiles.forEach((t, i) => t.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 380, delay: i * 30 }));
+  setTimeout(openStats, 1200);
+}
+function shareText(){
+  const head = mode === 'daily' ? `Word Trail No. ${S.day + 1}` : `Word Trail practice ${P.size}×${P.size}`;
+  return `${head}\n✏️ ${S.found.filter(w => P.targets.includes(w)).length}/${P.targets.length} words${S.bonus.length ? ` + ${S.bonus.length} bonus` : ''}\n⏱️ ${fmt(S.elapsed)}${S.hints.length ? ` · 💡 ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}`;
+}
+let tick;
+function openStats(){
+  const s = st(mode);
+  $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  $('result').textContent = S.done ? `You found all ${P.targets.length} words${S.bonus.length ? ` and ${S.bonus.length} bonus word${S.bonus.length > 1 ? 's' : ''}` : ''} in ${fmt(S.elapsed)}${S.hints.length ? `, with ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}.` : `${S.found.length} of ${P.targets.length} words found so far.`;
+  $('stats4').innerHTML = (mode === 'daily'
+    ? [[s.done, 'Completed'], [s.cur, 'Current streak'], [s.max, 'Best streak'], [s.best == null ? '–' : fmt(s.best), 'Fastest']]
+    : [[s.done, 'Completed'], [s.bonus, 'Bonus words'], [s.best == null ? '–' : fmt(s.best), 'Fastest'], [P.size + '×' + P.size, 'This grid']])
+    .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  let after = '';
+  if (S.done){
+    after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button>${mode === 'daily' ? `<button class="btn" id="toPractice" type="button">Practice grid</button>` : `<button class="btn" id="again" type="button">New grid</button>`}</div>`;
+    after += `<div class="shareText" id="shareText" hidden></div>`;
+  }
+  if (mode === 'daily') after += `<div class="next"><span class="label">Next daily grid in</span><b id="countdown"></b></div>`;
+  $('after').innerHTML = after;
+  if (S.done){
+    $('shareBtn').onclick = share;
+    if ($('toPractice')) $('toPractice').onclick = () => { closeAll(); loadMode('practice'); };
+    if ($('again')) $('again').onclick = () => { closeAll(); openNew(); };
+  }
+  clearInterval(tick);
+  const cd = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
+    el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); };
+  cd(); tick = setInterval(cd, 1000);
+  open('statsSheet');
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); feedback('', 'Copied to clipboard', 'good'); render(); }
+  catch(e){ const b = $('shareText'); b.textContent = text; b.hidden = false; const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+}
+
+// ---- sheets ----
+const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hidden);
+function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); }
+function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); last = Date.now(); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
+let newSize = 4;
+function openNew(){
+  newSize = P && mode === 'practice' ? P.size : 4;
+  drawNew(); $('newCancel').hidden = !(mode === 'practice' && S && !S.done && S.found.length); open('newSheet');
+}
+function drawNew(){
+  [...$('sizeSeg').children].forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === newSize));
+  $('sizeNote').textContent = newSize === 4 ? 'About 15–35 target words. A quick game.' : 'About 30–55 target words, with longer words to find.';
+}
+$('sizeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ newSize = +b.dataset.s; drawNew(); } });
+$('newGo').addEventListener('click', () => {
+  if (mode === 'practice' && S && !S.done && S.found.length){ const s = st('practice'); s.played++; store.set('trail-stats', stats); }
+  closeAll(); S = practiceGrid(newSize); store.set('trail-practice', S); loadMode('practice');
+});
+$('newCancel').addEventListener('click', closeAll);
+$('newBtn').addEventListener('click', openNew);
+$('helpBtn').addEventListener('click', () => open('helpSheet'));
+$('helpClose').addEventListener('click', closeAll);
+$('statsBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', closeAll);
+$('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) loadMode(b.dataset.m); });
+
+// ---- boot ----
+loadMode(mode);
+if (!store.get('trail-seen-help', false)){ store.set('trail-seen-help', true); open('helpSheet'); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
