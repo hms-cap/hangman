@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess and Word Trail on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Word Trail and Four Groups on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -82,6 +82,16 @@ A letter-grid word search in the style of Squares.
 - Hints show the first three letters of a word and outline those tiles, numbered, on the grid
 - Share your result, saves progress
 
+### Four Groups
+A word-grouping puzzle in the style of Connections.
+- Sixteen words hide four groups of four; pick four and submit, with four mistakes allowed and a "One away" nudge
+- Groups are color-coded from easiest to trickiest; links include meanings, "___ ball" phrases, hidden words and sounds
+- 40 original hand-written puzzles, each checked to have exactly one solution even with decoy words
+- **Daily** puzzle (No. 1 = 16 Oct 2026, a 32-puzzle cycle), the same for everyone, with streaks and a countdown
+- **Practice**: 8 practice-only puzzles plus every past daily, with a puzzle picker
+- Shuffle, deselect, share your result as colored squares, saved progress and stats (win %, streaks, perfect games)
+- Add puzzles by editing `groups-data.js`
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -91,6 +101,7 @@ A letter-grid word search in the style of Squares.
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
+| `groups.html`, `groups-data.js` | Four Groups page and its hand-written puzzles |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

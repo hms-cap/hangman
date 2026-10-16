@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Four Groups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+/* Four group colors, easiest to trickiest */
+:root{ --g1:#e3a93b; --g2:#7bb08a; --g3:#7fa2d6; --g4:#e07a6b; --g-ink:#1d262d }
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --g1:#d39a2f; --g2:#5f9a71; --g3:#5f86c0; --g4:#c9655a; --g-ink:#0e1a26 }}
+:root[data-theme="dark"]{ --g1:#d39a2f; --g2:#5f9a71; --g3:#5f86c0; --g4:#c9655a; --g-ink:#0e1a26 }
+
+.app{gap:10px}
+.icons{display:flex;gap:2px;justify-self:end}
+.icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.85rem}
+@media (max-width:440px){.back .txt{display:none}}
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted)}
+.mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+.lead{margin:0;text-align:center;color:var(--muted);font-size:.95rem}
+.lead b{color:var(--ink);font-weight:600}
+
+.board{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0;justify-content:center}
+.solved{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:12px;min-height:66px;padding:8px 10px;color:var(--g-ink);text-align:center}
+.solved h3{margin:0;font-weight:700;font-size:.95rem;letter-spacing:.01em}
+.solved p{margin:0;font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.03em}
+.solved.c1{background:var(--g1)} .solved.c2{background:var(--g2)} .solved.c3{background:var(--g3)} .solved.c4{background:var(--g4)}
+.solved.reveal{opacity:.88}
+.solved.pop{animation:pop .45s cubic-bezier(.2,.8,.2,1.2)}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:none;opacity:1}}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;container-type:inline-size}
+.tile{
+  border:1.5px solid var(--key-edge);border-bottom-width:3px;border-radius:12px;background:var(--key);color:var(--ink);
+  min-height:66px;padding:4px 3px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;
+  font-family:var(--mono);font-weight:700;letter-spacing:.02em;line-height:1.1;white-space:nowrap;overflow:hidden;
+  transition:background .12s,color .12s,transform .08s;-webkit-tap-highlight-color:transparent;
+}
+.tile:active{transform:scale(.96)}
+.tile.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+/* tiles are ~23cqw wide; monospace letters ~0.62em, so each length class gets a size that fits on one line */
+.tile.s0{font-size:min(1rem,5.2cqw)} .tile.s1{font-size:min(.9rem,4cqw)} .tile.s2{font-size:min(.76rem,3.25cqw)} .tile.s3{font-size:min(.66rem,2.9cqw)}
+.tile.jump{animation:jump .35s ease-out}
+@keyframes jump{40%{transform:translateY(-7px)}}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.lives{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:.9rem}
+.lives i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:inline-block;transition:transform .25s,opacity .25s}
+.lives i.lost{transform:scale(.4);opacity:.2}
+.actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.actions .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.toast{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.92rem;padding:9px 14px;border-radius:10px;pointer-events:none}
+.toast[hidden]{display:none}
+
+.help ul{margin:0;padding-left:1.1em;color:var(--muted);line-height:1.5}
+.help b{color:var(--ink)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.levels span{border-radius:8px;padding:6px 4px;text-align:center;font-size:.72rem;font-weight:700;color:var(--g-ink)}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.grid-emoji{display:flex;flex-direction:column;gap:3px;align-items:center}
+.grid-emoji div{display:flex;gap:3px}
+.grid-emoji i{width:18px;height:18px;border-radius:4px;display:block}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.3rem;font-weight:500;font-variant-numeric:tabular-nums}
+.shareText{font-family:var(--mono);white-space:pre;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;font-size:.9rem}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.picker button{border:1px solid var(--line);background:var(--key);border-radius:10px;padding:10px 4px;cursor:pointer;font-family:var(--mono);font-weight:600;font-size:.9rem;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
+.picker button small{font-family:var(--ui);font-size:.66rem;color:var(--muted);font-weight:600}
+.picker button.won small{color:var(--correct)} .picker button.lost small{color:var(--miss)}
+.picker button[aria-current="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit)}
+.c1b{background:var(--g1)} .c2b{background:var(--g2)} .c3b{background:var(--g3)} .c4b{background:var(--g4)}
+@media (max-height:680px){.tile,.solved{min-height:54px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Four Groups</h1>
+    <div class="icons">
+      <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
+      <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="mode" id="mode">
+    <button type="button" data-m="daily" aria-pressed="true">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="practice" aria-pressed="false">Practice<small id="pracNo"></small></button>
+  </div>
+  <p class="lead" id="lead">Make <b>four groups of four</b>.</p>
+
+  <div class="board" id="board">
+    <div id="solvedArea" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="tiles" id="tiles" role="group" aria-label="Words"></div>
+  </div>
+
+  <div class="lives" id="lives" aria-live="polite"></div>
+  <div class="actions" id="actions">
+    <button class="btn" id="shuffleBtn" type="button">Shuffle</button>
+    <button class="btn" id="clearBtn" type="button">Deselect</button>
+    <button class="btn primary" id="submitBtn" type="button">Submit</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="sheet" id="helpSheet" hidden>
+  <div class="panel help" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">How to play</h2>
+    <p>Sixteen words hide four groups of four. Find what links each group.</p>
+    <ul>
+      <li>Tap <b>four words</b> you think belong together, then <b>Submit</b>.</li>
+      <li>You can make <b>four mistakes</b>. If three of your four words are right, you'll see <b>One away</b>.</li>
+      <li>Watch for decoys: some words seem to fit more than one group, but each puzzle has exactly one answer.</li>
+      <li>Links can be meanings, phrases like <b>___ ball</b>, hidden words, or sounds.</li>
+    </ul>
+    <p>Each group has a color, from the most straightforward to the trickiest:</p>
+    <div class="levels"><span class="c1b">Easiest</span><span class="c2b">Medium</span><span class="c3b">Harder</span><span class="c4b">Trickiest</span></div>
+    <p>A new daily puzzle starts at midnight. Practice has extra puzzles and every past daily.</p>
+    <button class="btn primary" id="helpClose" type="button">Start</button>
+  </div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Statistics</h2>
+    <p id="result"></p>
+    <div class="grid-emoji" id="guessGrid"></div>
+    <div class="stats4" id="stats4"></div>
+    <div id="after"></div>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="pickSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="pickTitle">
+    <h2 id="pickTitle">Practice puzzles</h2>
+    <p>Pick any puzzle. Past dailies are added here each day.</p>
+    <div class="picker" id="picker"></div>
+    <button class="btn" id="pickClose" type="button">Close</button>
+  </div>
+</div>
+
+<script src="groups-data.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const PUZ = window.GROUPS_PUZZLES, DAILY_N = window.GROUPS_DAILY_COUNT;
+const EPOCH = new Date(2026, 9, 16);
+const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
+const dailyPuzzle = day => ((day % DAILY_N) + DAILY_N) % DAILY_N;
+const EMOJI = ['🟨', '🟩', '🟦', '🟥'];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let mode = store.get('groups-mode', 'daily');
+let progress = store.get('groups-progress', {}); // 'd<day>' or 'p<puzzle>' -> { solved:[group], guesses:[[words]], mistakes, done, won, order:[words] }
+let stats = store.get('groups-stats', {});
+const st = m => (stats[m] ||= { played: 0, won: 0, cur: 0, max: 0, perfect: 0, last: null });
+let pi = 0, key = '', P = null, G = null, selected = [];
+
+function groupOf(word){ return P.findIndex(g => g.slice(1).includes(word)); }
+function practiceAvailable(){
+  const out = [];
+  for (let i = DAILY_N; i < PUZ.length; i++) out.push(i);              // practice-only puzzles
+  const today = dayIndex();
+  for (let d = Math.min(today - 1, DAILY_N - 1); d >= 0; d--) out.push(dailyPuzzle(d)); // past dailies
+  return [...new Set(out)];
+}
+function load(m, index){
+  mode = m; store.set('groups-mode', m);
+  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
+  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+  if (m === 'daily') pi = dailyPuzzle(dayIndex());
+  else {
+    const avail = practiceAvailable();
+    pi = index != null ? index : store.get('groups-practice-current', null);
+    if (pi == null || !avail.includes(pi)) pi = avail.find(i => !(progress['p' + i] && progress['p' + i].done)) ?? avail[0];
+    store.set('groups-practice-current', pi);
+  }
+  $('pracNo').textContent = '';
+  P = PUZ[pi];
+  key = m === 'daily' ? 'd' + dayIndex() : 'p' + pi; // daily progress is per day, so a repeated puzzle starts fresh
+  G = progress[key] ||= { solved: [], guesses: [], mistakes: 0, done: false, won: false };
+  if (!G.order){ G.order = shuffle(P.flatMap(g => g.slice(1))); }
+  selected = [];
+  save(); render();
+}
+const save = () => { progress[key] = G; store.set('groups-progress', progress); };
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const sizeClass = w => w.length <= 6 ? 's0' : w.length <= 8 ? 's1' : w.length <= 10 ? 's2' : 's3';
+
+function render(animateGroup){
+  // solved (and, after a loss, revealed) groups in the order found
+  const shown = G.done && !G.won ? [...G.solved, ...[0, 1, 2, 3].filter(g => !G.solved.includes(g))] : G.solved;
+  $('solvedArea').innerHTML = shown.map(g => `<div class="solved c${g + 1}${G.solved.includes(g) ? '' : ' reveal'}${g === animateGroup ? ' pop' : ''}"><h3>${P[g][0]}</h3><p>${P[g].slice(1).join(', ')}</p></div>`).join('');
+  const left = G.order.filter(w => !shown.includes(groupOf(w)));
+  $('tiles').innerHTML = left.map(w => `<button type="button" class="tile ${sizeClass(w)}${selected.includes(w) ? ' sel' : ''}" data-w="${w}" aria-pressed="${selected.includes(w)}">${w}</button>`).join('');
+  $('lives').innerHTML = G.done ? '' : `Mistakes left: ${[0, 1, 2, 3].map(i => `<i class="${i < 4 - G.mistakes ? '' : 'lost'}"></i>`).join('')}`;
+  $('actions').hidden = G.done;
+  $('submitBtn').disabled = selected.length !== 4;
+  $('clearBtn').disabled = !selected.length;
+  const label = mode === 'daily' ? `No. ${dayIndex() + 1}` : `Puzzle ${pi + 1}`;
+  $('lead').innerHTML = G.done ? (G.won ? `${label} solved${G.mistakes ? ` with ${G.mistakes} mistake${G.mistakes > 1 ? 's' : ''}` : ' with no mistakes'}.` : `${label}: here are the groups.`) + (mode === 'practice' ? ' <button class="btn small" id="pickBtn2" type="button">More puzzles</button>' : '') : `Make <b>four groups of four</b>.${mode === 'practice' ? ' <button class="btn small" id="pickBtn2" type="button">Puzzle ' + (pi + 1) + '</button>' : ''}`;
+  if ($('pickBtn2')) $('pickBtn2').onclick = openPicker;
+}
+
+$('tiles').addEventListener('click', e => {
+  const b = e.target.closest('.tile'); if (!b || G.done) return;
+  const w = b.dataset.w;
+  if (selected.includes(w)) selected = selected.filter(x => x !== w);
+  else if (selected.length < 4) selected.push(w);
+  render();
+});
+$('shuffleBtn').addEventListener('click', () => { G.order = shuffle(G.order); save(); render(); });
+$('clearBtn').addEventListener('click', () => { selected = []; render(); });
+$('submitBtn').addEventListener('click', submit);
+
+function sameGuess(a, b){ return a.length === b.length && a.every(x => b.includes(x)); }
+function submit(){
+  if (selected.length !== 4 || G.done) return;
+  if (G.guesses.some(g => sameGuess(g, selected))){ toast('Already guessed'); return; }
+  G.guesses.push(selected.slice());
+  const counts = [0, 0, 0, 0]; selected.forEach(w => counts[groupOf(w)]++);
+  const best = Math.max(...counts), g = counts.indexOf(best);
+  if (best === 4){
+    const sel = selected.slice();
+    const finishCorrect = () => {
+      G.solved.push(g); selected = [];
+      // keep the found words out of the remaining order
+      if (G.solved.length === 4){ G.done = true; G.won = true; record(); }
+      save(); render(g);
+      if (G.done) setTimeout(openStats, 1300);
+    };
+    if (reduced) return finishCorrect();
+    document.querySelectorAll('.tile').forEach(t => { if (sel.includes(t.dataset.w)) t.classList.add('jump'); });
+    setTimeout(finishCorrect, 380);
+  } else {
+    G.mistakes++;
+    toast(best === 3 ? 'One away…' : G.mistakes >= 4 ? 'Out of mistakes' : 'Not a group', 1600);
+    const tiles = $('tiles'); tiles.classList.remove('shake'); void tiles.offsetWidth; tiles.classList.add('shake');
+    try{ navigator.vibrate && navigator.vibrate(40); }catch(_){}
+    if (G.mistakes >= 4){ G.done = true; G.won = false; selected = []; record(); save(); setTimeout(() => { render(); setTimeout(openStats, 1600); }, 500); return; }
+    save(); render();
+  }
+}
+function record(){
+  const s = st(mode); s.played++;
+  if (G.won){ s.won++; if (!G.mistakes) s.perfect++; }
+  if (mode === 'daily'){
+    const day = dayIndex();
+    s.cur = G.won ? (s.last === day - 1 ? s.cur + 1 : 1) : 0; s.last = day;
+  } else s.cur = G.won ? s.cur + 1 : 0;
+  s.max = Math.max(s.max, s.cur);
+  G.day = mode === 'daily' ? dayIndex() : null;
+  store.set('groups-stats', stats);
+}
+
+// ---- sheets ----
+let toastT;
+function toast(t, ms = 1400){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hidden);
+function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); }
+function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
+
+function shareText(){
+  const head = mode === 'daily' ? `Four Groups No. ${dayIndex() + 1}` : `Four Groups puzzle ${pi + 1}`;
+  return head + '\n' + G.guesses.map(g => g.map(w => EMOJI[groupOf(w)]).join('')).join('\n');
+}
+let tick;
+function openStats(){
+  const s = st(mode);
+  $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  $('result').textContent = !G.done ? `${G.solved.length} of 4 groups found, ${4 - G.mistakes} mistake${4 - G.mistakes === 1 ? '' : 's'} left.` : G.won ? (G.mistakes ? `Solved with ${G.mistakes} mistake${G.mistakes > 1 ? 's' : ''}.` : 'Perfect: no mistakes.') : 'Out of mistakes this time.';
+  $('guessGrid').innerHTML = G.done ? G.guesses.map(g => `<div>${g.map(w => `<i class="c${groupOf(w) + 1}b"></i>`).join('')}</div>`).join('') : '';
+  $('stats4').innerHTML = [[s.played, 'Played'], [s.played ? Math.round(100 * s.won / s.played) : 0, 'Win %'], [mode === 'daily' ? s.cur : s.perfect, mode === 'daily' ? 'Current streak' : 'Perfect'], [s.max, 'Best streak']]
+    .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  let after = '';
+  if (G.done){
+    after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="morePuz" type="button">${mode === 'daily' ? 'Practice puzzles' : 'Next puzzle'}</button></div><div class="shareText" id="shareText" hidden></div>`;
+  }
+  if (mode === 'daily') after += `<div class="next"><span class="label">Next daily puzzle in</span><b id="countdown"></b></div>`;
+  $('after').innerHTML = after;
+  if (G.done){
+    $('shareBtn').onclick = share;
+    $('morePuz').onclick = () => { closeAll(); if (mode === 'daily') load('practice'); else { const a = practiceAvailable(), next = a.find(i => !(progress['p' + i] && progress['p' + i].done)); if (next != null) load('practice', next); else openPicker(); } };
+  }
+  clearInterval(tick);
+  const cd = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
+    el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); };
+  cd(); tick = setInterval(cd, 1000);
+  open('statsSheet');
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }
+  catch(e){ const b = $('shareText'); b.textContent = text; b.hidden = false; const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+}
+function openPicker(){
+  const avail = practiceAvailable().sort((a, b) => a - b);
+  $('picker').innerHTML = avail.map(i => { const p = progress['p' + i]; const state = p && p.done ? (p.won ? 'won' : 'lost') : p && p.guesses && p.guesses.length ? 'started' : '';
+    return `<button type="button" data-i="${i}" class="${state}" aria-current="${mode === 'practice' && i === pi}">${i + 1}<small>${state === 'won' ? 'Solved' : state === 'lost' ? 'Missed' : state === 'started' ? 'Started' : 'New'}</small></button>`; }).join('');
+  open('pickSheet');
+}
+$('picker').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; closeAll(); load('practice', +b.dataset.i); });
+$('pickClose').addEventListener('click', closeAll);
+$('helpBtn').addEventListener('click', () => open('helpSheet'));
+$('helpClose').addEventListener('click', closeAll);
+$('statsBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', closeAll);
+$('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) load(b.dataset.m); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && !anySheet()) submit(); if (e.key === 'Escape'){ selected = []; render(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && mode === 'daily' && P !== PUZ[dailyPuzzle(dayIndex())]) load('daily'); });
+
+load(mode);
+if (!store.get('groups-seen-help', false)){ store.set('groups-seen-help', true); open('helpSheet'); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

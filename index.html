@@ -23,15 +23,16 @@
   --sudoku:#1f7a63; --sudoku-edge:#145846;
   --chess:#33424f; --chess-edge:#1f2a33;
   --hang:#c0393f; --hang-edge:#91262b;
+  --groups:#7457a6; --groups-edge:#553d80;
   --on:#ffffff; --on-soft:rgba(255,255,255,.78); --on-faint:rgba(255,255,255,.22); --on-line:rgba(255,255,255,.4);
   --flame:#e0782a;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --flame:#f08c3c}}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --flame:#f08c3c}}
 :root[data-theme="dark"]{
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --flame:#f08c3c}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --flame:#f08c3c}
 
 html,body{height:auto;min-height:100%}
 .hub{max-width:820px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
@@ -58,7 +59,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
   background-image:linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px);background-size:16px 16px}
 .t-five{--bg:var(--five);--edge:var(--five-edge)} .t-trail{--bg:var(--trail);--edge:var(--trail-edge)}
-.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)}
+.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)}
 .tile h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.65rem;line-height:1;text-wrap:balance}
 .tile .status{margin:0;font-size:.86rem;line-height:1.35;color:var(--on-soft)}
 .tile .status b{color:var(--on);font-weight:600}
@@ -69,6 +70,8 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 
 /* Today: tall tiles */
 .today{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.today .span{grid-column:1/-1}
+.gr-cell{fill:var(--on-faint)} .gr-1{fill:#f3c867} .gr-2{fill:#a3d3ae} .gr-3{fill:#a9c4ec} .gr-4{fill:#f2a196}
 .daily{flex-direction:column;gap:10px;padding:14px 14px 16px}
 .daily .art{display:flex;justify-content:center;align-items:center;min-height:132px}
 .daily .art > svg{width:100%;max-width:150px;height:auto;display:block}
@@ -106,7 +109,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 /* entrance: one staggered moment */
 @media (prefers-reduced-motion:no-preference){
   .tile{animation:rise .45s cubic-bezier(.2,.8,.2,1.15) both}
-  .today .tile:nth-child(2){animation-delay:.06s}
+  .today .tile:nth-child(2){animation-delay:.06s} .today .tile:nth-child(3){animation-delay:.1s}
   .library .tile:nth-child(1){animation-delay:.12s} .library .tile:nth-child(2){animation-delay:.17s} .library .tile:nth-child(3){animation-delay:.22s}
 }
 @keyframes rise{from{transform:translateY(14px) scale(.97);opacity:0}to{transform:none;opacity:1}}
@@ -150,6 +153,10 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     <a class="tile daily t-trail" href="trail.html" id="tTrail">
       <div class="art" id="artTrail"></div>
       <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
+    </a>
+    <a class="tile wide t-groups span" href="groups.html" id="tGroups">
+      <div class="art" id="artGroups"></div>
+      <div class="meta"><h3>Four Groups</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
     </a>
   </section>
 
@@ -205,7 +212,7 @@ const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.
 const fmt = ms => { const s = Math.floor(ms / 1000), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
 const today = new Date(), midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 const dayFrom = (y, m, d) => Math.round((midnight - new Date(y, m, d)) / 864e5);
-const fiveDay = dayFrom(2026, 9, 14), trailDay = dayFrom(2026, 9, 16);
+const fiveDay = dayFrom(2026, 9, 14), trailDay = dayFrom(2026, 9, 16), groupsDay = dayFrom(2026, 9, 16);
 const svg = (vb, body) => `<svg viewBox="${vb}" aria-hidden="true">${body}</svg>`;
 const setBar = (id, frac) => { const b = $(id); b.hidden = false; b.firstElementChild.style.width = Math.round(100 * Math.min(1, frac)) + '%'; };
 const badge = el => el.insertAdjacentHTML('afterbegin', '<span class="done-badge" aria-label="Done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>');
@@ -254,6 +261,28 @@ let trailDone = false;
     if (d.total) setBar('bTrail', d.found.length / d.total);
     $('cTrail').textContent = 'Continue';
   } else $('sTrail').innerHTML = `No. ${trailDay + 1} is ready`;
+})();
+
+// ---- Four Groups: today's solved groups as colored rows ----
+let groupsDone = false;
+(function(){
+  const prog = get('groups-progress', {}), g = prog['d' + groupsDay];
+  let body = '';
+  const rows = g ? g.solved.slice() : [];
+  if (g && g.done && !g.won) [0, 1, 2, 3].forEach(x => { if (!rows.includes(x)) rows.push(x); });
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++){
+    const cls = rows[r] != null ? 'gr-' + (rows[r] + 1) : 'gr-cell';
+    body += `<rect x="${c * 24 + 2}" y="${r * 24 + 2}" width="21" height="21" rx="4" class="${cls}"/>`;
+  }
+  $('artGroups').innerHTML = svg('0 0 100 100', body);
+  if (g && g.done){
+    groupsDone = true; badge($('tGroups'));
+    $('sGroups').innerHTML = g.won ? `No. ${groupsDay + 1} solved${g.mistakes ? `, <b>${g.mistakes}</b> mistake${g.mistakes > 1 ? 's' : ''}` : ' with <b>no mistakes</b>'}` : `No. ${groupsDay + 1}: out of mistakes`;
+    $('cGroups').textContent = 'See stats'; $('cGroups').classList.add('ghost');
+  } else if (g && g.guesses && g.guesses.length){
+    $('sGroups').innerHTML = `<b>${g.solved.length}</b> of 4 groups, ${4 - g.mistakes} mistake${4 - g.mistakes === 1 ? '' : 's'} left`;
+    $('cGroups').textContent = 'Continue';
+  } else $('sGroups').innerHTML = `No. ${groupsDay + 1}: sort 16 words into four groups`;
 })();
 
 // ---- Sudoku: the saved board ----
@@ -323,12 +352,12 @@ let trailDone = false;
 // ---- Header: streak and greeting ----
 (function(){
   const live = (s, day) => s && s.cur && (s.last === day || s.last === day - 1) ? s.cur : 0;
-  const n = Math.max(live((get('five-stats', {}) || {}).daily, fiveDay), live((get('trail-stats', {}) || {}).daily, trailDay));
+  const n = Math.max(live((get('five-stats', {}) || {}).daily, fiveDay), live((get('trail-stats', {}) || {}).daily, trailDay), live((get('groups-stats', {}) || {}).daily, groupsDay));
   $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail'].filter(Boolean);
-  $('greet').innerHTML = `${part}. ` + (left.length === 2 ? 'Two daily puzzles are waiting.' : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'Both daily puzzles are done. See you tomorrow.');
+  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !groupsDone && 'Four Groups'].filter(Boolean);
+  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${left.length === 3 ? 'Three' : 'Two'} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
 // ---- Install help: hide once installed, show this device's steps first, one-tap install where Chrome offers it ----
