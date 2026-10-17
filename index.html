@@ -158,7 +158,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     </a>
     <a class="tile wide t-cpz span" href="chess-puzzles.html?daily" id="tDaily">
       <div class="art" id="artDaily"></div>
-      <div class="meta"><h3>Daily Chess Puzzle</h3><p class="status" id="sDaily"></p><span class="cta" id="cDaily">Solve</span></div>
+      <div class="meta"><h3>Chess Puzzles</h3><p class="status" id="sDaily"></p><span class="cta" id="cDaily">Solve</span></div>
     </a>
   </section>
 
@@ -171,10 +171,6 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     <a class="tile wide t-chess" href="chess.html">
       <div class="art" id="artChess"></div>
       <div class="meta"><h3>Chess</h3><p class="status" id="sChess"></p><span class="cta" id="cChess">Play</span></div>
-    </a>
-    <a class="tile wide t-cpz" href="chess-puzzles.html?practice">
-      <div class="art" id="artCpz"></div>
-      <div class="meta"><h3>Chess Puzzles</h3><p class="status" id="sCpz"></p><span class="cta" id="cCpz">Solve</span></div>
     </a>
     <a class="tile wide t-hang" href="hangman.html">
       <div class="art" id="artHang"></div>
@@ -271,7 +267,7 @@ let trailDone = false;
   } else $('sTrail').innerHTML = `No. ${trailDay + 1} is ready`;
 })();
 
-// ---- Daily Chess Puzzle: today's position (the starting position gives nothing away) ----
+// ---- Chess Puzzles: today's daily position (the starting position gives nothing away) ----
 let chessDone = false;
 (function(){
   const C = window.Chess, P = window.ChessPieces, info = window.ChessDaily && ChessDaily.puzzleFor(chessDay);
@@ -295,7 +291,9 @@ let chessDone = false;
   } else if (playing && (d.mistakes || d.hinted)){
     $('sDaily').innerHTML = `${side} to ${goal}, <b>${3 - d.mistakes}</b> tr${3 - d.mistakes === 1 ? 'y' : 'ies'} left`;
     $('cDaily').textContent = 'Continue';
-  } else $('sDaily').innerHTML = `No. ${chessDay + 1} (${info.weekday}): ${side} to ${goal}`;
+  } else $('sDaily').innerHTML = `Daily No. ${chessDay + 1}: ${side} to ${goal}`;
+  const st = get('cpz-state', null);
+  if (st && st.games) $('sDaily').innerHTML += `<br>Practice rating <b>${Math.round(st.rating)}</b>`;
 })();
 
 // ---- Sudoku: the saved board ----
@@ -346,19 +344,6 @@ let chessDone = false;
   }
 })();
 
-// ---- Chess Puzzles: a knight fork, and the player's rating ----
-(function(){
-  const P = window.ChessPieces; let body = '';
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) body += `<rect x="${c * 25}" y="${r * 25}" width="25" height="25" class="${(r + c) % 2 ? 'ch-d' : 'ch-l'}"/>`;
-  const put = (t, col, x, y) => P.pieceSVG(t, col).replace('<svg ', `<svg x="${x}" y="${y}" width="25" height="25" `);
-  body += put('k', 'b', 0, 0) + put('r', 'b', 75, 0) + put('n', 'w', 25, 75);
-  body += '<path class="cp-arrow" d="M37.5 85 L50 37.5"/><circle class="cp-dot" cx="50" cy="37.5" r="4"/>';
-  $('artCpz').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="cpzc"><rect width="100" height="100" rx="6"/></clipPath><g clip-path="url(#cpzc)">${body}</g></svg>`;
-  const st = get('cpz-state', null);
-  if (st && st.games){ $('sCpz').innerHTML = `Rating <b>${Math.round(st.rating)}</b>, ${st.solved} solved`; $('cCpz').textContent = 'Keep solving'; }
-  else $('sCpz').innerHTML = 'Find the winning move. Mate in 1 to 3 and winning combinations';
-})();
-
 // ---- Hangman: the drawing so far ----
 (function(){
   const g = get('hangman-game', null), st = get('hangman-stats', {});
@@ -382,8 +367,8 @@ let chessDone = false;
   $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !chessDone && 'the daily chess puzzle'].filter(Boolean);
-  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${left.length === 3 ? 'Three' : 'Two'} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0][0].toUpperCase() + left[0].slice(1)}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
+  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !chessDone && 'Chess Puzzles'].filter(Boolean);
+  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${left.length === 3 ? 'Three' : 'Two'} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
 // ---- Install help: hide once installed, show this device's steps first, one-tap install where Chrome offers it ----

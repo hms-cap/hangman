@@ -81,7 +81,7 @@ A five-letter word-guessing game in the style of Wordle.
 - Any move that still forces mate is accepted, not just the stored line
 - Adaptive puzzle rating that serves puzzles near your level; hints and "show solution" count as misses
 - Filter by Mate in 1/2/3, Win material, Forks or Sacrifices; stats with a rating chart
-- **Daily** puzzle (No. 1 = 17 Oct 2026), the same for everyone: easiest on Monday, hardest on Sunday (the set is split into seven rating bands, one per weekday, so it runs about 16 months before repeating)
+- Opens on the **Daily** puzzle (No. 1 = 17 Oct 2026; one tile on the home page under Today), the same for everyone: easiest on Monday, hardest on Sunday (the set is split into seven rating bands, one per weekday, so it runs about 16 months before repeating)
   - Three tries: a wrong move costs one, three ends the day and plays out the solution. Hints are allowed and show up in the shared result
   - Separate stats and streak (it counts toward the home-page streak), share your result as `🟥💡✅`, countdown to the next one. It doesn't change your puzzle rating
   - **Practice** mode is the rated, filterable set described above

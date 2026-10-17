@@ -195,7 +195,7 @@ const save = () => store.set('cpz-state', S);
 // ---- daily ----
 const DAILY_TRIES = 3;
 const qs = new URLSearchParams(location.search);
-let mode = qs.has('daily') ? 'daily' : qs.has('practice') ? 'practice' : store.get('cpz-mode', 'practice');
+let mode = qs.has('daily') ? 'daily' : qs.has('practice') ? 'practice' : store.get('cpz-mode', 'daily');
 let D = null;      // today's daily: { day, mistakes, hinted, done, won }
 let DS = Object.assign({ played: 0, won: 0, cur: 0, max: 0, last: null }, store.get('cpz-dstats', {}));
 const isDaily = () => mode === 'daily';
