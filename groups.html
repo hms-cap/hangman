@@ -85,7 +85,29 @@
 .picker button.won small{color:var(--correct)} .picker button.lost small{color:var(--miss)}
 .picker button[aria-current="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit)}
 .c1b{background:var(--g1)} .c2b{background:var(--g2)} .c3b{background:var(--g3)} .c4b{background:var(--g4)}
-@media (max-height:680px){.tile,.solved{min-height:54px}}
+.lvl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lvl button{border:1px solid var(--line);background:var(--key);border-radius:999px;padding:6px 4px;font-weight:600;font-size:.84rem;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.lvl button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.lvl i{width:8px;height:8px;border-radius:50%;display:none}
+.lvl i.won{display:block;background:var(--g2)} .lvl i.lost{display:block;background:var(--g4)} .lvl i.started{display:block;border:1.5px solid currentColor}
+.hintChip{display:flex;align-items:center;gap:8px;justify-content:center;font-size:.86rem;color:var(--muted);padding:6px 10px;border:1.5px dashed var(--line);border-radius:10px;text-align:center}
+.hintChip b{color:var(--ink)}
+.hintChip .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.tile.hinted{border-style:dashed;border-width:2.5px}
+.tile.hinted.c1{border-color:var(--g1)} .tile.hinted.c2{border-color:var(--g2)} .tile.hinted.c3{border-color:var(--g3)} .tile.hinted.c4{border-color:var(--g4)}
+.tile.hinted.sel{border-style:solid}
+.actions .btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;margin-right:4px}
+.actions{gap:6px}
+.actions .btn{padding:9px 13px}
+.hintsUsed{margin-left:2px}
+.byLevel{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.byLevel div{border:1px solid var(--line);border-radius:10px;padding:6px 4px;display:flex;flex-direction:column;gap:1px}
+.byLevel span{font-size:.72rem;color:var(--muted);font-weight:600}
+.byLevel b{font-family:var(--mono);font-weight:500;font-size:1rem}
+.byLevel small{font-size:.66rem;color:var(--muted)}
+.picker[hidden],.label[hidden]{display:none}
+@media (max-height:680px){.tile,.solved{min-height:52px}.lvl button{padding:4px}}
+@media (max-width:380px){.actions .btn{padding:8px 10px;font-size:.88rem}}
 </style>
 </head>
 <body>
@@ -101,12 +123,18 @@
 
   <div class="mode" id="mode">
     <button type="button" data-m="daily" aria-pressed="true">Daily<small id="dayNo"></small></button>
-    <button type="button" data-m="practice" aria-pressed="false">Practice<small id="pracNo"></small></button>
+    <button type="button" data-m="practice" aria-pressed="false">Practice</button>
+  </div>
+  <div class="lvl" id="lvl" role="group" aria-label="Level">
+    <button type="button" data-l="easy">Easy<i></i></button>
+    <button type="button" data-l="medium">Medium<i></i></button>
+    <button type="button" data-l="hard">Hard<i></i></button>
   </div>
   <p class="lead" id="lead">Make <b>four groups of four</b>.</p>
 
   <div class="board" id="board">
     <div id="solvedArea" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="hintChip" id="hintChip" hidden></div>
     <div class="tiles" id="tiles" role="group" aria-label="Words"></div>
   </div>
 
@@ -114,6 +142,7 @@
   <div class="actions" id="actions">
     <button class="btn" id="shuffleBtn" type="button">Shuffle</button>
     <button class="btn" id="clearBtn" type="button">Deselect</button>
+    <button class="btn" id="hintBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>Hint</button>
     <button class="btn primary" id="submitBtn" type="button">Submit</button>
   </div>
 </div>
@@ -127,12 +156,13 @@
     <ul>
       <li>Tap <b>four words</b> you think belong together, then <b>Submit</b>.</li>
       <li>You can make <b>four mistakes</b>. If three of your four words are right, you'll see <b>One away</b>.</li>
+      <li>Stuck? <b>Hint</b> names the easiest group you haven't found; tap again to mark one of its words, then a second.</li>
       <li>Watch for decoys: some words seem to fit more than one group, but each puzzle has exactly one answer.</li>
-      <li>Links can be meanings, phrases like <b>___ ball</b>, hidden words, or sounds.</li>
     </ul>
+    <p><b>Levels.</b> Easy uses plain categories with no decoys. Medium adds phrases like <b>___ ball</b> and a decoy or two. Hard brings hidden words, anagrams and sounds, with more decoys.</p>
     <p>Each group has a color, from the most straightforward to the trickiest:</p>
     <div class="levels"><span class="c1b">Easiest</span><span class="c2b">Medium</span><span class="c3b">Harder</span><span class="c4b">Trickiest</span></div>
-    <p>A new daily puzzle starts at midnight. Practice has extra puzzles and every past daily.</p>
+    <p>There's a new daily puzzle at each level every midnight, the same for everyone. Practice has unlimited puzzles at each level, the hand-written classics and every past daily.</p>
     <button class="btn primary" id="helpClose" type="button">Start</button>
   </div>
 </div>
@@ -143,6 +173,7 @@
     <p id="result"></p>
     <div class="grid-emoji" id="guessGrid"></div>
     <div class="stats4" id="stats4"></div>
+    <div class="byLevel" id="byLevel"></div>
     <div id="after"></div>
     <button class="btn" id="statsClose" type="button">Close</button>
   </div>
@@ -151,13 +182,18 @@
 <div class="sheet" id="pickSheet" hidden>
   <div class="panel" role="dialog" aria-labelledby="pickTitle">
     <h2 id="pickTitle">Practice puzzles</h2>
-    <p>Pick any puzzle. Past dailies are added here each day.</p>
-    <div class="picker" id="picker"></div>
+    <button class="btn primary" id="pickNew" type="button">New puzzle</button>
+    <div class="label" id="pickDailyLabel">Past dailies</div>
+    <div class="picker" id="pickerDaily"></div>
+    <div class="label" id="pickClassicLabel">Classic puzzles</div>
+    <div class="picker" id="pickerClassic"></div>
     <button class="btn" id="pickClose" type="button">Close</button>
   </div>
 </div>
 
 <script src="groups-data.js"></script>
+<script src="groups-bank.js"></script>
+<script src="groups-core.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -165,62 +201,93 @@ const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
-const PUZ = window.GROUPS_PUZZLES, DAILY_N = window.GROUPS_DAILY_COUNT;
+const CLASSIC = window.GROUPS_PUZZLES;
 const EPOCH = new Date(2026, 9, 16);
 const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
-const dailyPuzzle = day => ((day % DAILY_N) + DAILY_N) % DAILY_N;
+const LEVELS = ['easy', 'medium', 'hard'], LNAME = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 const EMOJI = ['🟨', '🟩', '🟦', '🟥'];
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dailyKey = (day, level) => `d${day}${level[0]}`;
 
-let mode = store.get('groups-mode', 'daily');
-let progress = store.get('groups-progress', {}); // 'd<day>' or 'p<puzzle>' -> { solved:[group], guesses:[[words]], mistakes, done, won, order:[words] }
+let mode = store.get('groups-mode', 'daily'), level = store.get('groups-level', 'medium');
+if (!LEVELS.includes(level)) level = 'medium';
+// progress: key -> { P:[groups], solved:[g], guesses:[[w]], mistakes, done, won, order:[w], hints, hint:{g,n} }
+//   keys: d<day><e|m|h> daily, g<e|m|h><seed> practice, p<i> classic
+let progress = store.get('groups-progress', {});
 let stats = store.get('groups-stats', {});
 const st = m => (stats[m] ||= { played: 0, won: 0, cur: 0, max: 0, perfect: 0, last: null });
-let pi = 0, key = '', P = null, G = null, selected = [];
+let cur = store.get('groups-practice-cur', {}); // level -> practice key
+let key = '', P = null, G = null, selected = [], src = null; // src: { kind:'daily'|'gen'|'classic', day?, seed?, i? }
 
-function groupOf(word){ return P.findIndex(g => g.slice(1).includes(word)); }
-function practiceAvailable(){
-  const out = [];
-  for (let i = DAILY_N; i < PUZ.length; i++) out.push(i);              // practice-only puzzles
-  const today = dayIndex();
-  for (let d = Math.min(today - 1, DAILY_N - 1); d >= 0; d--) out.push(dailyPuzzle(d)); // past dailies
-  return [...new Set(out)];
+function parseKey(k){
+  let m;
+  if ((m = /^d(\d+)([emh])$/.exec(k))) return { kind: 'daily', day: +m[1], level: { e: 'easy', m: 'medium', h: 'hard' }[m[2]] };
+  if ((m = /^g([emh])(\d+)$/.exec(k))) return { kind: 'gen', seed: +m[2], level: { e: 'easy', m: 'medium', h: 'hard' }[m[1]] };
+  if ((m = /^p(\d+)$/.exec(k))) return { kind: 'classic', i: +m[1], level: GroupsCore.classicLevel(CLASSIC[+m[1]] || []) };
+  return null;
 }
-function load(m, index){
-  mode = m; store.set('groups-mode', m);
-  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
-  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
-  if (m === 'daily') pi = dailyPuzzle(dayIndex());
+function puzzleFor(s){
+  if (s.kind === 'daily'){ const p = GroupsCore.daily(s.day, s.level); return p && p.groups; }
+  if (s.kind === 'gen'){ const p = GroupsCore.generate(s.seed, s.level); return p && p.groups; }
+  return CLASSIC[s.i];
+}
+const classicsAt = l => CLASSIC.map((p, i) => i).filter(i => GroupsCore.classicLevel(CLASSIC[i]) === l);
+function freshKey(l){ // next practice puzzle: an unplayed classic first, then a newly built one
+  const c = classicsAt(l).find(i => !(progress['p' + i] && progress['p' + i].guesses && progress['p' + i].guesses.length));
+  if (c != null) return 'p' + c;
+  return `g${l[0]}${(Math.random() * 2147483647) | 0}`;
+}
+
+function load(m, k){
+  mode = m; store.set('groups-mode', m); store.set('groups-level', level);
+  if (m === 'daily') k = dailyKey(dayIndex(), level);
   else {
-    const avail = practiceAvailable();
-    pi = index != null ? index : store.get('groups-practice-current', null);
-    if (pi == null || !avail.includes(pi)) pi = avail.find(i => !(progress['p' + i] && progress['p' + i].done)) ?? avail[0];
-    store.set('groups-practice-current', pi);
+    k = k || cur[level];
+    if (!k || !parseKey(k) || parseKey(k).level !== level) k = freshKey(level);
+    cur[level] = k; store.set('groups-practice-cur', cur);
   }
-  $('pracNo').textContent = '';
-  P = PUZ[pi];
-  key = m === 'daily' ? 'd' + dayIndex() : 'p' + pi; // daily progress is per day, so a repeated puzzle starts fresh
-  G = progress[key] ||= { solved: [], guesses: [], mistakes: 0, done: false, won: false };
-  if (!G.order){ G.order = shuffle(P.flatMap(g => g.slice(1))); }
-  selected = [];
+  key = k; src = parseKey(k);
+  G = progress[key] || { solved: [], guesses: [], mistakes: 0, done: false, won: false, hints: 0 };
+  if (!G.P){ G.P = puzzleFor(src); } // keep the puzzle itself, so it never changes under a saved game
+  P = G.P;
+  if (!P){ toast('Could not build a puzzle'); return; }
+  if (!G.order) G.order = shuffle(P.flatMap(g => g.slice(1)));
+  G.hints ||= 0;
+  progress[key] = G; selected = [];
   save(); render();
 }
 const save = () => { progress[key] = G; store.set('groups-progress', progress); };
 function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const sizeClass = w => w.length <= 6 ? 's0' : w.length <= 8 ? 's1' : w.length <= 10 ? 's2' : 's3';
+function groupOf(word){ return P.findIndex(g => g.slice(1).includes(word)); }
+const label = () => src.kind === 'daily' ? `No. ${src.day + 1}` : src.kind === 'classic' ? `Classic ${src.i + 1}` : 'Practice';
 
 function render(animateGroup){
+  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
+  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+  [...$('lvl').children].forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.l === level);
+    const d = progress[dailyKey(dayIndex(), b.dataset.l)];
+    b.querySelector('i').className = mode === 'daily' && d ? (d.done ? (d.won ? 'won' : 'lost') : d.guesses && d.guesses.length ? 'started' : '') : '';
+  });
   // solved (and, after a loss, revealed) groups in the order found
   const shown = G.done && !G.won ? [...G.solved, ...[0, 1, 2, 3].filter(g => !G.solved.includes(g))] : G.solved;
   $('solvedArea').innerHTML = shown.map(g => `<div class="solved c${g + 1}${G.solved.includes(g) ? '' : ' reveal'}${g === animateGroup ? ' pop' : ''}"><h3>${P[g][0]}</h3><p>${P[g].slice(1).join(', ')}</p></div>`).join('');
   const left = G.order.filter(w => !shown.includes(groupOf(w)));
-  $('tiles').innerHTML = left.map(w => `<button type="button" class="tile ${sizeClass(w)}${selected.includes(w) ? ' sel' : ''}" data-w="${w}" aria-pressed="${selected.includes(w)}">${w}</button>`).join('');
-  $('lives').innerHTML = G.done ? '' : `Mistakes left: ${[0, 1, 2, 3].map(i => `<i class="${i < 4 - G.mistakes ? '' : 'lost'}"></i>`).join('')}`;
+  // hints
+  const h = G.hint && !G.done && !G.solved.includes(G.hint.g) ? G.hint : null;
+  const marked = h ? P[h.g].slice(1, h.n) : []; // stage 2 marks one word, stage 3 two
+  $('hintChip').hidden = !h;
+  if (h) $('hintChip').innerHTML = `<i class="sw c${h.g + 1}b"></i><span>One group is <b>${P[h.g][0]}</b>${h.n > 1 ? `: ${marked.join(' and ')} ${marked.length > 1 ? 'are' : 'is'} in it` : ''}</span>`;
+  $('tiles').innerHTML = left.map(w => `<button type="button" class="tile ${sizeClass(w)}${selected.includes(w) ? ' sel' : ''}${marked.includes(w) ? ' hinted c' + (h.g + 1) : ''}" data-w="${w}" aria-pressed="${selected.includes(w)}">${w}</button>`).join('');
+  $('lives').innerHTML = G.done ? '' : `Mistakes left: ${[0, 1, 2, 3].map(i => `<i class="${i < 4 - G.mistakes ? '' : 'lost'}"></i>`).join('')}` + (G.hints ? `<span class="hintsUsed">· ${G.hints} hint${G.hints > 1 ? 's' : ''}</span>` : '');
   $('actions').hidden = G.done;
   $('submitBtn').disabled = selected.length !== 4;
   $('clearBtn').disabled = !selected.length;
-  const label = mode === 'daily' ? `No. ${dayIndex() + 1}` : `Puzzle ${pi + 1}`;
-  $('lead').innerHTML = G.done ? (G.won ? `${label} solved${G.mistakes ? ` with ${G.mistakes} mistake${G.mistakes > 1 ? 's' : ''}` : ' with no mistakes'}.` : `${label}: here are the groups.`) + (mode === 'practice' ? ' <button class="btn small" id="pickBtn2" type="button">More puzzles</button>' : '') : `Make <b>four groups of four</b>.${mode === 'practice' ? ' <button class="btn small" id="pickBtn2" type="button">Puzzle ' + (pi + 1) + '</button>' : ''}`;
+  $('hintBtn').disabled = !!(h && h.n >= 3);
+  const lab = `${label()} · ${LNAME[level]}`;
+  const more = mode === 'practice' ? ` <button class="btn small" id="pickBtn2" type="button">${G.done ? 'More puzzles' : 'Puzzles'}</button>` : '';
+  $('lead').innerHTML = (G.done ? (G.won ? `${lab} solved${G.mistakes ? ` with ${G.mistakes} mistake${G.mistakes > 1 ? 's' : ''}` : ' with no mistakes'}.` : `${lab}: here are the groups.`) : `${lab}: make <b>four groups of four</b>.`) + more;
   if ($('pickBtn2')) $('pickBtn2').onclick = openPicker;
 }
 
@@ -234,6 +301,17 @@ $('tiles').addEventListener('click', e => {
 $('shuffleBtn').addEventListener('click', () => { G.order = shuffle(G.order); save(); render(); });
 $('clearBtn').addEventListener('click', () => { selected = []; render(); });
 $('submitBtn').addEventListener('click', submit);
+$('hintBtn').addEventListener('click', hint);
+
+// Hint: name the easiest group not yet found; tap again to mark one of its words, then a second.
+function hint(){
+  if (G.done) return;
+  if (G.hint && G.solved.includes(G.hint.g)) G.hint = null;
+  if (!G.hint){ const g = [0, 1, 2, 3].find(x => !G.solved.includes(x)); G.hint = { g, n: 1 }; }
+  else if (G.hint.n < 3) G.hint.n++;
+  else return toast('Find this group first');
+  G.hints++; save(); render();
+}
 
 function sameGuess(a, b){ return a.length === b.length && a.every(x => b.includes(x)); }
 function submit(){
@@ -246,7 +324,7 @@ function submit(){
     const sel = selected.slice();
     const finishCorrect = () => {
       G.solved.push(g); selected = [];
-      // keep the found words out of the remaining order
+      if (G.hint && G.hint.g === g) G.hint = null;
       if (G.solved.length === 4){ G.done = true; G.won = true; record(); }
       save(); render(g);
       if (G.done) setTimeout(openStats, 1300);
@@ -265,13 +343,14 @@ function submit(){
 }
 function record(){
   const s = st(mode); s.played++;
-  if (G.won){ s.won++; if (!G.mistakes) s.perfect++; }
+  if (G.won){ s.won++; if (!G.mistakes && !G.hints) s.perfect++; }
+  const bl = (s.levels ||= {})[level] ||= { played: 0, won: 0 }; bl.played++; if (G.won) bl.won++;
   if (mode === 'daily'){
+    // the streak counts days on which you solved at least one daily, at any level
     const day = dayIndex();
-    s.cur = G.won ? (s.last === day - 1 ? s.cur + 1 : 1) : 0; s.last = day;
+    if (G.won && s.last !== day){ s.cur = s.last === day - 1 ? s.cur + 1 : 1; s.last = day; }
   } else s.cur = G.won ? s.cur + 1 : 0;
   s.max = Math.max(s.max, s.cur);
-  G.day = mode === 'daily' ? dayIndex() : null;
   store.set('groups-stats', stats);
 }
 
@@ -284,57 +363,71 @@ function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden =
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
 
 function shareText(){
-  const head = mode === 'daily' ? `Four Groups No. ${dayIndex() + 1}` : `Four Groups puzzle ${pi + 1}`;
-  return head + '\n' + G.guesses.map(g => g.map(w => EMOJI[groupOf(w)]).join('')).join('\n');
+  const head = (src.kind === 'daily' ? `Four Groups No. ${src.day + 1}` : src.kind === 'classic' ? `Four Groups classic ${src.i + 1}` : 'Four Groups practice') + ` · ${LNAME[level]}`;
+  return head + '\n' + G.guesses.map(g => g.map(w => EMOJI[groupOf(w)]).join('')).join('\n') + (G.hints ? `\n💡 ${G.hints} hint${G.hints > 1 ? 's' : ''}` : '');
 }
 let tick;
 function openStats(){
   const s = st(mode);
   $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
-  $('result').textContent = !G.done ? `${G.solved.length} of 4 groups found, ${4 - G.mistakes} mistake${4 - G.mistakes === 1 ? '' : 's'} left.` : G.won ? (G.mistakes ? `Solved with ${G.mistakes} mistake${G.mistakes > 1 ? 's' : ''}.` : 'Perfect: no mistakes.') : 'Out of mistakes this time.';
+  const hintTxt = G.hints ? `, ${G.hints} hint${G.hints > 1 ? 's' : ''}` : '';
+  $('result').textContent = !G.done ? `${G.solved.length} of 4 groups found, ${4 - G.mistakes} mistake${4 - G.mistakes === 1 ? '' : 's'} left${hintTxt}.` : G.won ? (G.mistakes || G.hints ? `Solved with ${G.mistakes} mistake${G.mistakes === 1 ? '' : 's'}${hintTxt}.` : 'Perfect: no mistakes, no hints.') : 'Out of mistakes this time.';
   $('guessGrid').innerHTML = G.done ? G.guesses.map(g => `<div>${g.map(w => `<i class="c${groupOf(w) + 1}b"></i>`).join('')}</div>`).join('') : '';
-  $('stats4').innerHTML = [[s.played, 'Played'], [s.played ? Math.round(100 * s.won / s.played) : 0, 'Win %'], [mode === 'daily' ? s.cur : s.perfect, mode === 'daily' ? 'Current streak' : 'Perfect'], [s.max, 'Best streak']]
+  $('stats4').innerHTML = [[s.played, 'Played'], [s.played ? Math.round(100 * s.won / s.played) : 0, 'Win %'], [mode === 'daily' ? s.cur : s.perfect, mode === 'daily' ? 'Day streak' : 'Perfect'], [s.max, 'Best streak']]
     .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  $('byLevel').innerHTML = LEVELS.map(l => { const b = (s.levels || {})[l] || { played: 0, won: 0 }; return `<div><span>${LNAME[l]}</span><b>${b.won}/${b.played}</b><small>solved</small></div>`; }).join('');
   let after = '';
   if (G.done){
-    after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="morePuz" type="button">${mode === 'daily' ? 'Practice puzzles' : 'Next puzzle'}</button></div><div class="shareText" id="shareText" hidden></div>`;
+    const nextLevel = mode === 'daily' && LEVELS.find(l => !(progress[dailyKey(dayIndex(), l)] || {}).done);
+    after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="morePuz" type="button">${mode === 'daily' ? (nextLevel ? `Today's ${LNAME[nextLevel]}` : 'Practice puzzles') : 'Next puzzle'}</button></div><div class="shareText" id="shareText" hidden></div>`;
+    setTimeout(() => {
+      $('morePuz').onclick = () => { closeAll(); if (mode === 'daily'){ if (nextLevel){ level = nextLevel; load('daily'); } else load('practice'); } else nextPractice(); };
+    });
   }
-  if (mode === 'daily') after += `<div class="next"><span class="label">Next daily puzzle in</span><b id="countdown"></b></div>`;
+  if (mode === 'daily') after += `<div class="next"><span class="label">Next daily puzzles in</span><b id="countdown"></b></div>`;
   $('after').innerHTML = after;
-  if (G.done){
-    $('shareBtn').onclick = share;
-    $('morePuz').onclick = () => { closeAll(); if (mode === 'daily') load('practice'); else { const a = practiceAvailable(), next = a.find(i => !(progress['p' + i] && progress['p' + i].done)); if (next != null) load('practice', next); else openPicker(); } };
-  }
+  if (G.done) $('shareBtn').onclick = share;
   clearInterval(tick);
   const cd = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
     el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); };
   cd(); tick = setInterval(cd, 1000);
   open('statsSheet');
 }
+function nextPractice(){ const k = freshKey(level); cur[level] = k; store.set('groups-practice-cur', cur); load('practice', k); }
 async function share(){
   const text = shareText();
   try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
   try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }
   catch(e){ const b = $('shareText'); b.textContent = text; b.hidden = false; const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 }
+function stateOf(k){ const p = progress[k]; return p && p.done ? (p.won ? 'won' : 'lost') : p && p.guesses && p.guesses.length ? 'started' : ''; }
+const STATE_TXT = { won: 'Solved', lost: 'Missed', started: 'Started', '': 'New' };
 function openPicker(){
-  const avail = practiceAvailable().sort((a, b) => a - b);
-  $('picker').innerHTML = avail.map(i => { const p = progress['p' + i]; const state = p && p.done ? (p.won ? 'won' : 'lost') : p && p.guesses && p.guesses.length ? 'started' : '';
-    return `<button type="button" data-i="${i}" class="${state}" aria-current="${mode === 'practice' && i === pi}">${i + 1}<small>${state === 'won' ? 'Solved' : state === 'lost' ? 'Missed' : state === 'started' ? 'Started' : 'New'}</small></button>`; }).join('');
+  $('pickTitle').textContent = `${LNAME[level]} practice`;
+  const today = dayIndex(), days = []; for (let d = today - 1; d >= Math.max(0, today - 30); d--) days.push(d);
+  $('pickerDaily').innerHTML = days.map(d => { const k = dailyKey(d, level), s = stateOf(k); return `<button type="button" data-k="${k}" class="${s}" aria-current="${k === key}">${d + 1}<small>${STATE_TXT[s]}</small></button>`; }).join('');
+  $('pickDailyLabel').hidden = $('pickerDaily').hidden = !days.length;
+  const cl = classicsAt(level);
+  $('pickerClassic').innerHTML = cl.map(i => { const k = 'p' + i, s = stateOf(k); return `<button type="button" data-k="${k}" class="${s}" aria-current="${k === key}">${i + 1}<small>${STATE_TXT[s]}</small></button>`; }).join('');
+  $('pickClassicLabel').hidden = $('pickerClassic').hidden = !cl.length;
   open('pickSheet');
 }
-$('picker').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; closeAll(); load('practice', +b.dataset.i); });
+for (const id of ['pickerDaily', 'pickerClassic']) $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; closeAll(); cur[level] = b.dataset.k; store.set('groups-practice-cur', cur); load('practice', b.dataset.k); });
+$('pickNew').addEventListener('click', () => { closeAll(); const k = `g${level[0]}${(Math.random() * 2147483647) | 0}`; cur[level] = k; store.set('groups-practice-cur', cur); load('practice', k); });
 $('pickClose').addEventListener('click', closeAll);
 $('helpBtn').addEventListener('click', () => open('helpSheet'));
 $('helpClose').addEventListener('click', closeAll);
 $('statsBtn').addEventListener('click', openStats);
 $('statsClose').addEventListener('click', closeAll);
 $('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) load(b.dataset.m); });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && !anySheet()) submit(); if (e.key === 'Escape'){ selected = []; render(); } });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && mode === 'daily' && P !== PUZ[dailyPuzzle(dayIndex())]) load('daily'); });
+$('lvl').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.l !== level){ level = b.dataset.l; load(mode); } });
+document.addEventListener('keydown', e => { if (anySheet()) return; if (e.key === 'Enter') submit(); if (e.key === 'Escape'){ selected = []; render(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && mode === 'daily' && src && src.day !== dayIndex()) load('daily'); });
 
+// Opening from the home page with ?daily&level=… goes straight to that puzzle
+{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (LEVELS.includes(q.get('level'))) level = q.get('level'); if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
 load(mode);
-if (!store.get('groups-seen-help', false)){ store.set('groups-seen-help', true); open('helpSheet'); }
+if (!store.get('groups-seen-help-2', false)){ store.set('groups-seen-help-2', true); open('helpSheet'); }
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

@@ -101,15 +101,15 @@ A letter-grid word search in the style of Squares.
 - Share your result, saves progress
 
 ### Four Groups
-Not linked from the home page any more; still playable at `groups.html`.
 A word-grouping puzzle in the style of Connections.
 - Sixteen words hide four groups of four; pick four and submit, with four mistakes allowed and a "One away" nudge
-- Groups are color-coded from easiest to trickiest; links include meanings, "___ ball" phrases, hidden words and sounds
-- 40 original hand-written puzzles, each checked to have exactly one solution even with decoy words
-- **Daily** puzzle (No. 1 = 16 Oct 2026, a 32-puzzle cycle), the same for everyone, with streaks and a countdown
-- **Practice**: 8 practice-only puzzles plus every past daily, with a puzzle picker
-- Shuffle, deselect, share your result as colored squares, saved progress and stats (win %, streaks, perfect games)
-- Add puzzles by editing `groups-data.js`
+- **Three levels.** Easy uses plain categories (fruits, dog breeds, metals) with no decoys. Medium adds phrases such as "___ ball" and synonyms, with one or two decoy words that seem to fit two groups. Hard adds wordplay (hidden words, anagrams, sound-alikes, palindromes) and two to four decoys
+- **Hints:** the first names the easiest group you haven't found, the next two mark one and then two of its words. Hints are counted and shown in the shared result
+- **Daily** puzzle at each level (No. 1 = 16 Oct 2026), the same for everyone, with a day streak (solve at least one level), a countdown and stats by level
+- **Practice**: unlimited new puzzles at each level, plus every past daily and the 40 hand-written classics (Medium and Hard)
+- Puzzles are built on the phone from a bank of 157 categories (`groups-bank.js`) by `groups-core.js`: it picks categories by level, places decoys, and keeps a puzzle only if an exact solver finds exactly one way to split the words. Hidden words, anagrams and palindromes are checked against every word on the board, so an accidental one is always known
+- `node tools/check-groups.js` checks the bank (and uses the system Hunspell dictionary to find compound words a "___ ball" style list is missing), builds 300 puzzles per level and two years of dailies, and prints samples
+- Shuffle, deselect, share your result as colored squares, saved progress
 
 ## Files
 | File | What it is |
@@ -120,7 +120,7 @@ A word-grouping puzzle in the style of Connections.
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
-| `groups.html`, `groups-data.js` | Four Groups page and its hand-written puzzles |
+| `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
