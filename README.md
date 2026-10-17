@@ -81,6 +81,10 @@ A five-letter word-guessing game in the style of Wordle.
 - Any move that still forces mate is accepted, not just the stored line
 - Adaptive puzzle rating that serves puzzles near your level; hints and "show solution" count as misses
 - Filter by Mate in 1/2/3, Win material, Forks or Sacrifices; stats with a rating chart
+- **Daily** puzzle (No. 1 = 17 Oct 2026), the same for everyone: easiest on Monday, hardest on Sunday (the set is split into seven rating bands, one per weekday, so it runs about 16 months before repeating)
+  - Three tries: a wrong move costs one, three ends the day and plays out the solution. Hints are allowed and show up in the shared result
+  - Separate stats and streak (it counts toward the home-page streak), share your result as `🟥💡✅`, countdown to the next one. It doesn't change your puzzle rating
+  - **Practice** mode is the rated, filterable set described above
 - Regenerate with `node tools/generate-chess-puzzles.js 500` and check with `node tools/verify-chess-puzzles.js`
 
 ### Word Trail
@@ -96,6 +100,7 @@ A letter-grid word search in the style of Squares.
 - Share your result, saves progress
 
 ### Four Groups
+Not linked from the home page any more; still playable at `groups.html`.
 A word-grouping puzzle in the style of Connections.
 - Sixteen words hide four groups of four; pick four and submit, with four mistakes allowed and a "One away" nudge
 - Groups are color-coded from easiest to trickiest; links include meanings, "___ ball" phrases, hidden words and sounds
@@ -115,7 +120,7 @@ A word-grouping puzzle in the style of Connections.
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-data.js` | Four Groups page and its hand-written puzzles |
-| `chess-puzzles.html`, `chess-puzzles.js` | Chess Puzzles page and its verified puzzle set |
+| `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

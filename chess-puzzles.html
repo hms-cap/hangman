@@ -98,6 +98,17 @@
 
 .actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .actions .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted)}
+.mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+.tries{display:inline-flex;gap:3px;vertical-align:-1px;margin-left:4px}
+.tries i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
+.tries i.used{background:var(--miss);border-color:var(--miss)}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.9rem;padding:9px 14px;border-radius:10px;pointer-events:none}
+.shareText{font-family:var(--mono);white-space:pre;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;line-height:1.3;font-size:.95rem}
 .stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
 .stats4 b{display:block;font-family:var(--mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums}
 .stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
@@ -116,6 +127,11 @@
     <h1>Chess Puzzles</h1>
     <button class="rating" id="ratingBtn" type="button" aria-label="Your puzzle rating and stats"><small>Rating</small><b id="rating">1200</b><span class="delta" id="delta"></span></button>
   </header>
+
+  <div class="mode" id="mode" role="group" aria-label="Daily or practice">
+    <button type="button" data-m="daily">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="practice">Practice</button>
+  </div>
 
   <div class="filters" id="filters" role="group" aria-label="Puzzle type"></div>
 
@@ -140,9 +156,24 @@
   </div>
 </div>
 
+<div class="sheet" id="dailySheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="dailyTitle">
+    <h2 id="dailyTitle"></h2>
+    <p id="dailySub"></p>
+    <div class="stats4" id="dstats4"></div>
+    <div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="toPractice" type="button">Practice puzzles</button></div>
+    <div class="shareText" id="shareText" hidden></div>
+    <div class="next"><span class="label">Next daily puzzle in</span><b id="countdown"></b></div>
+    <button class="btn small" id="dailyClose" type="button">Look at the board</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
 <script src="chess-core.js"></script>
 <script src="chess-pieces.js"></script>
 <script src="chess-puzzles.js"></script>
+<script src="chess-daily.js"></script>
 <script>
 'use strict';
 const { Position, WHITE, BLACK, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_PROMO, sqName, sqFrom } = window.Chess;
@@ -160,6 +191,87 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let S = Object.assign({ rating: 1200, games: 0, solved: 0, failed: 0, streak: 0, best: 0, history: [], seen: {}, filter: 'all', current: null }, store.get('cpz-state', {}));
 const save = () => store.set('cpz-state', S);
+
+// ---- daily ----
+const DAILY_TRIES = 3;
+const qs = new URLSearchParams(location.search);
+let mode = qs.has('daily') ? 'daily' : qs.has('practice') ? 'practice' : store.get('cpz-mode', 'practice');
+let D = null;      // today's daily: { day, mistakes, hinted, done, won }
+let DS = Object.assign({ played: 0, won: 0, cur: 0, max: 0, last: null }, store.get('cpz-dstats', {}));
+const isDaily = () => mode === 'daily';
+const saveDaily = () => store.set('cpz-daily', D);
+function loadDaily(){
+  const day = ChessDaily.dayIndex(), d = store.get('cpz-daily', null);
+  D = d && d.day === day ? d : { day, mistakes: 0, hinted: 0, done: false, won: false };
+  const info = ChessDaily.puzzleFor(day);
+  D.weekday = info ? info.weekday : '';
+  return info ? PUZ[info.index] : null;
+}
+function startDaily(){
+  const p = loadDaily();
+  $('dayNo').textContent = 'No. ' + (D.day + 1);
+  start(p);
+  if (!Z) return;
+  if (D.done){ // show the finished position and the result
+    for (const u of p.line){ const m = Z.pos.fromUci(u); if (!m) break; Z.pos.make(m); Z.step++; Z.lastFrom = mFrom(m); Z.lastTo = mTo(m); }
+    Z.status = D.won ? 'solved' : 'review'; Z.counted = true; Z.mistakes = D.mistakes; Z.hinted = D.hinted;
+    render(); setTimeout(openDaily, 300);
+  }
+}
+function finishDaily(won){
+  if (D.done) return;
+  D.done = true; D.won = won; saveDaily();
+  DS.played++; if (won) DS.won++;
+  DS.cur = won ? (DS.last === D.day - 1 ? DS.cur + 1 : 1) : 0; // a streak only continues if yesterday's was solved
+  DS.last = D.day; DS.max = Math.max(DS.max, DS.cur);
+  store.set('cpz-dstats', DS);
+  if (won) setTimeout(openDaily, 900); // a miss opens the results after the solution has played out
+}
+function switchMode(m){
+  mode = m; store.set('cpz-mode', m); lastDelta = 0;
+  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
+  $('filters').hidden = m === 'daily';
+  if (m === 'daily') startDaily();
+  else { const cur = S.current && PUZ.find(p => p.key === S.current); start(cur && !(cur.key in S.seen) ? cur : pick()); }
+}
+$('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) switchMode(b.dataset.m); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && isDaily() && D && D.day !== ChessDaily.dayIndex()){ closeSheets(); startDaily(); } });
+
+function shareText(){
+  const goal = Z.p.themes[0] === 'material' ? 'Win material' : 'Mate in ' + Z.p.themes[0].slice(6);
+  const marks = '🟥'.repeat(D.mistakes) + (D.hinted ? '💡' : '') + (D.won ? '✅' : '❌');
+  return `Daily Chess Puzzle No. ${D.day + 1} (${D.weekday})\n${goal}, rated ${Z.p.rating}\n${marks}`;
+}
+function openDaily(){
+  if (!isDaily() || !D || !D.done) return;
+  $('dailyTitle').textContent = D.won ? (D.mistakes || D.hinted ? 'Solved' : 'Solved first try!') : 'Not today';
+  $('dailySub').textContent = D.won
+    ? `Daily No. ${D.day + 1}` + (D.mistakes ? ` with ${D.mistakes} wrong move${D.mistakes > 1 ? 's' : ''}` : '') + (D.hinted ? (D.mistakes ? ' and a hint' : ' with a hint') : '') + '.'
+    : `Daily No. ${D.day + 1}. The solution is on the board. A new puzzle comes at midnight.`;
+  $('dstats4').innerHTML = [[DS.played, 'Played'], [DS.played ? Math.round(100 * DS.won / DS.played) : 0, 'Solved %'], [DS.cur, 'Current streak'], [DS.max, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  $('shareText').hidden = true;
+  document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== 'dailySheet');
+  tick();
+}
+function tick(){
+  const el = $('countdown'); if ($('dailySheet').hidden) return;
+  const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, t = Math.floor(ms / 1000);
+  el.textContent = `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  setTimeout(tick, 1000 - (Date.now() % 1000));
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }
+  catch(e){ const box = $('shareText'); box.textContent = text; box.hidden = false; const r = document.createRange(); r.selectNodeContents(box); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Select and copy the result'); }
+}
+const closeSheets = () => document.querySelectorAll('.sheet').forEach(s => s.hidden = true);
+let toastT;
+function toast(t, ms = 1600){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+$('shareBtn').addEventListener('click', share);
+$('toPractice').addEventListener('click', () => { closeSheets(); switchMode('practice'); });
+$('dailyClose').addEventListener('click', closeSheets);
+$('dailySheet').addEventListener('click', e => { if (e.target === $('dailySheet')) closeSheets(); });
 
 // ---- puzzle selection ----
 function pool(){ return PUZ.filter(p => S.filter === 'all' || p.themes.includes(S.filter)); }
@@ -181,7 +293,7 @@ function start(p){
   const pos = new Position(p.fen);
   Z = { p, pos, step: 0, solver: pos.turn, status: 'play', mistakes: 0, hinted: 0, counted: false, dynamic: false, flip: pos.turn === BLACK, lastFrom: -1, lastTo: -1, mark: null, hint: null };
   if (p.last){ Z.lastFrom = sqFrom(p.last.slice(0, 2)); Z.lastTo = sqFrom(p.last.slice(2, 4)); }
-  S.current = p.key; save();
+  if (!isDaily()){ S.current = p.key; save(); }
   selected = -1; targets = new Map();
   render();
 }
@@ -236,7 +348,11 @@ function renderPrompt(){
   pr.className = 'prompt' + (Z.status === 'solved' ? ' good' : Z.status === 'failed' ? ' bad' : '');
   const goal = Z.p.themes[0] === 'material' ? 'win material' : `mate in ${+Z.p.themes[0].slice(6)}`;
   const tags = Z.p.themes.filter(t => !t.startsWith('mateIn') && t !== 'material' && THEME_TEXT[t]).map(t => THEME_TEXT[t]);
-  if (Z.status === 'play'){
+  if (isDaily() && Z.status === 'play'){
+    const left = DAILY_TRIES - D.mistakes;
+    $('pTitle').textContent = Z.feedback || `${side} to move: ${goal}`;
+    $('pSub').innerHTML = `${D.weekday} puzzle, rated <b>${Z.p.rating}</b> <span class="tries" aria-label="${left} tr${left === 1 ? 'y' : 'ies'} left">${Array.from({ length: DAILY_TRIES }, (_, i) => `<i class="${i < D.mistakes ? 'used' : ''}"></i>`).join('')}</span>`;
+  } else if (Z.status === 'play'){
     $('pTitle').textContent = Z.feedback || `${side} to move: ${goal}`;
     $('pSub').innerHTML = `Puzzle rated <b>${Z.p.rating}</b>` + (Z.step ? '' : '. The highlighted move was your opponent’s.');
   } else if (Z.status === 'solved'){
@@ -246,12 +362,22 @@ function renderPrompt(){
     $('pTitle').textContent = Z.feedback || 'Not the best move';
     $('pSub').innerHTML = 'Try again, or show the solution.';
   } else { // review
-    $('pTitle').textContent = 'Solution';
+    $('pTitle').textContent = isDaily() && D.done && !D.won ? 'Not today. Here’s the solution' : 'Solution';
     $('pSub').innerHTML = `${goal[0].toUpperCase() + goal.slice(1)}${tags.length ? '. ' + tags.join(', ') : ''}. Puzzle rated <b>${Z.p.rating}</b>.`;
   }
 }
 function renderActions(){
   let html = '';
+  if (isDaily()){
+    if (Z.status === 'play') html = `<button class="btn" id="hintBtn" type="button">${Z.hint ? 'Show the move' : 'Hint'}</button><button class="btn" id="solBtn" type="button">Give up</button>`;
+    else if (!busy) html = `<button class="btn primary" id="resBtn" type="button">See results</button><button class="btn" id="pracBtn" type="button">Practice puzzles</button>`;
+    $('actions').innerHTML = html;
+    if ($('hintBtn')) $('hintBtn').onclick = hint;
+    if ($('solBtn')) $('solBtn').onclick = () => { if (!$('solBtn').dataset.armed){ $('solBtn').dataset.armed = 1; $('solBtn').textContent = 'Tap again to give up'; return; } showSolution(); };
+    if ($('resBtn')) $('resBtn').onclick = openDaily;
+    if ($('pracBtn')) $('pracBtn').onclick = () => switchMode('practice');
+    return;
+  }
   if (Z.status === 'play') html = `<button class="btn" id="hintBtn" type="button">${Z.hint ? 'Show the move' : 'Hint'}</button><button class="btn" id="solBtn" type="button">Show solution</button><button class="btn" id="skipBtn" type="button">Skip</button>`;
   else if (Z.status === 'failed') html = `<button class="btn" id="retryBtn" type="button">Try again</button><button class="btn" id="solBtn" type="button">Show solution</button><button class="btn primary" id="nextBtn" type="button">Next puzzle</button>`;
   else html = `<button class="btn primary" id="nextBtn" type="button">Next puzzle</button>`;
@@ -275,6 +401,7 @@ $('filters').addEventListener('click', e => { const b = e.target.closest('button
 // ---- rating ----
 function score(win){
   if (Z.counted) return; Z.counted = true;
+  if (isDaily()) return; // the daily puzzle has its own stats and doesn't move your rating
   const k = S.games < 15 ? 48 : S.games < 50 ? 32 : 24, exp = 1 / (1 + Math.pow(10, (Z.p.rating - S.rating) / 400));
   const d = Math.round(k * ((win ? 1 : 0) - exp));
   S.rating = Math.max(400, S.rating + d); lastDelta = d; S.games++;
@@ -314,6 +441,19 @@ function attempt(m){
     const still = mated || (left >= 1 && Chess.isMated(Z.pos, left, { nodes: 400000 }) === true);
     Z.pos.unmake();
     if (still){ ok = true; if (uci !== expected) Z.dynamic = true; }
+  }
+  if (!ok && isDaily()){
+    D.mistakes++; Z.mistakes++; saveDaily();
+    Z.pos.make(m); Z.lastFrom = mFrom(m); Z.lastTo = mTo(m); Z.mark = { sq: mTo(m), cls: 'bad' };
+    busy = true; render(mFrom(m), mTo(m));
+    try{ navigator.vibrate && navigator.vibrate(60); }catch(_){}
+    const left = DAILY_TRIES - D.mistakes;
+    setTimeout(() => {
+      Z.pos.unmake(); busy = false; restoreLast();
+      if (left > 0){ Z.feedback = `Not it. ${left} tr${left === 1 ? 'y' : 'ies'} left`; render(); return; }
+      finishDaily(false); showSolution();
+    }, reduced ? 0 : 650);
+    return;
   }
   if (!ok){
     Z.mistakes++;
@@ -356,6 +496,7 @@ function restoreLast(){
 }
 function finish(){
   Z.status = 'solved';
+  if (isDaily()) finishDaily(true);
   score(!Z.mistakes && !Z.hinted);
   try{ navigator.vibrate && navigator.vibrate(20); }catch(_){}
   render();
@@ -367,7 +508,7 @@ function retry(){
 }
 function hint(){
   if (!canMove()) return;
-  if (!Z.hinted){ Z.hinted = 1; score(false); }
+  if (!Z.hinted){ Z.hinted = 1; if (isDaily()){ D.hinted = 1; saveDaily(); } else score(false); }
   const u = Z.dynamic ? null : Z.p.line[Z.step];
   let from, to;
   if (u){ from = sqFrom(u.slice(0, 2)); to = sqFrom(u.slice(2, 4)); }
@@ -376,11 +517,12 @@ function hint(){
   render();
 }
 function showSolution(){
-  if (!Z.counted) score(false);
+  if (isDaily()) finishDaily(false);
+  else if (!Z.counted) score(false);
   const p = Z.p; start(p); Z.counted = true; Z.status = 'review'; busy = true; render();
   let k = 0;
   const stepFn = () => {
-    if (k >= p.line.length){ busy = false; render(); return; }
+    if (k >= p.line.length){ busy = false; render(); if (isDaily()) setTimeout(openDaily, 600); return; }
     const m = Z.pos.fromUci(p.line[k++]); playMove(m, k % 2 ? 'good' : null); Z.status = 'review';
     setTimeout(stepFn, reduced ? 200 : 750);
   };
@@ -435,10 +577,8 @@ $('statsClose').addEventListener('click', () => $('statsSheet').hidden = true);
 $('statsSheet').addEventListener('click', e => { if (e.target === $('statsSheet')) $('statsSheet').hidden = true; });
 
 // ---- boot: resume the puzzle you were on, if it wasn't finished ----
-{
-  const cur = S.current && PUZ.find(p => p.key === S.current);
-  start(cur && !(cur.key in S.seen) ? cur : pick());
-}
+switchMode(mode);
+if (qs.has('daily') || qs.has('practice')) history.replaceState(null, '', location.pathname);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>

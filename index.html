@@ -156,9 +156,9 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <div class="art" id="artTrail"></div>
       <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
     </a>
-    <a class="tile wide t-groups span" href="groups.html" id="tGroups">
-      <div class="art" id="artGroups"></div>
-      <div class="meta"><h3>Four Groups</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
+    <a class="tile wide t-cpz span" href="chess-puzzles.html?daily" id="tDaily">
+      <div class="art" id="artDaily"></div>
+      <div class="meta"><h3>Daily Chess Puzzle</h3><p class="status" id="sDaily"></p><span class="cta" id="cDaily">Solve</span></div>
     </a>
   </section>
 
@@ -172,7 +172,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <div class="art" id="artChess"></div>
       <div class="meta"><h3>Chess</h3><p class="status" id="sChess"></p><span class="cta" id="cChess">Play</span></div>
     </a>
-    <a class="tile wide t-cpz" href="chess-puzzles.html">
+    <a class="tile wide t-cpz" href="chess-puzzles.html?practice">
       <div class="art" id="artCpz"></div>
       <div class="meta"><h3>Chess Puzzles</h3><p class="status" id="sCpz"></p><span class="cta" id="cCpz">Solve</span></div>
     </a>
@@ -211,6 +211,8 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 <script src="trail-daily.js"></script>
 <script src="chess-core.js"></script>
 <script src="chess-pieces.js"></script>
+<script src="chess-puzzles.js"></script>
+<script src="chess-daily.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -218,7 +220,7 @@ const get = (k, d) => { try{ const v = localStorage.getItem(k); return v ? JSON.
 const fmt = ms => { const s = Math.floor(ms / 1000), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
 const today = new Date(), midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 const dayFrom = (y, m, d) => Math.round((midnight - new Date(y, m, d)) / 864e5);
-const fiveDay = dayFrom(2026, 9, 14), trailDay = dayFrom(2026, 9, 16), groupsDay = dayFrom(2026, 9, 16);
+const fiveDay = dayFrom(2026, 9, 14), trailDay = dayFrom(2026, 9, 16), chessDay = dayFrom(2026, 9, 17);
 const svg = (vb, body) => `<svg viewBox="${vb}" aria-hidden="true">${body}</svg>`;
 const setBar = (id, frac) => { const b = $(id); b.hidden = false; b.firstElementChild.style.width = Math.round(100 * Math.min(1, frac)) + '%'; };
 const badge = el => el.insertAdjacentHTML('afterbegin', '<span class="done-badge" aria-label="Done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>');
@@ -269,26 +271,31 @@ let trailDone = false;
   } else $('sTrail').innerHTML = `No. ${trailDay + 1} is ready`;
 })();
 
-// ---- Four Groups: today's solved groups as colored rows ----
-let groupsDone = false;
+// ---- Daily Chess Puzzle: today's position (the starting position gives nothing away) ----
+let chessDone = false;
 (function(){
-  const prog = get('groups-progress', {}), g = prog['d' + groupsDay];
+  const C = window.Chess, P = window.ChessPieces, info = window.ChessDaily && ChessDaily.puzzleFor(chessDay);
+  const row = info && (window.CHESS_PUZZLES || [])[info.index];
+  if (!row){ $('tDaily').hidden = true; chessDone = true; return; }
+  const pos = new C.Position(row[0]), flip = pos.turn === 1;
   let body = '';
-  const rows = g ? g.solved.slice() : [];
-  if (g && g.done && !g.won) [0, 1, 2, 3].forEach(x => { if (!rows.includes(x)) rows.push(x); });
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++){
-    const cls = rows[r] != null ? 'gr-' + (rows[r] + 1) : 'gr-cell';
-    body += `<rect x="${c * 24 + 2}" y="${r * 24 + 2}" width="21" height="21" rx="4" class="${cls}"/>`;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++){
+    const x = c * 12.5, y = r * 12.5, rank = flip ? r : 7 - r, file = flip ? 7 - c : c, s = rank * 16 + file;
+    body += `<rect x="${x}" y="${y}" width="12.5" height="12.5" class="${(rank + file) % 2 ? 'ch-l' : 'ch-d'}"/>`;
+    const p = pos.b[s];
+    if (p) body += P.pieceSVG(' pnbrqk'[p & 7], p >> 3 ? 'b' : 'w').replace('<svg ', `<svg x="${x}" y="${y}" width="12.5" height="12.5" `);
   }
-  $('artGroups').innerHTML = svg('0 0 100 100', body);
-  if (g && g.done){
-    groupsDone = true; badge($('tGroups'));
-    $('sGroups').innerHTML = g.won ? `No. ${groupsDay + 1} solved${g.mistakes ? `, <b>${g.mistakes}</b> mistake${g.mistakes > 1 ? 's' : ''}` : ' with <b>no mistakes</b>'}` : `No. ${groupsDay + 1}: out of mistakes`;
-    $('cGroups').textContent = 'See stats'; $('cGroups').classList.add('ghost');
-  } else if (g && g.guesses && g.guesses.length){
-    $('sGroups').innerHTML = `<b>${g.solved.length}</b> of 4 groups, ${4 - g.mistakes} mistake${4 - g.mistakes === 1 ? '' : 's'} left`;
-    $('cGroups').textContent = 'Continue';
-  } else $('sGroups').innerHTML = `No. ${groupsDay + 1}: sort 16 words into four groups`;
+  $('artDaily').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="dcb"><rect width="100" height="100" rx="6"/></clipPath><g clip-path="url(#dcb)">${body}</g></svg>`;
+  const goal = row[3].startsWith('mateIn') ? 'mate in ' + row[3][6] : 'win material';
+  const side = pos.turn ? 'Black' : 'White', d = get('cpz-daily', null), playing = d && d.day === chessDay;
+  if (playing && d.done){
+    chessDone = true; badge($('tDaily'));
+    $('sDaily').innerHTML = d.won ? `No. ${chessDay + 1} solved${d.mistakes ? `, <b>${d.mistakes}</b> wrong move${d.mistakes > 1 ? 's' : ''}` : ' <b>first try</b>'}` : `No. ${chessDay + 1}: not today`;
+    $('cDaily').textContent = 'See stats'; $('cDaily').classList.add('ghost');
+  } else if (playing && (d.mistakes || d.hinted)){
+    $('sDaily').innerHTML = `${side} to ${goal}, <b>${3 - d.mistakes}</b> tr${3 - d.mistakes === 1 ? 'y' : 'ies'} left`;
+    $('cDaily').textContent = 'Continue';
+  } else $('sDaily').innerHTML = `No. ${chessDay + 1} (${info.weekday}): ${side} to ${goal}`;
 })();
 
 // ---- Sudoku: the saved board ----
@@ -371,12 +378,12 @@ let groupsDone = false;
 // ---- Header: streak and greeting ----
 (function(){
   const live = (s, day) => s && s.cur && (s.last === day || s.last === day - 1) ? s.cur : 0;
-  const n = Math.max(live((get('five-stats', {}) || {}).daily, fiveDay), live((get('trail-stats', {}) || {}).daily, trailDay), live((get('groups-stats', {}) || {}).daily, groupsDay));
+  const n = Math.max(live((get('five-stats', {}) || {}).daily, fiveDay), live((get('trail-stats', {}) || {}).daily, trailDay), live(get('cpz-dstats', null), chessDay));
   $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !groupsDone && 'Four Groups'].filter(Boolean);
-  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${left.length === 3 ? 'Three' : 'Two'} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
+  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !chessDone && 'the daily chess puzzle'].filter(Boolean);
+  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${left.length === 3 ? 'Three' : 'Two'} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0][0].toUpperCase() + left[0].slice(1)}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
 // ---- Install help: hide once installed, show this device's steps first, one-tap install where Chrome offers it ----
