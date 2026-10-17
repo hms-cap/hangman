@@ -36,7 +36,7 @@ Either way it opens full-screen from its own icon. The install steps on the home
 - Undo and redo
 - Hints
 - Erase
-- Mistake checking, with an optional three-mistake limit
+- Mistake checking, with an optional three-mistake limit (each wrong number in a square counts once, so putting it back after undo or erase isn't a new mistake)
 - Highlights for the selected row, column and box, and for matching numbers
 - Count of how many of each number are left
 - Timer with pause; the game pauses automatically when you leave the app

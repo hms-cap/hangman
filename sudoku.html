@@ -241,14 +241,14 @@ function newGame(level, idx){
   }
   const puzzle = disguise([...P[level].slice(idx*81, idx*81+81)].map(Number));
   S = { level, idx, puzzle, solution: solve(puzzle), values: puzzle.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false),
-        mistakes:0, hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false };
+        mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false };
   lv(level).played++; saveStats();
   paused = false; save(); render();
 }
 function restore(){
   const g = store.get('sudoku-game', null);
   if (!g || !g.puzzle || g.puzzle.length !== 81) return false;
-  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1 }, g);
+  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1, counted:[] }, g);
   S.solution = solve(S.puzzle);
   if (S.sel < 0) S.sel = S.values.indexOf(0);
   return true;
@@ -340,7 +340,12 @@ function input(d){
     if (S.values[i] === d){ setCell(i, 0, 0, changes); }
     else {
       place(i, d, changes); S.hinted[i] = false;
-      if (d !== S.solution[i]){ S.mistakes++; buzz(); }
+      if (d !== S.solution[i]){
+        // Count each wrong number in a square once, so putting the same one back after undo, erase or a double tap isn't a new mistake
+        const key = i * 10 + d;
+        if (!S.counted.includes(key)){ S.counted.push(key); S.mistakes++; }
+        buzz();
+      }
       else celebrateUnits(i);
     }
   }
@@ -376,7 +381,7 @@ function undo(){ const c = S.history.pop(); if (!c || S.done) return; for (let k
 function redo(){ const c = S.future.pop(); if (!c || S.done) return; for (const x of c){ S.values[x.i]=x.v1; S.notes[x.i]=x.n1; } S.history.push(c); S.sel = c[0].i; after(); }
 function restart(){
   S.values = S.puzzle.slice(); S.notes.fill(0); S.hinted.fill(false); S.history = []; S.future = [];
-  S.mistakes = 0; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
+  S.mistakes = 0; S.counted = []; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
   paused = false; save(); render();
 }
 function after(){

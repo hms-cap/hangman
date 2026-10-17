@@ -1,6 +1,6 @@
 // Offline cache. Online: fetch fresh files (so updates show at once) and keep the cache current.
 // Offline or on a very slow connection: serve the saved copy.
-const CACHE = 'paper-games-v18';
+const CACHE = 'paper-games-v19';
 const FILES = ['./', 'index.html', 'hangman.html', 'sudoku.html', 'fiveletters.html', 'chess.html', 'trail.html', 'groups.html', 'chess-puzzles.html', 'paper.css', 'words.js', 'puzzles.js', 'fivewords.js', 'chess-core.js', 'chess-pieces.js', 'chess-worker.js', 'chess-tutor.js', 'trailwords.js', 'trail-daily.js', 'trail-core.js', 'groups-data.js', 'chess-puzzles.js', 'chess-daily.js',
   'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
