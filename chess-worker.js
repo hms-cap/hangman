@@ -2,13 +2,13 @@
 // The page starts two of these: one plays the computer's moves, the other reviews your moves in tutor mode.
 importScripts('chess-core.js', 'chess-tutor.js');
 onmessage = e => {
-  const { id, fen, moves, level, type, move, opp } = e.data;
+  const { id, fen, moves, level, type, move, opp, subject, time } = e.data;
   try {
     const pos = Chess.Position.fromMoves(fen, moves);
     if (type === 'review') {
       const m = pos.fromUci(move);
       if (!m) throw new Error('Illegal move to review: ' + move);
-      postMessage({ id, review: ChessTutor.review(pos, m, { time: 600, opp }) });
+      postMessage({ id, review: ChessTutor.review(pos, m, { time: time || 600, opp, subject }) });
       return;
     }
     const r = Chess.Engine.think(pos, level, fen === Chess.START ? moves : ['x']);

@@ -491,7 +491,11 @@ $('mode').addEventListener('click', e => { const b = e.target.closest('button');
 // ---- boot ----
 loadMode(mode);
 if (!store.get('trail-seen-help', false)){ store.set('trail-seen-help', true); open('helpSheet'); }
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>

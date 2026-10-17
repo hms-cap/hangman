@@ -387,7 +387,11 @@ applyHc();
 switchMode(mode);
 if (!store.get('five-seen-help', false)){ store.set('five-seen-help', true); open('helpSheet'); }
 else if (G.done && G.guesses.length) { if (!G.won) toast(G.answer.toUpperCase(), 0); }
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>

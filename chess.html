@@ -131,12 +131,39 @@
 .coach .busy{color:var(--muted);font-style:italic}
 .moves .mk{font-weight:700;color:var(--g);margin-left:1px}
 .moves button.cur .mk{color:inherit}
+.ana{display:flex;flex-direction:column;gap:6px;flex:none}
+.graph{width:100%;height:54px;display:block;border-radius:8px;border:1.5px solid var(--line);cursor:pointer;touch-action:none;overflow:hidden}
+.graph .bk{fill:var(--g-dark)} .graph .wh{fill:var(--g-light)} .graph .mid{stroke:var(--muted);stroke-width:.6;stroke-dasharray:2 2;opacity:.7}
+.graph .ln{fill:none;stroke:var(--hit);stroke-width:1.4;vector-effect:non-scaling-stroke}
+.graph .cur{stroke:var(--hit);stroke-width:2;vector-effect:non-scaling-stroke}
+.graph .pend{fill:var(--sheet);opacity:.55}
+.graph circle{stroke:var(--sheet);stroke-width:.8;vector-effect:non-scaling-stroke}
+.graph circle.g-mistake{fill:var(--g-mist)} .graph circle.g-blunder{fill:var(--g-blun)} .graph circle.g-inaccuracy{fill:var(--g-inacc)}
+:root{--g-light:#fbfbf6;--g-dark:#c9d3db}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--g-light:#3c5a76;--g-dark:#0e1f30}}
+:root[data-theme="dark"]{--g-light:#3c5a76;--g-dark:#0e1f30}
+.anaSides{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.anaSides div{border:1px solid var(--line);border-radius:10px;padding:5px 8px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.anaSides b{font-size:.8rem;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.anaSides b .dotc{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--ink);flex:none}
+.anaSides b .dotc.w{background:var(--pw-fill)} .anaSides b .dotc.b{background:var(--ink)}
+.anaSides b em{font-style:normal;font-family:var(--mono);margin-left:auto;font-size:.95rem}
+.anaSides small{color:var(--muted);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.anaSides small i{font-style:normal;font-weight:700}
+.anaNav{display:grid;grid-template-columns:auto auto 1fr auto auto auto;gap:6px;align-items:center}
+.anaNav button{border:1px solid var(--line);background:var(--key);border-radius:10px;height:38px;min-width:42px;padding:0 10px;cursor:pointer;font-weight:600;font-size:.84rem;display:flex;align-items:center;justify-content:center}
+.anaNav button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.anaNav #aMist{white-space:nowrap;font-size:.8rem;padding:0 6px}
+@media (max-width:400px){.anaNav{grid-template-columns:auto 1fr auto auto}.anaNav #aFirst,.anaNav #aLast{display:none}}
+.anaNav button:disabled{opacity:.35;cursor:default}
+.anaNav #aDone{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.anaProg{margin:0;font-size:.76rem;color:var(--muted);text-align:center}
 .summary{display:flex;gap:6px;flex-wrap:wrap}
 .summary span{border-radius:999px;padding:3px 10px;font-size:.82rem;font-weight:600;color:var(--sheet);background:var(--g)}
 .toast{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.9rem;padding:9px 14px;border-radius:10px;pointer-events:none}
 .toast[hidden]{display:none}
 @media (max-height:640px){.tool .lbl{display:none}}
-@media (max-height:720px){.coach{padding:6px 9px;gap:3px}.coach p{font-size:.8rem;line-height:1.3}.coachHead .badge{font-size:.7rem}}
+@media (max-height:720px){.graph{height:42px}.anaNav button{height:34px}.coach{padding:6px 9px;gap:3px}.coach p{font-size:.8rem;line-height:1.3}.coachHead .badge{font-size:.7rem}}
 </style>
 </head>
 <body>
@@ -164,7 +191,21 @@
     <div class="coachBtns" id="coachBtns"><button id="coachShow" type="button" hidden>Show</button><button id="coachBack" type="button" hidden>Take back</button></div>
   </div>
 
-  <div class="tools">
+  <div class="ana" id="ana" hidden>
+    <svg class="graph" id="graph" viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="Evaluation graph. Tap to jump to a move."></svg>
+    <div class="anaSides" id="anaSides"></div>
+    <div class="anaNav">
+      <button id="aFirst" type="button" aria-label="Start of the game"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg></button>
+      <button id="aPrev" type="button" aria-label="Previous move"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button id="aMist" type="button">Next mistake</button>
+      <button id="aNext" type="button" aria-label="Next move"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button id="aLast" type="button" aria-label="End of the game"><svg viewBox="0 0 24 24"><path d="M18 5v14M6 6l8 6-8 6z"/></svg></button>
+      <button id="aDone" type="button">Done</button>
+    </div>
+    <p class="anaProg" id="anaProg" hidden></p>
+  </div>
+
+  <div class="tools" id="tools">
     <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg><span class="lbl">Undo</span></button>
     <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span class="lbl">Hint</span></button>
     <button class="tool" id="flip" type="button"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 4L4 7M7 4l3 3"/><path d="M17 20V4M17 20l-3-3M17 20l3-3"/></svg><span class="lbl">Flip</span></button>
@@ -197,8 +238,8 @@
     <h2 id="overTitle"></h2>
     <p id="overSub"></p>
     <div class="summary" id="overSummary" hidden></div>
-    <div class="row"><button class="btn primary" id="overNew" type="button">New game</button><button class="btn" id="overReview" type="button">Look at the board</button></div>
-    <button class="btn small" id="overPgn" type="button">Copy game (PGN)</button>
+    <div class="row"><button class="btn primary" id="overAna" type="button">Analyze game</button><button class="btn" id="overNew" type="button">New game</button></div>
+    <div class="row"><button class="btn small" id="overReview" type="button">Look at the board</button><button class="btn small" id="overPgn" type="button">Copy game (PGN)</button></div>
     <div class="pgn" id="overPgnText" hidden></div>
   </div>
 </div>
@@ -209,6 +250,7 @@
     <div class="menu">
       <button id="toPuzzles" type="button" onclick="location.href='chess-puzzles.html'">Chess puzzles<small>Find the winning move in positions from real games</small></button>
       <button id="copyPgn" type="button">Copy game (PGN)<small>Paste it into any chess site or app to analyze the game</small></button>
+      <button id="anaBtn" type="button">Analyze game<small>Every move graded, with an evaluation graph and accuracy for both sides</small></button>
       <button id="tutorBtn" type="button"></button>
       <button id="drawBtn" type="button">Offer a draw</button>
     </div>
@@ -255,7 +297,7 @@ function newGame(opts){
   const human = opts.side === 'r' ? (Math.random() < .5 ? WHITE : BLACK) : opts.side === 'b' ? BLACK : WHITE;
   const tutor = opts.mode === 'ai' && !!opts.tutor;
   G = { mode: opts.mode, level: opts.level, human, moves: [], over: null, flipped: opts.mode === 'ai' ? human === BLACK : false, tutor, tutored: tutor, reviews: {} };
-  cancelReview();
+  cancelReview(); stopAnalysis();
   pos = new Position(START); sans = []; viewPly = null; selected = -1; hintMove = null; cancelEngine();
   save(); render(); maybeEngine(); maybeReview();
 }
@@ -308,7 +350,9 @@ function render(animate){
   drawPlayers(P, flipped);
   drawMoves();
   renderCoach();
-  $('viewing').hidden = viewPly == null;
+  renderAna();
+  $('viewing').hidden = viewPly == null || analysis;
+  $('tools').hidden = analysis;
   $('undo').disabled = !G.moves.length;
   $('hint').disabled = !humanToMove();
   $('resign').disabled = !!G.over || !G.moves.length;
@@ -322,7 +366,11 @@ function slide(from, to, flipped){
 }
 function drawHint(flipped){
   const arrows = [];
-  if (viewPly == null){
+  if (analysis){
+    // After a weak move: red = what was played, green = what was better
+    const r = anaReview(curPly());
+    if (r && r.uci !== r.best && ['inaccuracy', 'mistake', 'blunder'].includes(r.grade)){ arrows.push([Chess.sqFrom(r.uci.slice(0, 2)), Chess.sqFrom(r.uci.slice(2, 4)), 'bad']); arrows.push([Chess.sqFrom(r.best.slice(0, 2)), Chess.sqFrom(r.best.slice(2, 4)), 'good']); }
+  } else if (viewPly == null){
     if (hintMove) arrows.push([hintMove.from, hintMove.to, '']);
     const w = tutorOn() && currentWarning();
     if (w && !hintMove) for (const [f, t] of w.arrows) arrows.push([f, t, 'warn']);
@@ -362,9 +410,9 @@ function drawPlayers(P, flipped){
 function drawMoves(){
   const el = $('moves');
   if (!sans.length){ el.innerHTML = `<span class="empty">${G.mode === 'ai' && G.human === BLACK ? 'The computer plays white and moves first.' : 'White moves first. Tap a piece, then a square.'}</span>`; return; }
-  const cur = viewPly == null ? sans.length - 1 : viewPly - 1;
+  const cur = (viewPly == null ? sans.length : viewPly) - 1;
   let html = '';
-  sans.forEach((s, i) => { if (i % 2 === 0) html += `<span class="no">${i / 2 + 1}.</span>`; const r = G.reviews && G.reviews[i + 1]; html += `<button type="button" data-ply="${i + 1}" class="${i === cur ? 'cur' : ''}">${s}${r && r.symbol ? `<span class="mk g-${r.grade}">${r.symbol}</span>` : ''}</button>`; });
+  sans.forEach((s, i) => { if (i % 2 === 0) html += `<span class="no">${i / 2 + 1}.</span>`; const r = anaReview(i + 1) || (G.reviews && G.reviews[i + 1]); html += `<button type="button" data-ply="${i + 1}" class="${i === cur ? 'cur' : ''}">${s}${r && r.symbol ? `<span class="mk g-${r.grade}">${r.symbol}</span>` : ''}</button>`; });
   el.innerHTML = html;
   const c = el.querySelector('.cur'); if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -414,6 +462,8 @@ function finish(){
   }
   $('overTitle').textContent = title; $('overSub').textContent = sub + ` ${G.moves.length ? Math.ceil(G.moves.length / 2) + ' moves.' : ''}` + (G.tutored && G.mode === 'ai' ? ' Tutor games don’t count toward your record.' : '');
   $('overPgnText').hidden = true;
+  $('overAna').hidden = !G.moves.length;
+  $('overAna').textContent = G.analysis && Object.keys(G.analysis.r).length >= G.moves.length ? 'See analysis' : 'Analyze game';
   setTimeout(() => open('overSheet'), 500);
 }
 
@@ -495,6 +545,7 @@ function coachPly(){
 }
 function renderCoach(){
   const box = $('coach');
+  if (analysis) return renderAnaCoach();
   box.hidden = !tutorOn();
   if (box.hidden) return;
   const ply = coachPly(), r = ply && G.reviews[ply], busy = reviewReq && reviewReq.ply === ply;
@@ -527,6 +578,143 @@ function showSummary(){
   const count = (...gs) => rs.filter(r => gs.includes(r.grade)).length;
   const parts = [['best', count('best', 'excellent'), 'great move', 'great moves'], ['good', count('good'), 'good move', 'good moves'], ['inaccuracy', count('inaccuracy'), 'inaccuracy', 'inaccuracies'], ['mistake', count('mistake'), 'mistake', 'mistakes'], ['blunder', count('blunder'), 'blunder', 'blunders']];
   el.innerHTML = parts.filter(p => p[1]).map(([g, n, one, many]) => `<span class="g-${g}">${n} ${n === 1 ? one : many}</span>`).join('');
+}
+
+// ---- game analysis ----
+// After a game: every move by both sides is graded by the tutor in the background (both engine workers share the work),
+// with an evaluation graph, accuracy per side and a comment on each move.
+let analysis = false, anaGen = 0, anaSeq = 0;
+const anaInflight = new Map(); // id -> { ply, gen, w }
+const ANA_TIME = 250;
+const anaReview = ply => G && G.analysis && G.analysis.r[ply];
+const curPly = () => viewPly == null ? G.moves.length : viewPly;
+const sideName = c => G.mode === 'two' ? (c === WHITE ? 'White' : 'Black') : c === G.human ? 'You' : 'Computer';
+function startAnalysis(){
+  if (!G.over || !G.moves.length) return;
+  G.analysis ||= { r: {} };
+  analysis = true; selected = -1; targets = new Map(); hintMove = null;
+  viewPly = 0;
+  save(); render(); pumpAnalysis();
+}
+function endAnalysis(){ analysis = false; viewPly = null; render(); }
+function stopAnalysis(){ analysis = false; anaGen++; anaInflight.clear(); }
+function goPly(p){ viewPly = Math.max(0, Math.min(G.moves.length, p)); render(); }
+function anaWho(ply){
+  const c = moverOf(ply);
+  if (G.mode === 'two') return { subject: c === WHITE ? 'White' : 'Black', opp: c === WHITE ? 'Black' : 'White' };
+  return c === G.human ? { opp: 'the computer' } : { subject: 'the computer', opp: 'you' };
+}
+function nextPly(){
+  const busy = new Set([...anaInflight.values()].map(x => x.ply));
+  for (let p = 1; p <= G.moves.length; p++) if (!G.analysis.r[p] && !busy.has(p)) return p;
+  return 0;
+}
+function pumpAnalysis(){
+  if (!G.analysis || !G.over) return;
+  const pool = [worker, reviewer].filter(Boolean);
+  if (!pool.length){ // no workers: one move at a time on the main thread
+    const p = nextPly(); if (!p) return;
+    const gen = anaGen;
+    setTimeout(() => {
+      if (gen !== anaGen || !G.analysis) return;
+      const pp = Position.fromMoves(START, G.moves.slice(0, p - 1));
+      G.analysis.r[p] = ChessTutor.review(pp, pp.fromUci(G.moves[p - 1]), Object.assign({ time: 150 }, anaWho(p)));
+      save(); render(); pumpAnalysis();
+    }, 30);
+    return;
+  }
+  for (const w of pool){
+    if ([...anaInflight.values()].some(x => x.w === w)) continue;
+    if (w === reviewer && reviewReq) continue; // the tutor is using it
+    const p = nextPly(); if (!p) break;
+    const id = 'a' + (++anaSeq);
+    anaInflight.set(id, { ply: p, gen: anaGen, w });
+    w.postMessage(Object.assign({ id, type: 'review', fen: START, moves: G.moves.slice(0, p - 1), move: G.moves[p - 1], time: ANA_TIME }, anaWho(p)));
+  }
+  renderAna();
+}
+function onAna(e){
+  const { id, review } = e.data, job = anaInflight.get(id);
+  if (!job) return;
+  anaInflight.delete(id);
+  if (job.gen === anaGen && review && G.analysis && G.moves[job.ply - 1] === review.uci){
+    G.analysis.r[job.ply] = review; save();
+    if (analysis) render();
+  }
+  pumpAnalysis();
+}
+// Route worker replies: analysis jobs have string ids.
+for (const [w, fn] of [[worker, onEngine], [reviewer, onReview]]) if (w) w.onmessage = e => (typeof e.data.id === 'string' ? onAna(e) : fn(e));
+
+const accOf = wl => Math.max(0, Math.min(100, 103.1668 * Math.exp(-4.354 * wl) - 3.1669)); // per-move accuracy from lost winning chances
+const winPct = cp => 1 / (1 + Math.exp(-0.00368208 * cp));
+function renderAna(){
+  const box = $('ana');
+  box.hidden = !analysis;
+  if (!analysis) return;
+  const n = G.moves.length, R = G.analysis.r, done = Object.keys(R).length;
+  // progress
+  $('anaProg').hidden = done >= n;
+  $('anaProg').textContent = `Analyzing… ${done} of ${n} moves`;
+  // sides
+  const order = orientationFlipped() ? [BLACK, WHITE] : [WHITE, BLACK];
+  $('anaSides').innerHTML = order.map(c => {
+    const rs = []; for (let p = 1; p <= n; p++) if (moverOf(p) === c && R[p]) rs.push(R[p]);
+    const acc = rs.length ? Math.round(rs.reduce((a, r) => a + accOf(r.wl || 0), 0) / rs.length) : null;
+    const cnt = g => rs.filter(r => r.grade === g).length;
+    const bits = [['inaccuracy', 'inaccurac', '?!'], ['mistake', 'mistake', '?'], ['blunder', 'blunder', '??']].map(([g]) => { const k = cnt(g); return k ? `<i class="g-${g}" style="color:var(--g)">${k}</i> ${g === 'inaccuracy' ? (k === 1 ? 'inaccuracy' : 'inaccuracies') : g + (k === 1 ? '' : 's')}` : ''; }).filter(Boolean);
+    return `<div><b><span class="dotc ${c === WHITE ? 'w' : 'b'}"></span>${sideName(c)}<em>${acc == null ? '…' : acc + '%'}</em></b><small>${rs.length ? (bits.length ? bits.join(' · ') : 'No mistakes') : 'Accuracy'}</small></div>`;
+  }).join('');
+  // graph: white's winning chances over the game (top = white winning)
+  const W = 300, H = 60, x = p => n ? p / n * W : 0;
+  let ev = 20; const pts = [[0, H * (1 - winPct(ev))]];
+  let last = 0;
+  for (let p = 1; p <= n; p++){ if (!R[p]) break; ev = R[p].eval; pts.push([x(p), H * (1 - winPct(ev))]); last = p; }
+  const line = pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' L');
+  let g = `<rect class="bk" width="${W}" height="${H}"/>`;
+  g += `<path class="wh" d="M0,${H} L${line} L${x(last).toFixed(1)},${H} Z"/>`;
+  g += `<line class="mid" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}"/>`;
+  g += `<path class="ln" d="M${line}"/>`;
+  if (last < n) g += `<rect class="pend" x="${x(last)}" y="0" width="${W - x(last)}" height="${H}"/>`;
+  for (let p = 1; p <= last; p++){ const r = R[p]; if (['mistake', 'blunder'].includes(r.grade)) g += `<circle class="g-${r.grade}" cx="${x(p)}" cy="${(H * (1 - winPct(r.eval))).toFixed(1)}" r="2.6"/>`; }
+  g += `<line class="cur" x1="${x(curPly())}" y1="0" x2="${x(curPly())}" y2="${H}"/>`;
+  $('graph').innerHTML = g;
+  // nav
+  const c = curPly();
+  $('aFirst').disabled = $('aPrev').disabled = c <= 0;
+  $('aNext').disabled = $('aLast').disabled = c >= n;
+  $('aMist').disabled = !nextMistake(c);
+}
+function nextMistake(from){
+  const n = G.moves.length;
+  for (let k = 1; k <= n; k++){ const p = ((from + k - 1) % n) + 1, r = anaReview(p); if (r && ['mistake', 'blunder'].includes(r.grade)) return p; }
+  return 0;
+}
+function renderAnaCoach(){
+  const box = $('coach'); box.hidden = false;
+  const ply = curPly(), r = ply && anaReview(ply);
+  box.className = 'coach' + (r ? ' g-' + r.grade : '');
+  $('coachBadge').textContent = r ? r.label : '';
+  $('coachTitle').textContent = ply ? `${Math.ceil(ply / 2)}.${moverOf(ply) === BLACK ? '..' : ''} ${sans[ply - 1]} · ${sideName(moverOf(ply))}` : 'Game analysis';
+  const text = $('coachText');
+  text.classList.toggle('busy', !r);
+  text.textContent = r ? r.text + (r.grade !== 'best' && r.bestSan && !r.text.includes(r.bestSan) ? ` The engine preferred ${r.bestSan}.` : '')
+    : ply ? 'Analyzing this move…' : 'Step through the game with the arrows, jump to the next mistake, or tap the graph.';
+  $('coachBtns').hidden = true; $('coachWarn').hidden = true;
+}
+$('aFirst').addEventListener('click', () => goPly(0));
+$('aPrev').addEventListener('click', () => goPly(curPly() - 1));
+$('aNext').addEventListener('click', () => goPly(curPly() + 1));
+$('aLast').addEventListener('click', () => goPly(G.moves.length));
+$('aMist').addEventListener('click', () => { const p = nextMistake(curPly()); if (p) goPly(p); });
+$('aDone').addEventListener('click', endAnalysis);
+{
+  const pick = e => { const r = $('graph').getBoundingClientRect(); goPly(Math.round((e.clientX - r.left) / r.width * G.moves.length)); };
+  let down = false;
+  $('graph').addEventListener('pointerdown', e => { down = true; try { $('graph').setPointerCapture(e.pointerId); } catch(_){} pick(e); });
+  $('graph').addEventListener('pointermove', e => { if (down) pick(e); });
+  $('graph').addEventListener('pointerup', () => { down = false; });
+  $('graph').addEventListener('pointercancel', () => { down = false; });
 }
 
 // ---- input ----
@@ -577,7 +765,7 @@ $('undo').addEventListener('click', () => {
 });
 // Go back to the position after `plies` moves and carry on from there.
 function rewind(plies){
-  cancelEngine(); cancelReview();
+  cancelEngine(); cancelReview(); stopAnalysis(); delete G.analysis;
   const keep = G.moves.slice(0, plies);
   const wasOver = G.over;
   pos = new Position(START); sans = []; for (const u of keep){ const m = pos.fromUci(u); sans.push(pos.san(m)); pos.make(m); }
@@ -600,11 +788,12 @@ $('resign').addEventListener('click', () => {
 });
 $('moves').addEventListener('click', e => {
   const b = e.target.closest('button[data-ply]'); if (!b) return;
-  const ply = +b.dataset.ply; viewPly = ply === G.moves.length ? null : ply; selected = -1; targets = new Map(); render();
+  const ply = +b.dataset.ply; viewPly = ply === G.moves.length && !analysis ? null : ply; selected = -1; targets = new Map(); render();
 });
 $('liveBtn').addEventListener('click', () => { viewPly = null; render(); });
 document.addEventListener('keydown', e => {
   if (anySheet()) return;
+  if (analysis){ if (e.key === 'ArrowLeft') goPly(curPly() - 1); if (e.key === 'ArrowRight') goPly(curPly() + 1); if (e.key === 'Escape') endAnalysis(); return; }
   if (e.key === 'ArrowLeft'){ const cur = viewPly == null ? G.moves.length : viewPly; if (cur > 0){ viewPly = cur - 1; render(); } }
   if (e.key === 'ArrowRight' && viewPly != null){ viewPly = viewPly + 1 >= G.moves.length ? null : viewPly + 1; render(); }
   if (e.key === 'Escape'){ $('promo').hidden = true; deselect(); }
@@ -651,6 +840,8 @@ $('newCancel').addEventListener('click', closeAll);
 $('newBtn').addEventListener('click', openNew);
 $('overNew').addEventListener('click', openNew);
 $('overReview').addEventListener('click', closeAll);
+$('overAna').addEventListener('click', () => { closeAll(); startAnalysis(); });
+$('anaBtn').addEventListener('click', () => { closeAll(); startAnalysis(); });
 $('overPgn').addEventListener('click', () => copyPgn($('overPgnText')));
 
 $('settings').innerHTML = SETTINGS.map(([k, t, d]) => `<label class="switch"><span>${t}${d ? `<small>${d}</small>` : ''}</span><input type="checkbox" id="set-${k}" data-k="${k}"></label>`).join('');
@@ -660,6 +851,7 @@ $('more').addEventListener('click', () => {
   $('pgnText').hidden = true;
   $('drawBtn').hidden = G.mode !== 'ai' || !!G.over;
   $('tutorBtn').hidden = G.mode !== 'ai';
+  $('anaBtn').hidden = !G.over || !G.moves.length;
   $('tutorBtn').innerHTML = G.tutor ? 'Turn off tutor mode<small>Hide the comments on your moves</small>' : 'Turn on tutor mode<small>Get comments on your moves and warnings about threats. This game won\'t count toward your record.</small>';
   $('record').innerHTML = LEVELS.slice(1).map((L, i) => { const r = stats[i + 1] || { w: 0, d: 0, l: 0 }; return `<div><b style="font-family:var(--mono);font-size:.95rem;font-weight:500">${r.w}–${r.d}–${r.l}</b><br><span style="color:var(--muted)">${L.name}</span></div>`; }).join('');
   open('moreSheet');
@@ -684,9 +876,13 @@ $('drawBtn').addEventListener('click', () => {
 });
 
 // ---- boot ----
-if (load()){ render(); if (G.over) setTimeout(() => open('overSheet'), 200); else maybeEngine(); maybeReview(); }
+if (load()){ render(); if (G.over) finish(); else maybeEngine(); maybeReview(); } // finish() only shows the result sheet again; a result is never counted twice
 else { newGame(pick); openNew(); }
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>

@@ -579,7 +579,11 @@ $('statsSheet').addEventListener('click', e => { if (e.target === $('statsSheet'
 // ---- boot: resume the puzzle you were on, if it wasn't finished ----
 switchMode(mode);
 if (qs.has('daily') || qs.has('practice')) history.replaceState(null, '', location.pathname);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>

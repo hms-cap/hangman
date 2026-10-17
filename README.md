@@ -69,6 +69,7 @@ A five-letter word-guessing game in the style of Wordle.
 - Saves the game in progress and your win–draw–loss record at each level
 - The engine is written for this app: alpha-beta search with a transposition table, quiescence search, null-move pruning and late-move reductions. It runs in a Web Worker so the board never freezes. The move generator passes the standard perft test positions.
 - Original pencil-outline piece set drawn for this app
+- **Game analysis** after any finished game (Analyze game on the result screen, or in More): every move by both sides is graded Best to Blunder with a plain-words comment; an evaluation graph you can tap or drag to jump through the game; accuracy and inaccuracy/mistake/blunder counts for each side; red and green arrows for the move played and the better one; step buttons and Next mistake. It runs on both engine workers (about 15 seconds for a 30-move game), fills in as it goes and is saved with the game
 - **Tutor mode** (switch it on when starting a game, or from More): after each of your moves a coach card grades it (Best, Excellent, Good, Inaccuracy, Mistake, Blunder) and says why in plain words — a piece left hanging, a fork, a mate you allowed or missed — and names a better move and what it does
   - **Show better move** jumps to the position before your move with arrows for what you played and what was better; **Take back** lets you try again
   - Warns you about threats before you move: pieces that can be won and mate-in-one threats, with arrows on the board
@@ -129,7 +130,7 @@ A word-grouping puzzle in the style of Connections.
 ```sh
 node tools/generate-sudoku.js 1000 1000 1000 1000   # easy medium hard expert
 ```
-This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js` so installed copies pick up the update.
+This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js`. The service worker fetches fresh files whenever the phone is online (falling back to the saved copy offline or after 3 seconds) and pages reload once when a new version takes over, so installed copies show updates on the next open.
 
 ## Testing the chess engine
 ```sh

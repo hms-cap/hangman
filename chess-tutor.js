@@ -104,7 +104,8 @@ function reasonFor(pos, mv, hMine, ply) {
   return r;
 }
 
-// Grade move m (legal in pos) and explain it. opt: { time (ms per search), opp: name of the other side, e.g. 'the computer' }.
+// Grade move m (legal in pos) and explain it. opt: { time (ms per search), opp: name of the other side, e.g. 'the computer',
+// subject: name of the mover when it isn't "you" (e.g. 'Black', 'the computer'), so the text talks about them instead }.
 function review(pos, m, opt = {}) {
   const time = opt.time || 600, opp = opt.opp || 'your opponent', us = pos.turn, ply = pos.reps.length - 1;
   const legal = pos.legal(), san = pos.san(m, legal), f = mFrom(m), ty = typeOf(pos.b[f]), fl = mFlags(m);
@@ -159,13 +160,20 @@ function review(pos, m, opt = {}) {
     if (!missedMate && best !== m) { const why = reasonFor(pos, best, hMine, ply); t.push(`Better was ${bestSan}${why ? `, ${why}` : ''}.`); }
   }
   // Opening habits worth a gentle word, when the move wasn't the engine's choice anyway
-  if (grade !== 'best' && grade !== 'blunder' && !mated) {
+  if (grade !== 'best' && grade !== 'blunder' && !mated && !opt.subject) {
     if (ty === Q && ply < 14 && !(fl & F_CAP)) t.push('Tip: bringing the queen out early lets the other side chase it while developing.');
     else if (ty === K && !(fl & F_CASTLE) && (pos.castle & (us === WHITE ? 3 : 12))) t.push('Tip: moving your king gives up castling.');
   }
 
+  let text = t.join(' ');
+  if (opt.subject) { // "Your knight…" → "The knight…", "You had mate" → "Black had mate"
+    const subj = opt.subject;
+    text = text.replace(/\bYou had\b/g, cap(subj) + ' had').replace(/\bYour\b/g, 'The').replace(/\byour\b/g, 'the').replace('Checkmate — well played!', 'Checkmate.');
+  }
+  const clampEval = s => isMate(s) ? (s > 0 ? 1500 : -1500) : Math.max(-1500, Math.min(1500, s));
   return {
-    ply: ply + 1, san, uci: C.Position.uci(m), grade, label: LABEL[grade], symbol: SYMBOL[grade] || '', text: t.join(' '),
+    ply: ply + 1, san, uci: C.Position.uci(m), grade, label: LABEL[grade], symbol: SYMBOL[grade] || '', text,
+    eval: clampEval(us === WHITE ? sPlayed : -sPlayed), wl: Math.round(loss * 1000) / 1000,
     best: C.Position.uci(best), bestSan, reply: reply ? C.Position.uci(reply) : null, replySan,
     loss: isMate(sBest) || isMate(sPlayed) ? null : Math.round((sBest - sPlayed) / 10) / 10,
   };
