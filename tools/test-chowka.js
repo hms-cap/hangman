@@ -62,6 +62,30 @@ S = C.newGame(); S.killed[0] = true; S.pawns[0] = [24, 24, 24, 23]; play(S, 1);
 C.applyMove(S, 3, 0);
 ok(S.phase === 'over' && S.winner === 0, 'last pawn home wins');
 
+// Pairs (jodi) move together half an even throw.
+S = C.newGame(); S.pawns[0] = [5, 5, 1, 2]; S.phase = 'move'; S.pool = [4];
+ok(C.pairMovesFor(S, 4).length === 1 && C.pairMovesFor(S, 4)[0].to === 7, 'pair on 5 with a 4 moves to 7');
+ok(C.pairMovesFor(S, 3).length === 0, 'no pair move on an odd throw');
+const pm = C.applyMove(S, 0, 0, true);
+ok(pm && pm.pair && S.pawns[0][0] === 7 && S.pawns[0][1] === 7 && S.turn === 1, 'both pawns land together and the throw is spent');
+S = C.newGame(); S.pawns[0] = [5, 5, 0, 0]; S.phase = 'move'; S.pool = [8]; S.opts.pairMoves = false;
+ok(C.pairMovesFor(S, 8).length === 0, 'pair moves can be switched off');
+S = C.newGame(); S.pawns[0] = [24, 24, 0, 0]; ok(C.pairMovesFor(Object.assign(S, { phase: 'move' }), 2).length === 1, 'pawns home on the start square can pair up');
+S = C.newGame(); S.pawns[0] = [24, 24, 3, 7]; S.phase = 'move';
+ok(C.pairMovesFor(S, 2).length === 0, 'pawns in the centre are not a pair');
+{ // a pair may land on the other player's pair and captures both
+  const T = C.newGame(), sq = C.PATHS[0][9], j = C.PATHS[1].findIndex(([r, c]) => r === sq[0] && c === sq[1]);
+  T.pawns[1] = [j, j, 0, 0]; T.pawns[0] = [7, 7, 0, 0]; T.phase = 'move'; T.pool = [4];
+  ok(C.destination(T, 0, 0, 2) === null, 'a single cannot land on a pair');
+  const r2 = C.applyMove(T, 0, 0, true);
+  ok(r2 && r2.captured.length === 2 && T.pawns[1][0] === 0 && T.pawns[1][1] === 0, 'a pair captures a pair');
+}
+{ // a throw only a pair can use is not lost
+  const T = C.newGame(); T.killed[0] = true; T.pawns[0] = [22, 22, 24, 24]; T.phase = 'move'; T.pool = [4]; // singles would overshoot
+  ok(C.canUse(T, 4) && !C.movesFor(T, 4).length, '4 with two pawns on 22: only the pair can use it');
+  const r3 = C.applyMove(T, 0, 0, true); ok(r3 && r3.won, 'pair move into the centre wins');
+}
+
 // Random games all finish.
 let seed = 7; const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 let total = 0, wins = [0, 0];
@@ -71,9 +95,9 @@ for (let g = 0; g < 3000; g++){
   while (G.phase !== 'over' && n++ < 20000){
     if (G.phase === 'throw') C.applyThrow(G, C.roll(rand));
     else {
-      const ks = G.pool.map((v, k) => [k, C.movesFor(G, v)]).filter(([, m]) => m.length);
+      const ks = G.pool.map((v, k) => [k, C.movesFor(G, v).concat(C.pairMovesFor(G, v))]).filter(([, m]) => m.length);
       const [k, m] = ks[(rand() * ks.length) | 0], mv = m[(rand() * m.length) | 0];
-      if (!C.applyMove(G, mv.pawn, k)){ fails++; console.log('FAIL listed move rejected'); break; }
+      if (!C.applyMove(G, mv.pawn, k, mv.pair)){ fails++; console.log('FAIL listed move rejected'); break; }
     }
   }
   ok(G.phase === 'over', 'random game ' + g + ' finishes'); total += n; if (G.winner != null) wins[G.winner]++;
@@ -105,7 +129,7 @@ for (const lv of ['easy', 'medium', 'hard']){
       const r = mul(g + 99), G = C.newGame(), who = g % 2 ? [b, a] : [a, b]; G.turn = (g >> 1) & 1; let n = 0;
       while (G.phase !== 'over' && n++ < 5000){
         if (G.phase === 'throw') C.applyThrow(G, C.roll(r));
-        else { const mv = C.chooseMove(G, who[G.turn], r); if (!mv || !C.applyMove(G, mv.pawn, mv.k)){ ok(false, 'computer move rejected'); break; } }
+        else { const mv = C.chooseMove(G, who[G.turn], r); if (!mv || !C.applyMove(G, mv.pawn, mv.k, mv.pair)){ ok(false, 'computer move rejected'); break; } }
       }
       if (G.winner === (g % 2 ? 1 : 0)) wa++;
     }

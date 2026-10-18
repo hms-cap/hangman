@@ -4,13 +4,13 @@
 const C = require('../chowka-core.js');
 const n = +process.argv[2] || 400;
 function mulberry(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const randomMove = (S, rand) => { const l = []; S.pool.forEach((v, k) => C.movesFor(S, v).forEach(m => l.push({ pawn: m.pawn, k }))); return l[(rand() * l.length) | 0]; };
+const randomMove = (S, rand) => { const l = []; S.pool.forEach((v, k) => C.movesFor(S, v).concat(C.pairMovesFor(S, v)).forEach(m => l.push({ pawn: m.pawn, k, pair: m.pair }))); return l[(rand() * l.length) | 0]; };
 function game(a, b, seed){ // a plays player 0, b player 1; player 0 or 1 starts by seed
   const rand = mulberry(seed), S = C.newGame(); S.turn = seed & 1; let steps = 0;
   const who = [a, b];
   while (S.phase !== 'over' && steps++ < 5000){
     if (S.phase === 'throw') C.applyThrow(S, C.roll(rand));
-    else { const lv = who[S.turn], m = lv === 'random' ? randomMove(S, rand) : C.chooseMove(S, lv, rand); C.applyMove(S, m.pawn, m.k); }
+    else { const lv = who[S.turn], m = lv === 'random' ? randomMove(S, rand) : C.chooseMove(S, lv, rand); C.applyMove(S, m.pawn, m.k, m.pair); }
   }
   return S.winner;
 }

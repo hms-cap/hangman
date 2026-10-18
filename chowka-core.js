@@ -22,7 +22,7 @@ const key = (r, c) => r + ',' + c;
 const isSafe = (r, c) => SAFE.has(key(r, c));
 const cellOf = (pl, i) => PATHS[pl][i];
 
-const DEFAULTS = { killToEnter: true, pairs: true, threeOut: false };
+const DEFAULTS = { killToEnter: true, pairs: true, threeOut: false, pairMoves: true };
 
 // Cowries: true = mouth up. None up counts 8, all four up counts 4.
 const score = shells => { const up = shells.filter(Boolean).length; return up === 0 ? 8 : up; };
@@ -76,7 +76,29 @@ function movesFor(S, v){
   });
   return out;
 }
-const anyMove = S => S.pool.some(v => movesFor(S, v).length);
+// Pairs (jodi): two of a player's pawns on one square (not the centre) can move together on an even throw,
+// each going half of it. A moving pair may land on anything, including the other player's pair, and captures all there.
+function partnerOf(S, pl, i){
+  const p = S.pawns[pl][i];
+  return p === HOME ? -1 : S.pawns[pl].findIndex((q, j) => j !== i && q === p);
+}
+function pairDestination(S, pl, i, v){
+  if (!S.opts.pairMoves || !v || v % 2 || partnerOf(S, pl, i) < 0) return null;
+  const steps = route(S, pl, i, v / 2);
+  return steps ? steps[steps.length - 1] : null;
+}
+// Pair moves for throw v: one entry per square holding two or more of the player's pawns.
+function pairMovesFor(S, v){
+  const pl = S.turn, seen = new Set(), out = [];
+  S.pawns[pl].forEach((p, i) => {
+    if (p === HOME || seen.has(p)) return;
+    const to = pairDestination(S, pl, i, v);
+    if (to != null){ seen.add(p); out.push({ pawn: i, partner: partnerOf(S, pl, i), from: p, to, pair: true }); }
+  });
+  return out;
+}
+const canUse = (S, v) => movesFor(S, v).length > 0 || pairMovesFor(S, v).length > 0;
+const anyMove = S => S.pool.some(v => canUse(S, v));
 
 // Throw the cowries. Returns what happened so the page can say it.
 function applyThrow(S, shells){
@@ -94,15 +116,23 @@ function applyThrow(S, shells){
   return res;
 }
 
-// Move pawn i by the throw at pool index k.
-function applyMove(S, i, k){
+// Move pawn i by the throw at pool index k. With pair = true, pawn i and its partner move together half the throw.
+function applyMove(S, i, k, pair){
   if (S.phase !== 'move') return null;
   const pl = S.turn, v = S.pool[k];
-  const steps = v == null ? null : route(S, pl, i, v), to = destination(S, pl, i, v);
-  if (to == null) return null;
+  if (v == null) return null;
+  let steps, to, partner = -1;
+  if (pair){
+    to = pairDestination(S, pl, i, v); if (to == null) return null;
+    partner = partnerOf(S, pl, i); steps = route(S, pl, i, v / 2);
+    S.pawns[pl][partner] = to;
+  } else {
+    steps = route(S, pl, i, v); to = destination(S, pl, i, v);
+    if (to == null) return null;
+  }
   S.pawns[pl][i] = to;
   S.pool.splice(k, 1);
-  const [r, c] = cellOf(pl, to), res = { pawn: i, v, steps, to, captured: [], finished: to === HOME, won: false, forfeited: [] };
+  const [r, c] = cellOf(pl, to), res = { pawn: i, partner, pair: !!pair, v, steps, to, captured: [], finished: to === HOME, won: false, forfeited: [] };
   if (!isSafe(r, c)){
     const hit = opponentsAt(S, pl, r, c);
     if (hit.length){ hit.forEach(j => S.pawns[1 - pl][j] = 0); res.captured = hit; S.killed[pl] = true; S.bonus++; }
@@ -185,14 +215,18 @@ const clone = S => ({ ...S, pawns: [S.pawns[0].slice(), S.pawns[1].slice()], kil
 // Every (pawn, throw) pair worth trying now: stacked pawns and equal throws are the same choice.
 function choices(S){
   const out = [], seenV = new Set();
-  S.pool.forEach((v, k) => { if (seenV.has(v)) return; seenV.add(v); for (const m of movesFor(S, v)) out.push({ pawn: m.pawn, k, v }); });
+  S.pool.forEach((v, k) => {
+    if (seenV.has(v)) return; seenV.add(v);
+    for (const m of movesFor(S, v)) out.push({ pawn: m.pawn, k, v });
+    for (const m of pairMovesFor(S, v)) out.push({ pawn: m.pawn, k, v, pair: true });
+  });
   return out;
 }
 // Best score reachable by spending all remaining throws (pool), searched exhaustively up to `depth` moves.
 function plan(S, pl, depth, w){
   if (S.phase !== 'move' || S.turn !== pl || depth === 0 || !S.pool.length) return evaluate(S, pl, w);
   let best = -Infinity;
-  for (const c of choices(S)){ const T = clone(S); applyMove(T, c.pawn, c.k); best = Math.max(best, plan(T, pl, depth - 1, w)); }
+  for (const c of choices(S)){ const T = clone(S); applyMove(T, c.pawn, c.k, c.pair); best = Math.max(best, plan(T, pl, depth - 1, w)); }
   return best === -Infinity ? evaluate(S, pl, w) : best;
 }
 
@@ -209,7 +243,7 @@ function greedyTurn(S, pl){
   const w = { danger: 0, threat: 0 };
   while (S.phase === 'move' && S.turn === pl && S.pool.length){
     let best = null;
-    for (const c of choices(S)){ const T = clone(S); applyMove(T, c.pawn, c.k); const s = evaluate(T, pl, w); if (!best || s > best.s) best = { s, T }; }
+    for (const c of choices(S)){ const T = clone(S); applyMove(T, c.pawn, c.k, c.pair); const s = evaluate(T, pl, w); if (!best || s > best.s) best = { s, T }; }
     if (!best) break;
     S = best.T;
   }
@@ -246,19 +280,19 @@ function chooseMove(S, level, rand = Math.random){
         return memo.get(key);
       }
       let best = -Infinity;
-      for (const c of choices(T)){ const U = clone(T); applyMove(U, c.pawn, c.k); best = Math.max(best, score(U)); }
+      for (const c of choices(T)){ const U = clone(T); applyMove(U, c.pawn, c.k, c.pair); best = Math.max(best, score(U)); }
       return best === -Infinity ? afterReply(T, pl, L.w) : best;
     };
-    const scored = list.map(c => { const T = clone(S); applyMove(T, c.pawn, c.k); return { c, s: score(T) + rand() * 0.01 }; });
+    const scored = list.map(c => { const T = clone(S); applyMove(T, c.pawn, c.k, c.pair); return { c, s: score(T) + rand() * 0.01 }; });
     scored.sort((a, b) => b.s - a.s);
     return scored[0].c;
   }
-  const scored = list.map(c => { const T = clone(S); applyMove(T, c.pawn, c.k); return { c, s: plan(T, pl, L.depth - 1, L.w) + rand() * 0.01 }; });
+  const scored = list.map(c => { const T = clone(S); applyMove(T, c.pawn, c.k, c.pair); return { c, s: plan(T, pl, L.depth - 1, L.w) + rand() * 0.01 }; });
   scored.sort((a, b) => b.s - a.s);
   return scored[0].c;
 }
 
 const api = { N, HOME, PAWNS, PATHS, SAFE, isSafe, cellOf, score, isBonus, roll, newGame, route, destination, movesFor, anyMove,
-              opponentsAt, applyThrow, applyMove, DEFAULTS, chooseMove, evaluate, danger, LEVELS, HIT };
+              opponentsAt, applyThrow, applyMove, DEFAULTS, chooseMove, pairMovesFor, pairDestination, partnerOf, canUse, evaluate, danger, LEVELS, HIT };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Chowka = api;
 })(typeof self !== 'undefined' ? self : this);

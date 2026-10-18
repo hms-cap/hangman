@@ -22,7 +22,12 @@
 .icon-btn svg{width:24px;height:24px}
 
 .players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.pl{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;border:1.5px solid transparent;min-width:0;transition:border-color .2s,background .2s}
+.pl{position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;border:1.5px solid transparent;min-width:0;transition:border-color .2s,background .2s}
+.pl > div{flex:1}
+.clock{flex:none;align-self:flex-start;font-family:var(--mono);font-weight:600;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.pl.on .clock{color:var(--ink)}
+.clock.low{color:var(--miss)!important;animation:think .6s ease-in-out infinite}
+.tbar{position:absolute;left:0;bottom:0;height:3px;background:var(--c);width:0;transition:width .2s linear}
 .pl.on{border-color:var(--c);background:var(--key)}
 .pl .dot{flex:none;width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid var(--ink)}
 .pl div{display:flex;flex-direction:column;min-width:0}
@@ -64,22 +69,14 @@
 .mat.ready{border-style:solid;border-color:var(--c,var(--ink));box-shadow:inset 0 0 0 1px var(--c,var(--ink))}
 .mat.p0{--c:var(--p0)} .mat.p1{--c:var(--p1)}
 .mat:disabled,.mat[aria-disabled="true"]{cursor:default}
-.shell{width:52px;height:70px;flex:none;transform:translate(var(--x,0),var(--y,0)) rotate(var(--r,0deg));transition:transform .25s ease-out}
+/* Shells are placed every frame by a little physics loop (see shake/toss below), so no CSS transitions here */
+.shell{width:52px;height:70px;flex:none;will-change:transform;position:relative;z-index:1}
 .shell svg{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))}
-.shell.toss{animation:toss .7s cubic-bezier(.3,.7,.4,1) both;animation-delay:var(--d,0s)}
-/* Shaking: the shells rattle in place, as if cupped in your hands */
-.mat.shaking .shell{animation:rattle .14s ease-in-out infinite alternate;animation-delay:var(--rd,0s)}
-@keyframes rattle{
-  from{transform:translate(calc(var(--x,0px) - 5px),calc(var(--y,0px) - 4px)) rotate(calc(var(--r,0deg) - 14deg))}
-  to{transform:translate(calc(var(--x,0px) + 5px),calc(var(--y,0px) + 5px)) rotate(calc(var(--r,0deg) + 16deg))}}
+.mat.shaking{border-style:solid;border-color:var(--c,var(--ink));background:color-mix(in srgb,var(--c,var(--ink)) 9%,var(--peer))}
+.mat{will-change:transform}
 .shake{display:inline-flex;align-items:center;gap:8px;touch-action:none;-webkit-touch-callout:none}
 .shake svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .shake.on{background:var(--ink);color:var(--paper)}
-@keyframes toss{
-  0%{transform:translate(0,0) rotate(var(--r0,0deg)) scale(1)}
-  35%{transform:translate(var(--mx,0),-58px) rotate(calc(var(--r0,0deg) + 260deg)) scale(1.15)}
-  70%{transform:translate(var(--x,0),6px) rotate(calc(var(--r,0deg) + 520deg)) scale(.96)}
-  100%{transform:translate(var(--x,0),var(--y,0)) rotate(calc(var(--r,0deg) + 720deg)) scale(1)}}
 .total{position:absolute;left:12px;top:5px;font-family:var(--mono);font-weight:600;font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 .tap{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:.72rem;color:var(--muted);pointer-events:none}
 
@@ -91,6 +88,11 @@
 .chip[aria-pressed="true"] small{color:rgba(255,255,255,.8)}
 .chip.dead{opacity:.35;text-decoration:line-through}
 .chips.p0 .chip{--c:var(--p0)} .chips.p1 .chip{--c:var(--p1)}
+.pairbtn{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:12px;border:1.5px dashed var(--c);background:transparent;color:var(--c);font-weight:600;font-size:.88rem;cursor:pointer}
+.pairbtn svg{width:22px;height:16px}
+.pairbtn[aria-pressed="true"]{border-style:solid;background:var(--c);color:#fff}
+.pairbtn.p0{--c:var(--p0)} .pairbtn.p1{--c:var(--p1)}
+.ghost2{fill:none;stroke-width:3;opacity:.7}
 
 .seg.two{grid-template-columns:repeat(2,1fr)} .seg.three{grid-template-columns:repeat(3,1fr)}
 .note{font-size:.8rem;color:var(--muted);margin:-6px 0 0}
@@ -121,8 +123,8 @@
     </button>
   </header>
   <div class="players">
-    <div class="pl" id="pl0"><span class="dot"></span><div><b id="name0">Blue</b><small id="info0"></small></div></div>
-    <div class="pl" id="pl1"><span class="dot"></span><div><b id="name1">Red</b><small id="info1"></small></div></div>
+    <div class="pl" id="pl0"><span class="dot"></span><div><b id="name0">Blue</b><small id="info0"></small></div><span class="clock" id="clk0">0:00</span><i class="tbar" id="tb0"></i></div>
+    <div class="pl" id="pl1"><span class="dot"></span><div><b id="name1">Red</b><small id="info1"></small></div><span class="clock" id="clk1">0:00</span><i class="tbar" id="tb1"></i></div>
   </div>
 
   <div class="play" id="play">
@@ -134,7 +136,7 @@
         <div class="shell" id="sh0"></div><div class="shell" id="sh1"></div><div class="shell" id="sh2"></div><div class="shell" id="sh3"></div>
         <span class="tap" id="tap">Tap to throw</span>
       </div>
-      <div class="row2"><div class="chips" id="chips"></div><button class="btn shake" id="shakeBtn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9c1-3 3-4 5-4M20 15c-1 3-3 4-5 4M3 14l2-2 2 2M21 10l-2 2-2-2"/><circle cx="12" cy="12" r="3.2"/></svg><span id="shakeTxt">Hold to shake</span></button></div>
+      <div class="row2"><div class="chips" id="chips"></div><button class="pairbtn" id="pairBtn" type="button" aria-pressed="false" hidden><svg viewBox="0 0 22 16" aria-hidden="true"><circle cx="7" cy="8" r="5.5" fill="currentColor" opacity=".55"/><circle cx="15" cy="8" r="5.5" fill="currentColor"/></svg><span id="pairTxt">Move pair</span></button><button class="btn shake" id="shakeBtn" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9c1-3 3-4 5-4M20 15c-1 3-3 4-5 4M3 14l2-2 2 2M21 10l-2 2-2-2"/><circle cx="12" cy="12" r="3.2"/></svg><span id="shakeTxt">Hold to shake</span></button></div>
     </div>
   </div>
 </div>
@@ -151,9 +153,13 @@
       <label><span class="label" id="n0Label">Player 1 (bottom)</span><input id="n0" maxlength="14" autocomplete="off"></label>
       <label id="n1Box"><span class="label">Player 2 (top)</span><input id="n1" maxlength="14" autocomplete="off"></label>
     </div>
+    <span class="label">Turn time limit</span>
+    <div class="seg" id="segLimit"></div>
+    <p class="note">With a limit, a bar runs down on the player's card; when it runs out the game throws or makes a sensible move for them. Each player's clock always shows their total time.</p>
     <div>
       <label class="switch"><span>Capture before going inside<small>Pawns keep circling the outer ring until you've captured once</small></span><input type="checkbox" id="optKill"></label>
       <label class="switch"><span>Pairs can't be hit<small>A single pawn can't land on two of the other player's pawns</small></span><input type="checkbox" id="optPairs"></label>
+      <label class="switch"><span>Pairs move together<small>Two of your pawns on one square move as a pair on an even throw, each going half of it</small></span><input type="checkbox" id="optPairMoves"></label>
       <label class="switch"><span>Three 4s or 8s lose the turn<small>Throwing chowka or bara three times in a row ends your turn</small></span><input type="checkbox" id="optThree"></label>
       <label class="switch"><span>Show the route<small>Dotted line for whoever's turn it is</small></span><input type="checkbox" id="optRoute"></label>
       <label class="switch"><span>Face to face<small>Phone flat between you: the shells turn to face the top player on their turn</small></span><input type="checkbox" id="optFace"></label>
@@ -166,6 +172,7 @@
         <li>When you stop throwing, spend each throw on one pawn: pick a number, then tap a pawn. Different throws can move different pawns.</li>
         <li>Pawns start on your home square (the cross on your edge). They go round the <b>outer ring</b> anticlockwise, then the <b>inner ring</b> clockwise, then into the <b>centre</b>.</li>
         <li>Land on the other player's pawn to <b>capture</b> it: it goes back to its home and you get another throw. Squares with a cross are safe: no captures there.</li>
+        <li><b>Pairs (jodi):</b> two of your pawns on one square can move together on an even throw (2, 4 or 8), each going half of it. Pick the even number and tap <b>Move pair</b>, or just tap the pair when only the pair can use the throw. A moving pair can land on the other player's pair and captures both.</li>
         <li>You can't go into the inner ring until you've captured at least once. Until then your pawns keep going round.</li>
         <li>The centre needs an exact throw. A throw no pawn can use is lost. First to bring all four pawns to the centre wins.</li>
       </ul>
@@ -192,19 +199,21 @@ const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
-const set = Object.assign({ names: ['Blue', 'Red'], route: true, face: false }, K.DEFAULTS, store.get('chowka-settings', {}));
+const set = Object.assign({ names: ['Blue', 'Red'], route: true, face: false, limit: 0 }, K.DEFAULTS, store.get('chowka-settings', {}));
+if (![0, 15, 30, 60].includes(set.limit)) set.limit = 0;
 const stats = Object.assign({ games: 0, wins: [0, 0] }, store.get('chowka-stats', {}));
 if (!['two', 'cpu'].includes(set.mode)) set.mode = 'two'; if (!K.LEVELS[set.level]) set.level = 'medium';
 if (!stats.cpu) stats.cpu = { easy: [0, 0], medium: [0, 0], hard: [0, 0] };
 const LEVEL_NAMES = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 const name = p => p === 1 && S && S.cpu ? 'Computer' : (set.names[p] || '').trim() || ['Blue', 'Red'][p];
 const cpuTurn = () => !!(S && S.cpu && S.turn === 1 && S.phase !== 'over');
-const rulesFromSet = () => ({ killToEnter: set.killToEnter, pairs: set.pairs, threeOut: set.threeOut });
+const rulesFromSet = () => ({ killToEnter: set.killToEnter, pairs: set.pairs, threeOut: set.threeOut, pairMoves: set.pairMoves });
+const fmt = ms => { const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, x = String(t % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
 const CELL = 100, ctr = ([r, c]) => [c * CELL + 50, r * CELL + 50];
 
-let S, sel = 0, busy = false, shells = [true, false, true, false], view = null, confirmNew = 0;
+let S, sel = 0, busy = false, shells = [true, false, true, false], view = null, confirmNew = 0, pairMode = false;
 
 // ---------- cowry shells ----------
 // Mouth up: the toothed slit shows. Mouth down: the smooth speckled back.
@@ -224,11 +233,18 @@ function shellSVG(up){
 }
 const rest = () => [0, 1, 2, 3].map(() => ({ r: Math.round(Math.random() * 70 - 35), x: Math.round(Math.random() * 10 - 5), y: Math.round(Math.random() * 10 - 5) }));
 let lay = rest();
+// Each shell's live state: position (x, y), height above the mat (h), spin (r), and flip angle (f; the face turns over as f passes 90°).
+const PH = [0, 1, 2, 3].map(i => ({ x: 0, y: 0, h: 0, r: 0, f: 0, vx: 0, vy: 0, vh: 0, vr: 0, vf: 0, base: true, shown: null }));
+function placeShell(i){
+  const q = PH[i], e = $('sh' + i), c = Math.cos(q.f), up = c >= 0 ? q.base : !q.base;
+  if (q.shown !== up){ e.innerHTML = shellSVG(up); q.shown = up; }
+  const lift = 1 + q.h / 200, sx = Math.max(0.14, Math.abs(c));
+  e.style.transform = `translate(${q.x.toFixed(1)}px, ${(q.y - q.h).toFixed(1)}px) rotate(${q.r.toFixed(1)}deg) scale(${(sx * lift).toFixed(3)}, ${lift.toFixed(3)})`;
+  const svgEl = e.firstElementChild;
+  if (svgEl) svgEl.style.filter = q.h > 0.5 ? `drop-shadow(${(q.h * .12).toFixed(1)}px ${(2 + q.h * .35).toFixed(1)}px ${(2 + q.h * .25).toFixed(1)}px rgba(0,0,0,${Math.max(.08, .24 - q.h / 300).toFixed(2)}))` : '';
+}
 function drawShells(){
-  for (let i = 0; i < 4; i++){
-    const el = $('sh' + i); el.innerHTML = shellSVG(shells[i]);
-    el.style.setProperty('--r', lay[i].r + 'deg'); el.style.setProperty('--x', lay[i].x + 'px'); el.style.setProperty('--y', lay[i].y + 'px');
-  }
+  for (let i = 0; i < 4; i++){ const q = PH[i]; Object.assign(q, { x: lay[i].x, y: lay[i].y, r: lay[i].r, h: 0, f: 0, base: shells[i], shown: null }); placeShell(i); }
 }
 
 // ---------- board ----------
@@ -282,7 +298,7 @@ function drawPawns(V){
   const groups = {};
   for (let p = 0; p < 2; p++) V.pawns[p].forEach((pos, i) => { const [r, c] = K.cellOf(p, pos), k = r + ',' + c; (groups[k] = groups[k] || []).push([p, i]); });
   const can = new Set();
-  if (!busy && S.phase === 'move'){ const v = S.pool[sel]; if (v != null) K.movesFor(S, v).forEach(m => S.pawns[S.turn].forEach((pos, i) => { if (pos === m.from) can.add(i); })); }
+  if (!busy && S.phase === 'move'){ const v = S.pool[sel]; if (v != null) (pairMode ? K.pairMovesFor(S, v) : K.movesFor(S, v)).forEach(m => S.pawns[S.turn].forEach((pos, i) => { if (pos === m.from) can.add(i); })); }
   for (const k in groups){
     const list = groups[k].sort((a, b) => a[0] - b[0] || a[1] - b[1]), [r, c] = k.split(',').map(Number), { at, s } = slots(list.length);
     list.forEach(([p, i], j) => {
@@ -298,9 +314,10 @@ function drawGhosts(){
   if (busy || !S || S.phase !== 'move') return;
   const v = S.pool[sel]; if (v == null) return;
   const seen = new Set();
-  for (const m of K.movesFor(S, v)){
+  for (const m of (pairMode ? K.pairMovesFor(S, v) : K.movesFor(S, v))){
     const [r, c] = K.cellOf(S.turn, m.to), k = r + ',' + c; if (seen.has(k)) continue; seen.add(k);
-    el('circle', { cx: c * CELL + 50, cy: r * CELL + 50, r: 34, class: 'ghost', stroke: color(S.turn) }, gGhost);
+    el('circle', { cx: c * CELL + 50, cy: r * CELL + 50, r: 36, class: 'ghost', stroke: color(S.turn) }, gGhost);
+    if (pairMode) el('circle', { cx: c * CELL + 50, cy: r * CELL + 50, r: 27, class: 'ghost2', stroke: color(S.turn) }, gGhost); // double ring: the pair lands here
   }
 }
 
@@ -326,12 +343,19 @@ function render(){
   // throws waiting to be spent
   const chips = $('chips'); chips.className = 'chips p' + S.turn;
   if (S.phase === 'move'){
-    if (sel >= S.pool.length || !K.movesFor(S, S.pool[sel]).length){ const k = S.pool.findIndex(v => K.movesFor(S, v).length); sel = k < 0 ? 0 : k; }
+    if (sel >= S.pool.length || !K.canUse(S, S.pool[sel])){ const k = S.pool.findIndex(v => K.canUse(S, v)); sel = k < 0 ? 0 : k; }
     chips.innerHTML = S.pool.map((v, k) => {
-      const dead = !K.movesFor(S, v).length, word = v === 4 ? 'chowka' : v === 8 ? 'bara' : '';
+      const dead = !K.canUse(S, v), word = v === 4 ? 'chowka' : v === 8 ? 'bara' : '';
       return `<button type="button" class="chip${dead ? ' dead' : ''}" data-k="${k}" aria-pressed="${k === sel}" ${dead ? 'disabled' : ''} aria-label="Move ${v}">${v}${word ? `<small>${word}</small>` : ''}</button>`;
     }).join('');
   } else chips.innerHTML = '';
+  // Move pair: offered when the chosen throw is even and you have two pawns together; forced on when only the pair can use it
+  const v = S.phase === 'move' ? S.pool[sel] : null, pairs = v != null ? K.pairMovesFor(S, v) : [], singles = v != null ? K.movesFor(S, v) : [];
+  if (!pairs.length) pairMode = false; else if (!singles.length) pairMode = true;
+  const pb = $('pairBtn');
+  pb.hidden = !pairs.length || busy;
+  pb.className = 'pairbtn p' + S.turn; pb.setAttribute('aria-pressed', pairMode); pb.disabled = cpuTurn() || !singles.length;
+  if (pairs.length) $('pairTxt').textContent = pairMode ? `Pair: ${v / 2} each` : `Move pair (${v / 2} each)`;
   drawRoute(); drawGhosts(); drawPawns(V);
 }
 function prompt(){
@@ -339,6 +363,7 @@ function prompt(){
   const p = S.turn;
   if (cpuTurn()){ say(S.phase === 'throw' ? (S.pool.length ? 'Computer throws again…' : 'Computer is throwing…') : 'Computer is thinking…', p); $('msg').classList.add('thinking'); return; }
   if (S.phase === 'throw') say(S.pool.length ? `${name(p)}, throw again` : `${name(p)}, throw the shells`, p);
+  else if (pairMode) say(`${name(p)}: tap the pair to move it ${S.pool[sel] / 2}`, p);
   else if (S.pool.length > 1) say(`${name(p)}: pick a number, then a pawn`, p);
   else say(`${name(p)}: move a pawn ${S.pool[0]}`, p);
 }
@@ -347,25 +372,15 @@ const save = () => store.set('chowka-game', S && S.phase !== 'over' ? S : null);
 async function doThrow(auto, rand){
   if (!S || S.phase !== 'throw' || busy || (cpuTurn() && auto !== true)) return;
   busy = true; render();
-  const res = K.roll(rand || freshRand()), next = rest(), p = S.turn;
-  // tumble: shells fly up and flip a few times before landing
-  for (let i = 0; i < 4; i++){
-    const e = $('sh' + i); e.classList.remove('toss'); void e.offsetWidth;
-    e.style.setProperty('--r0', lay[i].r + 'deg'); e.style.setProperty('--mx', Math.round(Math.random() * 30 - 15) + 'px');
-    e.style.setProperty('--d', (i * 0.04) + 's'); e.classList.add('toss');
-  }
-  lay = next;
-  buzz(10);
-  for (let t = 0; t < 6; t++){ shells = shells.map(() => Math.random() < .5); drawShells(); await sleep(95); }
-  shells = res; drawShells();
-  await sleep(160); buzz(18);
+  const res = K.roll(rand || freshRand()), p = S.turn;
+  await tossAnim(res);
   const out = K.applyThrow(S, res), v = out.v;
   const label = v === 8 ? 'Bara! 8' : v === 4 ? 'Chowka! 4' : `${v}`;
   busy = false;
   if (out.lost){ say(`${label}: three in a row, turn lost. ${name(S.turn)} to throw`, p); }
   else if (out.again){ say(`${label}. ${cpuTurn() ? 'Computer throws again' : 'Throw again'}`, p); }
   else if (out.stuck){ say(`Threw ${v}, but no pawn can move. ${name(S.turn)}'s turn`, p); await handoff(); }
-  else { sel = S.pool.findIndex(x => K.movesFor(S, x).length); if (sel < 0) sel = 0; prompt(); }
+  else { sel = S.pool.findIndex(x => K.canUse(S, x)); if (sel < 0) sel = 0; pairMode = false; render(); prompt(); }
   save(); render(); kick();
 }
 async function handoff(){ busy = true; render(); await sleep(1100); busy = false; prompt(); render(); kick(); }
@@ -382,38 +397,40 @@ async function cpuStep(){
   if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden) return;
   if (S.phase === 'throw'){
     say(S.pool.length ? 'Computer shakes again…' : 'Computer shakes the shells…', 1);
-    $('mat').classList.add('shaking'); for (let t = 0; t < 5; t++){ await sleep(120); if (t % 2) flickerOne(); }
-    $('mat').classList.remove('shaking');
+    shakeAnim(true); await sleep(750); shakeAnim(false);
     return doThrow(true);
   }
   if (S.phase !== 'move') return;
   const m = K.chooseMove(S, S.cpu);
   if (!m) return;
-  sel = m.k; render(); // show the throw it picked and where its pawns can go
-  say(`Computer moves ${S.pool[m.k]}`, 1);
+  sel = m.k; pairMode = !!m.pair; render(); // show the throw it picked and where its pawns can go
+  say(m.pair ? `Computer moves a pair ${S.pool[m.k] / 2} each` : `Computer moves ${S.pool[m.k]}`, 1);
   await sleep(650);
-  if (cpuTurn() && S.phase === 'move') await move(m.pawn, m.k);
+  if (cpuTurn() && S.phase === 'move') await move(m.pawn, m.k, m.pair);
 }
 
 function tapCell(r, c){
   if (busy || !S || S.phase !== 'move' || cpuTurn()) return;
   const p = S.turn, here = S.pawns[p].map((pos, i) => [pos, i]).filter(([pos]) => { const [rr, cc] = K.cellOf(p, pos); return rr === r && cc === c && pos !== K.HOME; });
   if (!here.length) return;
-  // the chosen number first, then any other throw this pawn can use
+  if (pairMode){ for (const [, i] of here) if (K.pairDestination(S, p, i, S.pool[sel]) != null) return move(i, sel, true); }
+  // the chosen number first, then any other throw this pawn can use; a pair moves together if only that fits
   const order = [sel, ...S.pool.map((_, k) => k).filter(k => k !== sel)];
   for (const k of order){
     const v = S.pool[k];
     for (const [, i] of here) if (K.destination(S, p, i, v) != null) return move(i, k);
   }
+  for (const k of order){ for (const [, i] of here) if (K.pairDestination(S, p, i, S.pool[k]) != null) return move(i, k, true); }
   say(S.pool.length > 1 ? 'That pawn can\'t use any of these throws' : `That pawn can't move ${S.pool[0]}`, p);
 }
-async function move(i, k){
+async function move(i, k, pair){
   busy = true;
-  const p = S.turn, before = JSON.parse(JSON.stringify(S)), res = K.applyMove(S, i, k);
+  const p = S.turn, before = JSON.parse(JSON.stringify(S)), res = K.applyMove(S, i, k, pair);
   if (!res){ busy = false; return; }
-  // walk the pawn square by square, then let any captured pawn slide home
+  pairMode = false;
+  // walk the pawn (or the pair, side by side) square by square, then let any captured pawn slide home
   view = before; view.pool = S.pool;
-  for (const step of res.steps){ view.pawns[p][i] = step; drawPawns(view); buzz(4); await sleep(150); }
+  for (const step of res.steps){ view.pawns[p][i] = step; if (res.pair) view.pawns[p][res.partner] = step; drawPawns(view); buzz(4); await sleep(res.pair ? 190 : 150); }
   view = null;
   if (res.captured.length){ buzz([20, 30, 40]); }
   render();
@@ -439,22 +456,23 @@ function win(p){
   if (S.cpu){ const r = stats.cpu[S.cpu] || (stats.cpu[S.cpu] = [0, 0]); r[p === 0 ? 0 : 1]++; } else { stats.games++; stats.wins[p]++; }
   store.set('chowka-stats', stats); store.set('chowka-game', null);
   say(`${name(p)} wins!`, p); render();
+  const times = `Game time ${fmt(S.time[0] + S.time[1])} (${name(0)} ${fmt(S.time[0])}, ${name(1)} ${fmt(S.time[1])}).`;
   setTimeout(() => {
     const left = S.pawns[1 - p].filter(x => x === K.HOME).length;
     if (S.cpu){
       const r = stats.cpu[S.cpu], lv = LEVEL_NAMES[S.cpu];
       $('endTitle').textContent = p === 0 ? `You beat the computer!` : 'The computer wins';
-      $('endNote').textContent = `${p === 0 ? `All four pawns home on ${lv}.` : `It got all four home${left ? `; you had ${left} in the centre` : ''}.`} Your record on ${lv}: ${r[0]} won, ${r[1]} lost. ${p === 0 ? 'The computer' : 'You'} start${p === 0 ? 's' : ''} the next game.`;
+      $('endNote').textContent = `${p === 0 ? `All four pawns home on ${lv}.` : `It got all four home${left ? `; you had ${left} in the centre` : ''}.`} Your record on ${lv}: ${r[0]} won, ${r[1]} lost. ${p === 0 ? 'The computer' : 'You'} start${p === 0 ? 's' : ''} the next game. ${times}`;
     } else {
       $('endTitle').textContent = `${name(p)} wins!`;
-      $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game.`;
+      $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game. ${times}`;
     }
     $('endSheet').hidden = false;
   }, 900);
 }
 function newGame(starter){
-  S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter; S.cpu = set.mode === 'cpu' ? set.level : null;
-  sel = 0; busy = false; view = null; lay = rest(); drawShells(); clearTimeout(cpuTimer);
+  S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter; S.cpu = set.mode === 'cpu' ? set.level : null; S.time = [0, 0];
+  sel = 0; busy = false; view = null; pairMode = false; lay = rest(); drawShells(); clearTimeout(cpuTimer); clockSig = '';
   $('endSheet').hidden = true; $('menuSheet').hidden = true;
   save(); prompt(); render(); kick();
 }
@@ -468,6 +486,8 @@ function openMenu(){
   $('n1Box').hidden = mode === 'cpu'; $('n0Label').textContent = mode === 'cpu' ? 'Your name' : 'Player 1 (bottom)';
   $('optFace').closest('.switch').hidden = mode === 'cpu';
   $('n0').value = name(0); $('n1').value = (set.names[1] || '').trim() || 'Red';
+  $('segLimit').innerHTML = [[0, 'Off'], [15, '15 s'], [30, '30 s'], [60, '60 s']].map(([k, t]) => `<button type="button" data-k="${k}" aria-pressed="${k === set.limit}">${t}</button>`).join('');
+  $('optPairMoves').checked = S.opts.pairMoves !== false;
   $('optKill').checked = set.killToEnter; $('optPairs').checked = set.pairs; $('optThree').checked = set.threeOut;
   $('optRoute').checked = set.route; $('optFace').checked = set.face;
   $('stGames').textContent = stats.games;
@@ -490,7 +510,8 @@ $('newBtn').addEventListener('click', () => {
 });
 for (const p of [0, 1]) $('n' + p).addEventListener('input', e => { set.names[p] = e.target.value; saveSet(); render(); });
 const rule = (id, k) => $(id).addEventListener('change', e => { set[k] = e.target.checked; S.opts[k] = e.target.checked; saveSet(); save(); render(); });
-rule('optKill', 'killToEnter'); rule('optPairs', 'pairs'); rule('optThree', 'threeOut');
+rule('optKill', 'killToEnter'); rule('optPairs', 'pairs'); rule('optThree', 'threeOut'); rule('optPairMoves', 'pairMoves');
+$('segLimit').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; set.limit = +b.dataset.k; saveSet(); clockSig = ''; openMenu(); });
 $('optRoute').addEventListener('change', e => { set.route = e.target.checked; saveSet(); render(); });
 $('optFace').addEventListener('change', e => { set.face = e.target.checked; saveSet(); render(); });
 $('againBtn').addEventListener('click', () => newGame(S.winner == null ? 0 : 1 - S.winner));
@@ -509,18 +530,87 @@ const stir = (h, v) => { h = (h ^ (v >>> 0)) >>> 0; h = Math.imul(h ^ (h >>> 16)
 const fromSeed = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const freshRand = () => fromSeed(cryptoU32());
 let shaking = null, shakeRaf = 0;
-function flickerOne(){ const i = (Math.random() * 4) | 0; shells[i] = !shells[i]; $('sh' + i).innerHTML = shellSVG(shells[i]); }
+// ---------- shell physics ----------
+// One animation loop moves the shells. While shaking they're kicked about inside the mat, spin, hop and flip over,
+// harder the longer you hold, and they follow your finger. On a throw they're flung up, bounce and settle face up or down.
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd = Math.random;
+let anim = 'idle', animT0 = 0, animLast = 0, animRaf = 0, finger = { dx: 0, dy: 0 }, tossDone = null, tossFinal = null, bounced = [];
+const BX = 26, BY = 15; // how far a shell may wander from its spot on the mat
+function animLoop(now){
+  const dt = Math.min(40, now - (animLast || now)) / 16.7; animLast = now;
+  const t = now - animT0;
+  if (anim === 'shake'){
+    const I = Math.min(1, 0.45 + t / 1400), mat = $('mat');
+    mat.style.transform = `translate(${((rnd() - .5) * 2.4 * I).toFixed(1)}px, ${((rnd() - .5) * 2 * I).toFixed(1)}px)`;
+    PH.forEach((q, i) => {
+      q.vx += ((rnd() - .5) * 7 * I + finger.dx * .22) * dt; q.vy += ((rnd() - .5) * 5 * I + finger.dy * .22) * dt;
+      q.vx -= q.x * .06 * dt; q.vy -= q.y * .08 * dt; q.vx *= Math.pow(.86, dt); q.vy *= Math.pow(.86, dt);
+      q.x += q.vx * dt; q.y += q.vy * dt;
+      if (Math.abs(q.x) > BX){ q.x = Math.sign(q.x) * BX; q.vx *= -.55; }
+      if (Math.abs(q.y) > BY){ q.y = Math.sign(q.y) * BY; q.vy *= -.55; }
+      q.vr += (rnd() - .5) * 26 * I * dt; q.vr *= Math.pow(.86, dt); q.r += q.vr * dt;
+      q.vf += (rnd() - .5) * .5 * I * dt; q.vf *= Math.pow(.9, dt); q.f += q.vf * dt;
+      if (q.h <= 0 && rnd() < .12 * I * dt) q.vh = 2.5 + rnd() * 5 * I; // little hops off the mat
+      q.vh -= 1.0 * dt; q.h = Math.max(0, q.h + q.vh * dt); if (!q.h) q.vh = 0;
+      placeShell(i);
+    });
+    finger.dx = finger.dy = 0;
+  } else if (anim === 'toss'){
+    const settleAt = 640, end = 900;
+    PH.forEach((q, i) => {
+      if (t < settleAt){
+        q.vh -= 1.15 * dt; q.h += q.vh * dt;
+        if (q.h < 0){ q.h = 0; q.vh = -q.vh * .38; q.vr *= .6; q.vf *= .55; q.vx *= .7; if (!bounced[i]){ bounced[i] = 1; buzz(8); } if (q.vh < 1.6) q.vh = 0; }
+        q.vx *= Math.pow(.97, dt); q.vy *= Math.pow(.97, dt); q.x += q.vx * dt; q.y += q.vy * dt;
+        if (Math.abs(q.x) > BX + 6){ q.x = Math.sign(q.x) * (BX + 6); q.vx *= -.5; }
+        if (Math.abs(q.y) > BY){ q.y = Math.sign(q.y) * BY; q.vy *= -.5; }
+        q.r += q.vr * dt; q.f += q.vf * dt;
+        q.sx = q.x; q.sy = q.y; q.sr = q.r; q.sf = q.f; q.sh = q.h;
+      } else {
+        // glide to rest: the flip ends on a whole turn that shows the thrown face
+        const k = Math.min(1, (t - settleAt) / (end - settleAt)), e = 1 - Math.pow(1 - k, 3), L = lay[i], F = tossFinal[i];
+        q.x = q.sx + (L.x - q.sx) * e; q.y = q.sy + (L.y - q.sy) * e; q.h = q.sh * (1 - e);
+        q.r = q.sr + (q.tr - q.sr) * e; q.f = q.sf + (q.tf - q.sf) * e;
+        if (k >= 1){ q.base = F; q.f = 0; q.r = L.r; }
+      }
+      placeShell(i);
+    });
+    if (t >= end){ anim = 'idle'; $('mat').style.transform = ''; const d = tossDone; tossDone = null; d && d(); return; }
+  } else return;
+  animRaf = requestAnimationFrame(animLoop);
+}
+function startLoop(mode){ anim = mode; animT0 = performance.now(); animLast = 0; cancelAnimationFrame(animRaf); animRaf = requestAnimationFrame(animLoop); }
+function shakeAnim(on){
+  if (on){ $('mat').classList.add('shaking'); if (!calm) startLoop('shake'); }
+  else { $('mat').classList.remove('shaking'); if (anim === 'shake'){ anim = 'idle'; cancelAnimationFrame(animRaf); } $('mat').style.transform = ''; }
+}
+// Fling the shells and land them showing `result` (true = mouth up). Resolves when they've settled.
+function tossAnim(result){
+  shells = result.slice(); lay = rest();
+  if (calm){ drawShells(); return Promise.resolve(); }
+  buzz(10);
+  tossFinal = result; bounced = [];
+  PH.forEach((q, i) => {
+    q.vh = 9.5 + rnd() * 4; q.vx = (rnd() - .5) * 8 + finger.dx * .3; q.vy = (rnd() - .5) * 3;
+    q.vr = (rnd() - .5) * 46; q.vf = (rnd() < .5 ? -1 : 1) * (.32 + rnd() * .22);
+    // where the flip and spin will end: the nearest half-turns ahead that leave the right face showing
+    const spins = Math.round((q.f + q.vf * 26) / Math.PI);
+    q.tf = spins * Math.PI; q.base = (spins % 2 === 0) ? result[i] : !result[i];
+    q.tr = lay[i].r + 360 * Math.round((q.r + q.vr * 22 - lay[i].r) / 360);
+  });
+  return new Promise(res => { tossDone = res; startLoop('toss'); });
+}
 function startShake(e){
   if (shaking || busy || !S || S.phase !== 'throw' || cpuTurn()) return;
   e && e.preventDefault();
-  shaking = { t0: performance.now(), h: stir(cryptoU32(), Date.now()), last: 0 };
-  for (let i = 0; i < 4; i++){ const el = $('sh' + i); el.classList.remove('toss'); el.style.setProperty('--rd', (-Math.random() * 0.14).toFixed(3) + 's'); }
-  $('mat').classList.add('shaking'); $('shakeBtn').classList.add('on'); $('shakeTxt').textContent = 'Let go to throw'; $('tap').textContent = '';
+  shaking = { t0: performance.now(), h: stir(cryptoU32(), Date.now()), last: 0, px: null, py: null };
+  shakeAnim(true); $('shakeBtn').classList.add('on'); $('shakeTxt').textContent = 'Let go to throw'; $('tap').textContent = '';
   say(`${name(S.turn)}, shaking… let go to throw`, S.turn);
   const loop = now => {
     if (!shaking) return;
     shaking.h = stir(shaking.h, (now * 1000) | 0);
-    if (now - shaking.last > 110){ shaking.last = now; flickerOne(); buzz(6); }
+    if (now - shaking.last > 140){ shaking.last = now; buzz(5); }
     shakeRaf = requestAnimationFrame(loop);
   };
   shakeRaf = requestAnimationFrame(loop);
@@ -530,25 +620,63 @@ async function endShake(){
   const s = shaking, held = performance.now() - s.t0;
   if (held < 450){ await sleep(450 - held); s.h = stir(s.h, (performance.now() * 1000) | 0); } // a quick tap still gets a short rattle
   shaking = null; cancelAnimationFrame(shakeRaf);
-  $('mat').classList.remove('shaking'); $('shakeBtn').classList.remove('on'); $('shakeTxt').textContent = 'Hold to shake';
+  shakeAnim(false); $('shakeBtn').classList.remove('on'); $('shakeTxt').textContent = 'Hold to shake';
   doThrow(false, fromSeed(stir(stir(s.h, (performance.now() * 1000) | 0), cryptoU32())));
 }
 const sb = $('shakeBtn');
 sb.addEventListener('pointerdown', e => { sb.setPointerCapture && sb.setPointerCapture(e.pointerId); startShake(e); });
-sb.addEventListener('pointermove', e => { if (shaking) shaking.h = stir(shaking.h, (e.clientX * 977 + e.clientY * 131 + e.timeStamp * 1000) | 0); });
+sb.addEventListener('pointermove', e => {
+  if (!shaking) return;
+  shaking.h = stir(shaking.h, (e.clientX * 977 + e.clientY * 131 + e.timeStamp * 1000) | 0);
+  if (shaking.px != null){ finger.dx += (e.clientX - shaking.px) * (set.face && S.turn === 1 && !S.cpu ? -1 : 1); finger.dy += (e.clientY - shaking.py) * (set.face && S.turn === 1 && !S.cpu ? -1 : 1); }
+  shaking.px = e.clientX; shaking.py = e.clientY;
+});
 sb.addEventListener('pointerup', endShake); sb.addEventListener('pointercancel', endShake); sb.addEventListener('lostpointercapture', endShake);
 sb.addEventListener('contextmenu', e => e.preventDefault());
 sb.addEventListener('click', e => { if (e.detail === 0 && !shaking){ startShake(); endShake(); } }); // keyboard: a short shake
 
-$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b || b.disabled || busy || cpuTurn()) return; sel = +b.dataset.k; render(); });
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b || b.disabled || busy || cpuTurn()) return; sel = +b.dataset.k; pairMode = false; render(); prompt(); });
+$('pairBtn').addEventListener('click', () => { if (busy || cpuTurn() || S.phase !== 'move') return; pairMode = !pairMode; render(); prompt(); });
 board.addEventListener('click', e => { const t = e.target.closest('.cellhit'); if (t) tapCell(+t.dataset.r, +t.dataset.c); });
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || !$('menuSheet').hidden || !$('endSheet').hidden || e.target.tagName === 'INPUT') return;
   if ((e.key === ' ' || e.key === 'Enter') && e.target === document.body){ e.preventDefault(); doThrow(); }
-  if (/^[1-8]$/.test(e.key) && S.phase === 'move' && !cpuTurn()){ const k = S.pool.findIndex(v => v === +e.key); if (k >= 0){ sel = k; render(); } }
+  if (/^[1-8]$/.test(e.key) && S.phase === 'move' && !cpuTurn()){ const k = S.pool.findIndex(v => v === +e.key); if (k >= 0){ sel = k; pairMode = false; render(); prompt(); } }
+  if ((e.key === 'p' || e.key === 'P') && !$('pairBtn').hidden && !$('pairBtn').disabled) $('pairBtn').click();
 });
 addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+// ---------- clocks ----------
+// Each player's clock counts their time on turn (paused while a menu is open or the app is in the background).
+// With a turn limit, the bar on the active card runs down for each throw or move; at zero the game plays for them.
+let clockSig = '', clockLeft = 0, clockLast = performance.now(), saveTick = 0;
+function timeUp(){
+  if (!S || S.phase === 'over' || busy || cpuTurn()) return;
+  if (shaking) return endShake();
+  say(`Time's up! ${S.phase === 'throw' ? 'Throwing' : 'Moving'} for ${name(S.turn)}`, S.turn);
+  if (S.phase === 'throw') return doThrow(false);
+  const m = K.chooseMove(S, 'medium');
+  if (m) move(m.pawn, m.k, m.pair);
+}
+function clockTick(){
+  const now = performance.now(), dt = now - clockLast; clockLast = now;
+  if (!S || !S.time) return;
+  const live = S.phase !== 'over' && !document.hidden && $('menuSheet').hidden && $('endSheet').hidden;
+  if (live){ S.time[S.turn] += dt; if (++saveTick % 25 === 0) save(); }
+  const limited = set.limit > 0 && live && !cpuTurn();
+  const sig = S.turn + '|' + S.phase + '|' + S.pool.join() + '|' + S.pawns.join(';');
+  if (sig !== clockSig){ clockSig = sig; clockLeft = set.limit * 1000; }
+  if (limited && !busy){ clockLeft -= dt; if (clockLeft <= 0){ clockLeft = set.limit * 1000; timeUp(); } }
+  for (let p = 0; p < 2; p++){
+    const on = limited && S.turn === p, secs = Math.ceil(clockLeft / 1000);
+    $('clk' + p).textContent = fmt(S.time[p]) + (on && secs <= 10 ? ` · ${secs}s` : '');
+    $('clk' + p).classList.toggle('low', on && secs <= 5);
+    $('tb' + p).style.width = on ? Math.max(0, 100 * clockLeft / (set.limit * 1000)).toFixed(1) + '%' : '0';
+  }
+}
+setInterval(clockTick, 200);
+document.addEventListener('visibilitychange', () => { clockLast = performance.now(); });
 
 // ---------- start ----------
 buildBoard(); drawShells();
@@ -556,6 +684,7 @@ const saved = store.get('chowka-game', null);
 if (saved && saved.pawns && saved.phase && saved.phase !== 'over'){
   S = Object.assign(K.newGame(rulesFromSet()), saved); S.opts = Object.assign({}, K.DEFAULTS, saved.opts || {});
   if (S.cpu && !K.LEVELS[S.cpu]) S.cpu = 'medium';
+  if (!Array.isArray(S.time)) S.time = [0, 0];
   set.mode = S.cpu ? 'cpu' : 'two'; if (S.cpu) set.level = S.cpu;
   prompt(); render(); kick();
 } else newGame(0);
