@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Chowka Bara</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+/* Chowka Bara on graph paper: a printed 5×5 board with pencil crosses on the safe squares, blue and red pencil pawns,
+   and four real-looking cowry shells you tap to throw. Layout: header, the two players, the board, the shell tray. */
+:root{--p0:var(--hit);--p1:var(--miss)}
+.icon-btn{justify-self:end;width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);padding:0}
+.icon-btn svg{width:24px;height:24px}
+
+.players{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pl{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;border:1.5px solid transparent;min-width:0;transition:border-color .2s,background .2s}
+.pl.on{border-color:var(--c);background:var(--key)}
+.pl .dot{flex:none;width:18px;height:18px;border-radius:50%;background:var(--c);border:2px solid var(--ink)}
+.pl div{display:flex;flex-direction:column;min-width:0}
+.pl b{font-family:var(--hand);font-weight:400;font-size:1.3rem;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl small{font-size:.72rem;color:var(--muted);line-height:1.25}
+.pl small.open{color:var(--c)}
+#pl0{--c:var(--p0)} #pl1{--c:var(--p1)}
+
+.play{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:10px}
+.play.flip{flex-direction:column-reverse}
+.play.flip .tray{transform:rotate(180deg)}
+.stage{flex:1 1 auto;min-height:180px;display:flex;align-items:center;justify-content:center}
+#board{width:100%;height:100%;display:block;touch-action:manipulation;overflow:visible}
+
+.grid-cell{fill:var(--sheet)} .home0{fill:color-mix(in srgb,var(--p0) 12%,var(--sheet))} .home1{fill:color-mix(in srgb,var(--p1) 12%,var(--sheet))}
+.grid-line{fill:none;stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round}
+.inner-line{fill:none;stroke:var(--ink);stroke-width:5;stroke-linejoin:round}
+.cross{fill:none;stroke:var(--muted);stroke-width:3;stroke-linecap:round}
+.route{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 10;opacity:.45}
+.route.locked{opacity:.18}
+.arrow{opacity:.55}
+.ghost{fill:none;stroke-width:3;stroke-dasharray:5 5;animation:spin 6s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cellhit{fill:transparent;cursor:pointer}
+
+.pawn{transition:transform .17s ease-out;pointer-events:none}
+.pawn .body{stroke:var(--ink);stroke-width:2.5}
+.pawn.pl0 .body{fill:var(--p0)} .pawn.pl1 .body{fill:var(--p1)}
+.pawn .shine{fill:#fff;opacity:.35}
+.pawn .ring{fill:none;stroke:var(--ink);stroke-width:2.5;opacity:0}
+.pawn .ring{transform-box:fill-box;transform-origin:center}
+.pawn.can .ring{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.15;transform:scale(.92)}50%{opacity:.9;transform:scale(1.08)}}
+
+.tray{display:flex;flex-direction:column;gap:8px;transition:transform .35s ease}
+.msg{text-align:center;font-family:var(--hand);font-size:1.3rem;min-height:1.4em;margin:0;line-height:1.15;text-wrap:balance}
+.msg.p0{color:var(--p0)} .msg.p1{color:var(--p1)}
+.mat{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;min-height:112px;padding:20px 10px 22px;border-radius:18px;border:1.5px dashed var(--line);background:var(--peer);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mat.ready{border-style:solid;border-color:var(--c,var(--ink));box-shadow:inset 0 0 0 1px var(--c,var(--ink))}
+.mat.p0{--c:var(--p0)} .mat.p1{--c:var(--p1)}
+.mat:disabled,.mat[aria-disabled="true"]{cursor:default}
+.shell{width:52px;height:70px;flex:none;transform:translate(var(--x,0),var(--y,0)) rotate(var(--r,0deg));transition:transform .25s ease-out}
+.shell svg{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))}
+.shell.toss{animation:toss .7s cubic-bezier(.3,.7,.4,1) both;animation-delay:var(--d,0s)}
+@keyframes toss{
+  0%{transform:translate(0,0) rotate(var(--r0,0deg)) scale(1)}
+  35%{transform:translate(var(--mx,0),-58px) rotate(calc(var(--r0,0deg) + 260deg)) scale(1.15)}
+  70%{transform:translate(var(--x,0),6px) rotate(calc(var(--r,0deg) + 520deg)) scale(.96)}
+  100%{transform:translate(var(--x,0),var(--y,0)) rotate(calc(var(--r,0deg) + 720deg)) scale(1)}}
+.total{position:absolute;left:12px;top:5px;font-family:var(--mono);font-weight:600;font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.tap{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:.72rem;color:var(--muted);pointer-events:none}
+
+.row2{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.chip{min-width:46px;height:44px;padding:0 10px;border-radius:12px;border:1px solid var(--key-edge);border-bottom-width:3px;background:var(--key);font-family:var(--mono);font-weight:600;font-size:1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.chip small{font-family:var(--ui);font-size:.62rem;font-weight:600;color:var(--muted);text-transform:uppercase}
+.chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.chip[aria-pressed="true"] small{color:rgba(255,255,255,.8)}
+.chip.dead{opacity:.35;text-decoration:line-through}
+.chips.p0 .chip{--c:var(--p0)} .chips.p1 .chip{--c:var(--p1)}
+
+.names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.names label{display:flex;flex-direction:column;gap:4px}
+.names input{font:inherit;font-family:var(--hand);font-size:1.3rem;padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--key);color:var(--ink);width:100%;-webkit-user-select:text;user-select:text}
+#n0{border-color:var(--p0)} #n1{border-color:var(--p1)}
+.rules{border-top:1px solid var(--line);padding-top:10px}
+.rules summary{font-family:var(--hand);font-size:1.4rem;cursor:pointer}
+.rules ul{margin:8px 0 0;padding-left:1.1em;line-height:1.5;color:var(--muted);font-size:.9rem}
+.rules li b{color:var(--ink);font-weight:600}
+.statrow{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.statrow b{color:var(--ink)}
+.big{font-family:var(--hand);font-size:2.2rem;line-height:1}
+@media (min-height:800px){.shell{width:60px;height:80px}.mat{min-height:128px}}
+@media (max-height:700px){.mat{min-height:96px}.shell{width:42px;height:58px}.pl{padding:4px 8px}}
+@media (max-height:600px){.players{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+    <h1>Chowka Bara</h1>
+    <button class="icon-btn" id="menuBtn" type="button" aria-label="Menu and rules">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+  <div class="players">
+    <div class="pl" id="pl0"><span class="dot"></span><div><b id="name0">Blue</b><small id="info0"></small></div></div>
+    <div class="pl" id="pl1"><span class="dot"></span><div><b id="name1">Red</b><small id="info1"></small></div></div>
+  </div>
+
+  <div class="play" id="play">
+    <div class="stage"><svg id="board" viewBox="-6 -6 512 512" role="img" aria-label="Chowka Bara board"></svg></div>
+    <div class="tray" id="tray">
+      <p class="msg" id="msg" aria-live="polite"></p>
+      <div class="mat" id="mat" role="button" tabindex="0" aria-label="Throw the cowry shells">
+        <span class="total" id="total"></span>
+        <div class="shell" id="sh0"></div><div class="shell" id="sh1"></div><div class="shell" id="sh2"></div><div class="shell" id="sh3"></div>
+        <span class="tap" id="tap">Tap to throw</span>
+      </div>
+      <div class="row2"><div class="chips" id="chips"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="menuSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="menuTitle">
+    <h2 id="menuTitle">Chowka Bara</h2>
+    <div class="row"><button class="btn primary" id="closeMenu" type="button">Back to the game</button><button class="btn" id="newBtn" type="button">New game</button></div>
+    <div class="names">
+      <label><span class="label">Player 1 (bottom)</span><input id="n0" maxlength="14" autocomplete="off"></label>
+      <label><span class="label">Player 2 (top)</span><input id="n1" maxlength="14" autocomplete="off"></label>
+    </div>
+    <div>
+      <label class="switch"><span>Capture before going inside<small>Pawns keep circling the outer ring until you've captured once</small></span><input type="checkbox" id="optKill"></label>
+      <label class="switch"><span>Pairs can't be hit<small>A single pawn can't land on two of the other player's pawns</small></span><input type="checkbox" id="optPairs"></label>
+      <label class="switch"><span>Three 4s or 8s lose the turn<small>Throwing chowka or bara three times in a row ends your turn</small></span><input type="checkbox" id="optThree"></label>
+      <label class="switch"><span>Show the route<small>Dotted line for whoever's turn it is</small></span><input type="checkbox" id="optRoute"></label>
+      <label class="switch"><span>Face to face<small>Phone flat between you: the shells turn to face the top player on their turn</small></span><input type="checkbox" id="optFace"></label>
+    </div>
+    <details class="rules" id="rulesBox">
+      <summary>How to play</summary>
+      <ul>
+        <li><b>Throw</b> the four cowries. Count the shells lying mouth up: 1, 2 or 3 moves that many. All four up is <b>chowka (4)</b>, none up is <b>bara (8)</b>, and both give you another throw.</li>
+        <li>When you stop throwing, spend each throw on one pawn: pick a number, then tap a pawn. Different throws can move different pawns.</li>
+        <li>Pawns start on your home square (the cross on your edge). They go round the <b>outer ring</b> anticlockwise, then the <b>inner ring</b> clockwise, then into the <b>centre</b>.</li>
+        <li>Land on the other player's pawn to <b>capture</b> it: it goes back to its home and you get another throw. Squares with a cross are safe: no captures there.</li>
+        <li>You can't go into the inner ring until you've captured at least once. Until then your pawns keep going round.</li>
+        <li>The centre needs an exact throw. A throw no pawn can use is lost. First to bring all four pawns to the centre wins.</li>
+      </ul>
+    </details>
+    <span class="label">On this phone</span>
+    <div class="statrow"><span>Games <b id="stGames">0</b></span><span id="stW0"></span><span id="stW1"></span></div>
+  </div>
+</div>
+
+<div class="sheet" id="endSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="endTitle">
+    <h2 id="endTitle">Blue wins!</h2>
+    <p id="endNote"></p>
+    <div class="row"><button class="btn primary" id="againBtn" type="button">Play again</button><button class="btn" id="endMenu" type="button">Menu</button></div>
+  </div>
+</div>
+
+<script src="chowka-core.js"></script>
+<script>
+'use strict';
+const K = window.Chowka, $ = id => document.getElementById(id), NS = 'http://www.w3.org/2000/svg';
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const set = Object.assign({ names: ['Blue', 'Red'], route: true, face: false }, K.DEFAULTS, store.get('chowka-settings', {}));
+const stats = Object.assign({ games: 0, wins: [0, 0] }, store.get('chowka-stats', {}));
+const name = p => (set.names[p] || '').trim() || ['Blue', 'Red'][p];
+const rulesFromSet = () => ({ killToEnter: set.killToEnter, pairs: set.pairs, threeOut: set.threeOut });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+const CELL = 100, ctr = ([r, c]) => [c * CELL + 50, r * CELL + 50];
+
+let S, sel = 0, busy = false, shells = [true, false, true, false], view = null, confirmNew = 0;
+
+// ---------- cowry shells ----------
+// Mouth up: the toothed slit shows. Mouth down: the smooth speckled back.
+function shellSVG(up){
+  if (up) return `<svg viewBox="0 0 60 80" aria-hidden="true">
+    <ellipse cx="30" cy="40" rx="25" ry="35" fill="#f4ecdb" stroke="#7d6a4c" stroke-width="2.2"/>
+    <ellipse cx="30" cy="40" rx="17" ry="29" fill="#e9dcc0"/>
+    <path d="M30 9 C24 22 25 58 30 71 C35 58 36 22 30 9Z" fill="#3a2d20"/>
+    <path d="M24.5 20h4M24 27h4.5M23.8 34h4.7M23.8 41h4.7M24 48h4.5M24.4 55h4.1M25 62h3.4M35.5 20h-4M36 27h-4.5M36.2 34h-4.7M36.2 41h-4.7M36 48h-4.5M35.6 55h-4.1M35 62h-3.4" stroke="#f4ecdb" stroke-width="2.2" stroke-linecap="round"/>
+  </svg>`;
+  return `<svg viewBox="0 0 60 80" aria-hidden="true">
+    <ellipse cx="30" cy="40" rx="25" ry="35" fill="#efe2c6" stroke="#7d6a4c" stroke-width="2.2"/>
+    <ellipse cx="30" cy="38" rx="19" ry="28" fill="#e6d1a6"/>
+    <g fill="#b98a4e" opacity=".75"><circle cx="22" cy="26" r="2.6"/><circle cx="35" cy="22" r="2"/><circle cx="38" cy="36" r="2.8"/><circle cx="25" cy="44" r="2.2"/><circle cx="33" cy="52" r="2.6"/><circle cx="21" cy="57" r="1.8"/><circle cx="40" cy="58" r="1.6"/></g>
+    <ellipse cx="23" cy="26" rx="6" ry="11" fill="#fff" opacity=".45"/>
+  </svg>`;
+}
+const rest = () => [0, 1, 2, 3].map(() => ({ r: Math.round(Math.random() * 70 - 35), x: Math.round(Math.random() * 10 - 5), y: Math.round(Math.random() * 10 - 5) }));
+let lay = rest();
+function drawShells(){
+  for (let i = 0; i < 4; i++){
+    const el = $('sh' + i); el.innerHTML = shellSVG(shells[i]);
+    el.style.setProperty('--r', lay[i].r + 'deg'); el.style.setProperty('--x', lay[i].x + 'px'); el.style.setProperty('--y', lay[i].y + 'px');
+  }
+}
+
+// ---------- board ----------
+const board = $('board');
+const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+let gRoute, gGhost, gPawns, pawnEls = [[], []];
+function buildBoard(){
+  board.innerHTML = '';
+  const gCells = el('g', {}, board);
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++){
+    const cls = r === 4 && c === 2 ? 'grid-cell home0' : r === 0 && c === 2 ? 'grid-cell home1' : 'grid-cell';
+    el('rect', { x: c * CELL, y: r * CELL, width: CELL, height: CELL, class: cls }, gCells);
+  }
+  const lines = el('g', {}, board);
+  for (let i = 1; i < 5; i++){ el('path', { d: `M${i * CELL} 0V500M0 ${i * CELL}H500`, class: 'grid-line' }, lines); }
+  el('rect', { x: 0, y: 0, width: 500, height: 500, rx: 6, class: 'grid-line', 'stroke-width': 4 }, lines);
+  el('rect', { x: CELL, y: CELL, width: 300, height: 300, class: 'inner-line' }, lines); // inner ring outline
+  for (const s of K.SAFE){ const [r, c] = s.split(',').map(Number), x = c * CELL, y = r * CELL, m = 20;
+    el('path', { d: `M${x + m} ${y + m}L${x + CELL - m} ${y + CELL - m}M${x + CELL - m} ${y + m}L${x + m} ${y + CELL - m}`, class: 'cross' }, lines); }
+  gRoute = el('g', {}, board); gGhost = el('g', {}, board); gPawns = el('g', {}, board);
+  for (let p = 0; p < 2; p++) for (let i = 0; i < 4; i++){
+    const g = el('g', { class: 'pawn pl' + p }, gPawns);
+    el('circle', { class: 'ring', r: 26 }, g); el('circle', { class: 'body', r: 20 }, g); el('circle', { class: 'shine', cx: -6, cy: -7, r: 6 }, g);
+    pawnEls[p][i] = g;
+  }
+  const hits = el('g', {}, board); // tap targets, one per square
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) el('rect', { x: c * CELL, y: r * CELL, width: CELL, height: CELL, class: 'cellhit', 'data-r': r, 'data-c': c }, hits);
+}
+const color = p => `var(--p${p})`;
+function drawRoute(){
+  gRoute.innerHTML = '';
+  if (!set.route || !S || S.phase === 'over') return;
+  const p = S.turn, P = K.PATHS[p], pts = P.map(ctr), locked = S.opts.killToEnter && !S.killed[p];
+  const outer = pts.slice(0, 16).concat([pts[0]]), inner = pts.slice(15);
+  el('path', { d: 'M' + outer.map(q => q.join(' ')).join('L'), class: 'route', stroke: color(p) }, gRoute);
+  el('path', { d: 'M' + inner.map(q => q.join(' ')).join('L'), class: 'route' + (locked ? ' locked' : ''), stroke: color(p) }, gRoute);
+  // little arrowheads every few squares show the direction
+  for (const i of [2, 6, 10, 14, 17, 21]){
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    el('path', { d: 'M-7 -7L3 0L-7 7', transform: `translate(${mx} ${my}) rotate(${a})`, fill: 'none', stroke: color(p), 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'arrow', opacity: i >= 16 && locked ? .2 : .55 }, gRoute);
+  }
+}
+// Where each pawn sits: pawns sharing a square are spread out inside it.
+const SLOTS = { 1: [[0, 0]], 2: [[-19, -19], [19, 19]], 3: [[-20, -18], [20, -18], [0, 20]], 4: [[-21, -21], [21, -21], [-21, 21], [21, 21]] };
+function slots(n){
+  if (SLOTS[n]) return { at: SLOTS[n], s: n === 1 ? 1 : n === 2 ? .8 : .72 };
+  const at = []; for (let k = 0; k < n; k++) at.push([((k % 3) - 1) * 29, (Math.floor(k / 3) - 1) * 29]);
+  return { at, s: .55 };
+}
+function drawPawns(V){
+  const groups = {};
+  for (let p = 0; p < 2; p++) V.pawns[p].forEach((pos, i) => { const [r, c] = K.cellOf(p, pos), k = r + ',' + c; (groups[k] = groups[k] || []).push([p, i]); });
+  const can = new Set();
+  if (!busy && S.phase === 'move'){ const v = S.pool[sel]; if (v != null) K.movesFor(S, v).forEach(m => S.pawns[S.turn].forEach((pos, i) => { if (pos === m.from) can.add(i); })); }
+  for (const k in groups){
+    const list = groups[k].sort((a, b) => a[0] - b[0] || a[1] - b[1]), [r, c] = k.split(',').map(Number), { at, s } = slots(list.length);
+    list.forEach(([p, i], j) => {
+      const x = c * CELL + 50 + at[j][0], y = r * CELL + 50 + at[j][1], g = pawnEls[p][i];
+      g.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+      g.classList.toggle('can', p === S.turn && can.has(i));
+      g.classList.toggle('home', V.pawns[p][i] === K.HOME);
+    });
+  }
+}
+function drawGhosts(){
+  gGhost.innerHTML = '';
+  if (busy || !S || S.phase !== 'move') return;
+  const v = S.pool[sel]; if (v == null) return;
+  const seen = new Set();
+  for (const m of K.movesFor(S, v)){
+    const [r, c] = K.cellOf(S.turn, m.to), k = r + ',' + c; if (seen.has(k)) continue; seen.add(k);
+    el('circle', { cx: c * CELL + 50, cy: r * CELL + 50, r: 34, class: 'ghost', stroke: color(S.turn) }, gGhost);
+  }
+}
+
+// ---------- ui ----------
+function say(text, p){ $('msg').textContent = text; $('msg').className = 'msg' + (p == null ? '' : ' p' + p); }
+function render(){
+  const V = view || S;
+  for (let p = 0; p < 2; p++){
+    $('name' + p).textContent = name(p);
+    const done = S.pawns[p].filter(x => x === K.HOME).length, start = S.pawns[p].filter(x => x === 0).length;
+    const open = !S.opts.killToEnter || S.killed[p];
+    $('info' + p).textContent = `${done ? done + ' home · ' : ''}${open ? 'inside open' : 'needs a capture'}`;
+    $('info' + p).className = open ? 'open' : '';
+    $('pl' + p).classList.toggle('on', S.phase !== 'over' && S.turn === p);
+  }
+  $('play').classList.toggle('flip', set.face && S.turn === 1 && S.phase !== 'over');
+  const canThrow = S.phase === 'throw' && !busy;
+  $('mat').className = 'mat p' + S.turn + (canThrow ? ' ready' : '');
+  $('mat').setAttribute('aria-disabled', !canThrow);
+  $('tap').textContent = canThrow ? (S.pool.length ? 'Tap to throw again' : 'Tap to throw') : '';
+  $('total').textContent = S.pool.length ? 'This turn: ' + S.pool.join(' + ') : '';
+  // throws waiting to be spent
+  const chips = $('chips'); chips.className = 'chips p' + S.turn;
+  if (S.phase === 'move'){
+    if (sel >= S.pool.length || !K.movesFor(S, S.pool[sel]).length){ const k = S.pool.findIndex(v => K.movesFor(S, v).length); sel = k < 0 ? 0 : k; }
+    chips.innerHTML = S.pool.map((v, k) => {
+      const dead = !K.movesFor(S, v).length, word = v === 4 ? 'chowka' : v === 8 ? 'bara' : '';
+      return `<button type="button" class="chip${dead ? ' dead' : ''}" data-k="${k}" aria-pressed="${k === sel}" ${dead ? 'disabled' : ''} aria-label="Move ${v}">${v}${word ? `<small>${word}</small>` : ''}</button>`;
+    }).join('');
+  } else chips.innerHTML = '';
+  drawRoute(); drawGhosts(); drawPawns(V);
+}
+function prompt(){
+  if (S.phase === 'over') return;
+  const p = S.turn;
+  if (S.phase === 'throw') say(S.pool.length ? `${name(p)}, throw again` : `${name(p)}, throw the shells`, p);
+  else if (S.pool.length > 1) say(`${name(p)}: pick a number, then a pawn`, p);
+  else say(`${name(p)}: move a pawn ${S.pool[0]}`, p);
+}
+const save = () => store.set('chowka-game', S && S.phase !== 'over' ? S : null);
+
+async function doThrow(){
+  if (!S || S.phase !== 'throw' || busy) return;
+  busy = true; render();
+  const res = K.roll(), next = rest(), p = S.turn;
+  // tumble: shells fly up and flip a few times before landing
+  for (let i = 0; i < 4; i++){
+    const e = $('sh' + i); e.classList.remove('toss'); void e.offsetWidth;
+    e.style.setProperty('--r0', lay[i].r + 'deg'); e.style.setProperty('--mx', Math.round(Math.random() * 30 - 15) + 'px');
+    e.style.setProperty('--d', (i * 0.04) + 's'); e.classList.add('toss');
+  }
+  lay = next;
+  buzz(10);
+  for (let t = 0; t < 6; t++){ shells = shells.map(() => Math.random() < .5); drawShells(); await sleep(95); }
+  shells = res; drawShells();
+  await sleep(160); buzz(18);
+  const out = K.applyThrow(S, res), v = out.v;
+  const label = v === 8 ? 'Bara! 8' : v === 4 ? 'Chowka! 4' : `${v}`;
+  busy = false;
+  if (out.lost){ say(`${label}: three in a row, turn lost. ${name(S.turn)} to throw`, p); }
+  else if (out.again){ say(`${label}. Throw again`, p); }
+  else if (out.stuck){ say(`Threw ${v}, but no pawn can move. ${name(S.turn)}'s turn`, p); await handoff(); }
+  else { sel = S.pool.findIndex(x => K.movesFor(S, x).length); if (sel < 0) sel = 0; prompt(); }
+  save(); render();
+}
+async function handoff(){ busy = true; render(); await sleep(1100); busy = false; prompt(); }
+
+function tapCell(r, c){
+  if (busy || !S || S.phase !== 'move') return;
+  const p = S.turn, here = S.pawns[p].map((pos, i) => [pos, i]).filter(([pos]) => { const [rr, cc] = K.cellOf(p, pos); return rr === r && cc === c && pos !== K.HOME; });
+  if (!here.length) return;
+  // the chosen number first, then any other throw this pawn can use
+  const order = [sel, ...S.pool.map((_, k) => k).filter(k => k !== sel)];
+  for (const k of order){
+    const v = S.pool[k];
+    for (const [, i] of here) if (K.destination(S, p, i, v) != null) return move(i, k);
+  }
+  say(S.pool.length > 1 ? 'That pawn can\'t use any of these throws' : `That pawn can't move ${S.pool[0]}`, p);
+}
+async function move(i, k){
+  busy = true;
+  const p = S.turn, before = JSON.parse(JSON.stringify(S)), res = K.applyMove(S, i, k);
+  if (!res){ busy = false; return; }
+  // walk the pawn square by square, then let any captured pawn slide home
+  view = before; view.pool = S.pool;
+  for (const step of res.steps){ view.pawns[p][i] = step; drawPawns(view); buzz(4); await sleep(150); }
+  view = null;
+  if (res.captured.length){ buzz([20, 30, 40]); }
+  render();
+  await sleep(res.captured.length ? 380 : 60);
+  busy = false;
+  if (res.won) return win(p);
+  const them = name(1 - p), bits = [];
+  if (res.captured.length){
+    const n = res.captured.length, first = before.opts.killToEnter && !before.killed[p];
+    bits.push(`Captured ${n > 1 ? n + ' of ' + them + '\'s pawns' : them + '\'s pawn'}!` + (first ? ' The inner ring is open.' : ''));
+  }
+  if (res.finished) bits.push(`${name(p)} reaches the centre!`);
+  if (res.forfeited.length) bits.push(`No pawn can move ${res.forfeited.join(' or ')}.`);
+  save();
+  if (S.turn !== p){ // turn passes: say what happened, pause, then hand over
+    if (bits.length){ say(bits.concat(`${name(S.turn)}'s turn`).join(' '), p); await handoff(); } else { prompt(); render(); }
+  } else if (S.phase === 'throw'){ say(bits.concat('Throw again').join(' '), p); render(); }
+  else if (bits.length){ say(bits.join(' '), p); render(); setTimeout(() => { if (!busy && S.turn === p && S.phase === 'move') prompt(); }, 1400); }
+  else { prompt(); render(); }
+}
+function win(p){
+  stats.games++; stats.wins[p]++; store.set('chowka-stats', stats); store.set('chowka-game', null);
+  say(`${name(p)} wins!`, p); render();
+  setTimeout(() => {
+    $('endTitle').textContent = `${name(p)} wins!`;
+    const left = S.pawns[1 - p].filter(x => x === K.HOME).length;
+    $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game.`;
+    $('endSheet').hidden = false;
+  }, 900);
+}
+function newGame(starter){
+  S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter;
+  sel = 0; busy = false; view = null; lay = rest(); drawShells();
+  $('endSheet').hidden = true; $('menuSheet').hidden = true;
+  save(); prompt(); render();
+}
+
+// ---------- menu ----------
+function openMenu(){
+  $('n0').value = name(0); $('n1').value = name(1);
+  $('optKill').checked = set.killToEnter; $('optPairs').checked = set.pairs; $('optThree').checked = set.threeOut;
+  $('optRoute').checked = set.route; $('optFace').checked = set.face;
+  $('stGames').textContent = stats.games;
+  $('stW0').innerHTML = `${name(0)} <b>${stats.wins[0]}</b>`; $('stW1').innerHTML = `${name(1)} <b>${stats.wins[1]}</b>`;
+  confirmNew = 0; $('newBtn').textContent = 'New game';
+  $('endSheet').hidden = true; $('menuSheet').hidden = false;
+}
+const saveSet = () => store.set('chowka-settings', set);
+function closeMenu(){ $('menuSheet').hidden = true; if (S.phase === 'over') newGame(S.winner == null ? 0 : 1 - S.winner); else { prompt(); render(); } }
+$('menuBtn').addEventListener('click', openMenu);
+$('closeMenu').addEventListener('click', closeMenu);
+$('menuSheet').addEventListener('click', e => { if (e.target === $('menuSheet')) closeMenu(); });
+$('newBtn').addEventListener('click', () => {
+  const started = S && S.phase !== 'over' && (S.pawns.some(a => a.some(x => x)) || S.pool.length);
+  if (started && !confirmNew){ confirmNew = 1; $('newBtn').textContent = 'Tap again to restart'; return; }
+  newGame(0);
+});
+for (const p of [0, 1]) $('n' + p).addEventListener('input', e => { set.names[p] = e.target.value; saveSet(); render(); });
+const rule = (id, k) => $(id).addEventListener('change', e => { set[k] = e.target.checked; S.opts[k] = e.target.checked; saveSet(); save(); render(); });
+rule('optKill', 'killToEnter'); rule('optPairs', 'pairs'); rule('optThree', 'threeOut');
+$('optRoute').addEventListener('change', e => { set.route = e.target.checked; saveSet(); render(); });
+$('optFace').addEventListener('change', e => { set.face = e.target.checked; saveSet(); render(); });
+$('againBtn').addEventListener('click', () => newGame(S.winner == null ? 0 : 1 - S.winner));
+$('endMenu').addEventListener('click', openMenu);
+
+// ---------- input ----------
+$('mat').addEventListener('click', doThrow);
+$('mat').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doThrow(); } });
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b || b.disabled || busy) return; sel = +b.dataset.k; render(); });
+board.addEventListener('click', e => { const t = e.target.closest('.cellhit'); if (t) tapCell(+t.dataset.r, +t.dataset.c); });
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || !$('menuSheet').hidden || !$('endSheet').hidden || e.target.tagName === 'INPUT') return;
+  if ((e.key === ' ' || e.key === 'Enter') && e.target === document.body){ e.preventDefault(); doThrow(); }
+  if (/^[1-8]$/.test(e.key) && S.phase === 'move'){ const k = S.pool.findIndex(v => v === +e.key); if (k >= 0){ sel = k; render(); } }
+});
+addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+// ---------- start ----------
+buildBoard(); drawShells();
+const saved = store.get('chowka-game', null);
+if (saved && saved.pawns && saved.phase && saved.phase !== 'over'){
+  S = Object.assign(K.newGame(rulesFromSet()), saved); S.opts = Object.assign({}, K.DEFAULTS, saved.opts || {});
+  prompt(); render();
+} else newGame(0);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

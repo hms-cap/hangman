@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Word Trail, Four Groups and Snake on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -122,6 +122,17 @@ The classic: steer the snake to the apples, grow with each one, and don't hit th
 - Pauses automatically when you leave the app and saves the game, so you can continue later (the home tile shows where you left off)
 - Keyboard: `Space` or `P` to pause, `Enter` to play again
 
+### Chowka Bara
+The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for two players on one phone, with four cowry shells you tap to throw.
+- 5×5 board with crosses on the safe squares (the middle of each edge and the centre). Each player has four pawns that start on their home cross, go round the outer ring anticlockwise, then the inner ring clockwise, then into the centre
+- **Cowries:** count the shells lying mouth up. 1, 2 or 3 moves that many; all four up is **chowka (4)** and none up is **bara (8)**, and both earn another throw. The shells tumble and land with the toothed slit up or the speckled back up
+- All the throws of a turn are spent one at a time: pick a number, then tap a pawn. Dashed circles show where each pawn would land, and pawns that can move pulse
+- Landing on the other player outside a safe square sends that pawn home and earns another throw. You can't enter the inner ring until you've captured once (a dotted route shows your way round, faded inside until it opens)
+- Exact throw needed for the centre; a throw no pawn can use is lost. First to bring all four pawns home wins, and the loser starts the next game
+- Options: capture before going inside, pairs can't be hit (a single pawn can't land on two of the other player's pawns), three chowkas or baras in a row lose the turn, show the route, and **face to face**, which turns the shells toward the top player on their turn when the phone lies flat between you
+- Player names, wins on this phone, a How to play summary, and the game saves itself
+- Rules live in `chowka-core.js`; `node tools/test-chowka.js` checks them and plays 3,000 random games to make sure every game ends
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -134,6 +145,7 @@ The classic: steer the snake to the apples, grow with each one, and don't hit th
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |
+| `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

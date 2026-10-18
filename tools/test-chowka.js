@@ -1,0 +1,83 @@
+// Checks the Chowka Bara rules in chowka-core.js, then plays thousands of random games to make sure every one ends.
+// Run: node tools/test-chowka.js
+'use strict';
+const C = require('../chowka-core.js');
+let fails = 0;
+const ok = (cond, msg) => { if (!cond){ fails++; console.log('FAIL', msg); } };
+const shellsFor = v => v === 8 ? [0, 0, 0, 0] : [0, 1, 2, 3].map(k => k < v); // v mouth-up shells
+const play = (S, v) => C.applyThrow(S, shellsFor(v).map(Boolean));
+
+// Board: 25 distinct squares per path, each player's route covers the whole board, the two routes mirror.
+for (const P of C.PATHS){
+  ok(new Set(P.map(([r, c]) => r + ',' + c)).size === 25, 'path visits 25 distinct squares');
+  for (let i = 1; i < 25; i++){ const d = Math.abs(P[i][0] - P[i - 1][0]) + Math.abs(P[i][1] - P[i - 1][1]); ok(d === 1, 'path steps are adjacent at ' + i); }
+  ok(P[24][0] === 2 && P[24][1] === 2, 'path ends at centre');
+}
+ok(C.PATHS[0][0] + '' === '4,2' && C.PATHS[1][0] + '' === '0,2', 'homes are opposite edge middles');
+
+// Scoring
+ok(C.score([false, false, false, false]) === 8, 'none up is 8');
+ok(C.score([true, true, true, true]) === 4, 'all up is 4');
+ok(C.score([true, false, true, false]) === 2, 'two up is 2');
+
+// Extra throws: 4 and 8 keep the turn in the throw phase and pile up.
+let S = C.newGame();
+play(S, 4); ok(S.phase === 'throw' && S.pool.join() === '4', '4 throws again');
+play(S, 8); ok(S.phase === 'throw', '8 throws again');
+play(S, 2); ok(S.phase === 'move' && S.pool.join() === '4,8,2', 'turn ends throwing on 2 with three moves to spend');
+C.applyMove(S, 0, 0); C.applyMove(S, 0, 0); C.applyMove(S, 1, 0);
+ok(S.pawns[0].join() === '12,2,0,0' && S.turn === 1, 'moves spent on chosen pawns, turn passes');
+
+// Three bonus throws in a row (option)
+S = C.newGame({ threeOut: true }); play(S, 4); play(S, 8); const r3 = play(S, 4);
+ok(r3.lost && S.turn === 1 && !S.pool.length, 'three bonus throws in a row lose the turn when the option is on');
+
+// Without a capture, pawns circle the outer ring; after one, they go in.
+S = C.newGame(); S.pawns[0][0] = 14;
+ok(C.destination(S, 0, 0, 3) === 1, 'no capture yet: 14 + 3 wraps to 1');
+S.killed[0] = true; ok(C.destination(S, 0, 0, 3) === 17, 'after a capture: 14 + 3 goes inside to 17');
+S.pawns[0][0] = 22; ok(C.destination(S, 0, 0, 3) === null && C.destination(S, 0, 0, 2) === 24, 'centre needs an exact throw');
+S = C.newGame({ killToEnter: false }); S.pawns[0][0] = 14; ok(C.destination(S, 0, 0, 3) === 17, 'kill rule off: goes straight in');
+
+// Capture sends the pawn home, unlocks the inside, earns a throw.
+S = C.newGame(); S.pawns[1][0] = 6; // player 1's square 6 is player 0's square... find it
+const target = C.PATHS[1][6], idx0 = C.PATHS[0].findIndex(([r, c]) => r === target[0] && c === target[1]);
+S.pawns[0][0] = idx0 - 3; play(S, 3); const cap = C.applyMove(S, 0, 0);
+ok(cap.captured.join() === '0' && S.pawns[1][0] === 0 && S.killed[0] && S.turn === 0 && S.phase === 'throw', 'capture: home, unlock, extra throw');
+
+// Safe squares: no capture there.
+S = C.newGame(); S.pawns[0][0] = 5; play(S, 3); // player 0 square 8 is player 1's home (0,2)
+const safe = C.applyMove(S, 0, 0); ok(safe.to === 8 && !safe.captured.length && S.pawns[1].every(p => p === 0), 'no capture on a safe square');
+
+// Pairs: a single can't land on two opponent pawns on an ordinary square.
+S = C.newGame(); S.pawns[1][0] = S.pawns[1][1] = 6; S.pawns[0][0] = idx0 - 1;
+ok(C.destination(S, 0, 0, 1) === null, 'pair blocks a landing');
+S.opts.pairs = false; ok(C.destination(S, 0, 0, 1) === idx0, 'pairs off: landing allowed');
+S.phase = 'move'; S.pool = [1]; const two = C.applyMove(S, 0, 0); ok(two.captured.length === 2, 'pairs off: both captured');
+
+// No legal move: the throw is lost and the turn passes.
+S = C.newGame(); S.killed[0] = true; S.pawns[0] = [24, 24, 24, 23]; play(S, 3);
+ok(S.turn === 1, 'stuck throw passes the turn');
+S = C.newGame(); S.killed[0] = true; S.pawns[0] = [24, 24, 24, 23]; play(S, 1);
+C.applyMove(S, 3, 0);
+ok(S.phase === 'over' && S.winner === 0, 'last pawn home wins');
+
+// Random games all finish.
+let seed = 7; const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+let total = 0, wins = [0, 0];
+for (let g = 0; g < 3000; g++){
+  const G = C.newGame({ pairs: g % 2 === 0, threeOut: g % 3 === 0 });
+  let n = 0;
+  while (G.phase !== 'over' && n++ < 20000){
+    if (G.phase === 'throw') C.applyThrow(G, C.roll(rand));
+    else {
+      const ks = G.pool.map((v, k) => [k, C.movesFor(G, v)]).filter(([, m]) => m.length);
+      const [k, m] = ks[(rand() * ks.length) | 0], mv = m[(rand() * m.length) | 0];
+      if (!C.applyMove(G, mv.pawn, k)){ fails++; console.log('FAIL listed move rejected'); break; }
+    }
+  }
+  ok(G.phase === 'over', 'random game ' + g + ' finishes'); total += n; if (G.winner != null) wins[G.winner]++;
+}
+console.log(`3000 random games: avg ${Math.round(total / 3000)} actions, wins ${wins.join(' / ')}`);
+console.log(fails ? `${fails} failed` : 'All checks passed');
+process.exit(fails ? 1 : 0);
