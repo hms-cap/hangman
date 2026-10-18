@@ -123,15 +123,21 @@ The classic: steer the snake to the apples, grow with each one, and don't hit th
 - Keyboard: `Space` or `P` to pause, `Enter` to play again
 
 ### Chowka Bara
-The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for two players on one phone, with four cowry shells you tap to throw.
+The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for two players on one phone or against the computer, with four cowry shells you tap to throw.
 - 5×5 board with crosses on the safe squares (the middle of each edge and the centre). Each player has four pawns that start on their home cross, go round the outer ring anticlockwise, then the inner ring clockwise, then into the centre
 - **Cowries:** count the shells lying mouth up. 1, 2 or 3 moves that many; all four up is **chowka (4)** and none up is **bara (8)**, and both earn another throw. The shells tumble and land with the toothed slit up or the speckled back up
 - All the throws of a turn are spent one at a time: pick a number, then tap a pawn. Dashed circles show where each pawn would land, and pawns that can move pulse
 - Landing on the other player outside a safe square sends that pawn home and earns another throw. You can't enter the inner ring until you've captured once (a dotted route shows your way round, faded inside until it opens)
 - Exact throw needed for the centre; a throw no pawn can use is lost. First to bring all four pawns home wins, and the loser starts the next game
 - Options: capture before going inside, pairs can't be hit (a single pawn can't land on two of the other player's pawns), three chowkas or baras in a row lose the turn, show the route, and **face to face**, which turns the shells toward the top player on their turn when the phone lies flat between you
+- **Vs computer** at three levels (the computer plays Red and throws its own shells, pausing so you can see which throw it uses and where):
+  - **Easy** often just moves something
+  - **Medium** picks the best single move and avoids leaving pawns where they can be hit
+  - **Hard** plans how to spend all of a turn's throws together, then weighs every likely reply: it works out the chance of each pawn being hit from the cowry odds and assumes you answer well
+  - In computer matches Medium beats Easy about 88% of the time and Hard beats Medium about 63% (dice games always leave room for luck); `node tools/chowka-match.js` plays the levels against each other
+  - Your won–lost record is kept for each level
 - Player names, wins on this phone, a How to play summary, and the game saves itself
-- Rules live in `chowka-core.js`; `node tools/test-chowka.js` checks them and plays 3,000 random games to make sure every game ends
+- Rules and the computer player live in `chowka-core.js`; `node tools/test-chowka.js` checks the rules, plays 3,000 random games to make sure every game ends, and checks that the computer only makes legal moves and that each level beats the one below
 
 ## Files
 | File | What it is |
@@ -145,7 +151,7 @@ The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for 
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |
-| `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) |
+| `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) and the computer player |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

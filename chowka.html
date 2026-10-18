@@ -84,6 +84,9 @@
 .chip.dead{opacity:.35;text-decoration:line-through}
 .chips.p0 .chip{--c:var(--p0)} .chips.p1 .chip{--c:var(--p1)}
 
+.seg.two{grid-template-columns:repeat(2,1fr)} .seg.three{grid-template-columns:repeat(3,1fr)}
+.note{font-size:.8rem;color:var(--muted);margin:-6px 0 0}
+.thinking{animation:think 1s ease-in-out infinite}@keyframes think{50%{opacity:.45}}
 .names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .names label{display:flex;flex-direction:column;gap:4px}
 .names input{font:inherit;font-family:var(--hand);font-size:1.3rem;padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--key);color:var(--ink);width:100%;-webkit-user-select:text;user-select:text}
@@ -132,9 +135,13 @@
   <div class="panel" role="dialog" aria-labelledby="menuTitle">
     <h2 id="menuTitle">Chowka Bara</h2>
     <div class="row"><button class="btn primary" id="closeMenu" type="button">Back to the game</button><button class="btn" id="newBtn" type="button">New game</button></div>
+    <span class="label">Play</span>
+    <div class="seg two" id="segMode"></div>
+    <div id="levelBox"><span class="label">Computer level</span><div class="seg three" id="segLevel" style="margin-top:6px"></div></div>
+    <p class="note" id="modeNote">Changing these starts a new game.</p>
     <div class="names">
-      <label><span class="label">Player 1 (bottom)</span><input id="n0" maxlength="14" autocomplete="off"></label>
-      <label><span class="label">Player 2 (top)</span><input id="n1" maxlength="14" autocomplete="off"></label>
+      <label><span class="label" id="n0Label">Player 1 (bottom)</span><input id="n0" maxlength="14" autocomplete="off"></label>
+      <label id="n1Box"><span class="label">Player 2 (top)</span><input id="n1" maxlength="14" autocomplete="off"></label>
     </div>
     <div>
       <label class="switch"><span>Capture before going inside<small>Pawns keep circling the outer ring until you've captured once</small></span><input type="checkbox" id="optKill"></label>
@@ -155,7 +162,8 @@
       </ul>
     </details>
     <span class="label">On this phone</span>
-    <div class="statrow"><span>Games <b id="stGames">0</b></span><span id="stW0"></span><span id="stW1"></span></div>
+    <div class="statrow"><span>Two players: <b id="stGames">0</b> games</span><span id="stW0"></span><span id="stW1"></span></div>
+    <div class="statrow" id="stCpu"></div>
   </div>
 </div>
 
@@ -177,7 +185,11 @@ const store = {
 };
 const set = Object.assign({ names: ['Blue', 'Red'], route: true, face: false }, K.DEFAULTS, store.get('chowka-settings', {}));
 const stats = Object.assign({ games: 0, wins: [0, 0] }, store.get('chowka-stats', {}));
-const name = p => (set.names[p] || '').trim() || ['Blue', 'Red'][p];
+if (!['two', 'cpu'].includes(set.mode)) set.mode = 'two'; if (!K.LEVELS[set.level]) set.level = 'medium';
+if (!stats.cpu) stats.cpu = { easy: [0, 0], medium: [0, 0], hard: [0, 0] };
+const LEVEL_NAMES = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+const name = p => p === 1 && S && S.cpu ? 'Computer' : (set.names[p] || '').trim() || ['Blue', 'Red'][p];
+const cpuTurn = () => !!(S && S.cpu && S.turn === 1 && S.phase !== 'over');
 const rulesFromSet = () => ({ killToEnter: set.killToEnter, pairs: set.pairs, threeOut: set.threeOut });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
@@ -291,15 +303,15 @@ function render(){
     $('name' + p).textContent = name(p);
     const done = S.pawns[p].filter(x => x === K.HOME).length, start = S.pawns[p].filter(x => x === 0).length;
     const open = !S.opts.killToEnter || S.killed[p];
-    $('info' + p).textContent = `${done ? done + ' home · ' : ''}${open ? 'inside open' : 'needs a capture'}`;
+    $('info' + p).textContent = `${p === 1 && S.cpu ? LEVEL_NAMES[S.cpu] + ' · ' : ''}${done ? done + ' home · ' : ''}${open ? 'inside open' : 'needs a capture'}`;
     $('info' + p).className = open ? 'open' : '';
     $('pl' + p).classList.toggle('on', S.phase !== 'over' && S.turn === p);
   }
-  $('play').classList.toggle('flip', set.face && S.turn === 1 && S.phase !== 'over');
-  const canThrow = S.phase === 'throw' && !busy;
+  $('play').classList.toggle('flip', set.face && !S.cpu && S.turn === 1 && S.phase !== 'over');
+  const canThrow = S.phase === 'throw' && !busy && !cpuTurn();
   $('mat').className = 'mat p' + S.turn + (canThrow ? ' ready' : '');
   $('mat').setAttribute('aria-disabled', !canThrow);
-  $('tap').textContent = canThrow ? (S.pool.length ? 'Tap to throw again' : 'Tap to throw') : '';
+  $('tap').textContent = canThrow ? (S.pool.length ? 'Tap to throw again' : 'Tap to throw') : cpuTurn() && S.phase === 'throw' ? 'Computer\'s throw' : '';
   $('total').textContent = S.pool.length ? 'This turn: ' + S.pool.join(' + ') : '';
   // throws waiting to be spent
   const chips = $('chips'); chips.className = 'chips p' + S.turn;
@@ -315,14 +327,15 @@ function render(){
 function prompt(){
   if (S.phase === 'over') return;
   const p = S.turn;
+  if (cpuTurn()){ say(S.phase === 'throw' ? (S.pool.length ? 'Computer throws again…' : 'Computer is throwing…') : 'Computer is thinking…', p); $('msg').classList.add('thinking'); return; }
   if (S.phase === 'throw') say(S.pool.length ? `${name(p)}, throw again` : `${name(p)}, throw the shells`, p);
   else if (S.pool.length > 1) say(`${name(p)}: pick a number, then a pawn`, p);
   else say(`${name(p)}: move a pawn ${S.pool[0]}`, p);
 }
 const save = () => store.set('chowka-game', S && S.phase !== 'over' ? S : null);
 
-async function doThrow(){
-  if (!S || S.phase !== 'throw' || busy) return;
+async function doThrow(auto){
+  if (!S || S.phase !== 'throw' || busy || (cpuTurn() && auto !== true)) return;
   busy = true; render();
   const res = K.roll(), next = rest(), p = S.turn;
   // tumble: shells fly up and flip a few times before landing
@@ -340,15 +353,35 @@ async function doThrow(){
   const label = v === 8 ? 'Bara! 8' : v === 4 ? 'Chowka! 4' : `${v}`;
   busy = false;
   if (out.lost){ say(`${label}: three in a row, turn lost. ${name(S.turn)} to throw`, p); }
-  else if (out.again){ say(`${label}. Throw again`, p); }
+  else if (out.again){ say(`${label}. ${cpuTurn() ? 'Computer throws again' : 'Throw again'}`, p); }
   else if (out.stuck){ say(`Threw ${v}, but no pawn can move. ${name(S.turn)}'s turn`, p); await handoff(); }
   else { sel = S.pool.findIndex(x => K.movesFor(S, x).length); if (sel < 0) sel = 0; prompt(); }
-  save(); render();
+  save(); render(); kick();
 }
-async function handoff(){ busy = true; render(); await sleep(1100); busy = false; prompt(); }
+async function handoff(){ busy = true; render(); await sleep(1100); busy = false; prompt(); render(); kick(); }
+
+// ---------- computer ----------
+// The computer takes its turn one step at a time with short pauses, so you can follow what it does.
+let cpuTimer = null;
+function kick(){
+  clearTimeout(cpuTimer);
+  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden) return;
+  cpuTimer = setTimeout(cpuStep, S.phase === 'throw' ? 700 : 500);
+}
+async function cpuStep(){
+  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden) return;
+  if (S.phase === 'throw'){ if (!S.pool.length) say('Computer is throwing…', 1); return doThrow(true); }
+  if (S.phase !== 'move') return;
+  const m = K.chooseMove(S, S.cpu);
+  if (!m) return;
+  sel = m.k; render(); // show the throw it picked and where its pawns can go
+  say(`Computer moves ${S.pool[m.k]}`, 1);
+  await sleep(650);
+  if (cpuTurn() && S.phase === 'move') await move(m.pawn, m.k);
+}
 
 function tapCell(r, c){
-  if (busy || !S || S.phase !== 'move') return;
+  if (busy || !S || S.phase !== 'move' || cpuTurn()) return;
   const p = S.turn, here = S.pawns[p].map((pos, i) => [pos, i]).filter(([pos]) => { const [rr, cc] = K.cellOf(p, pos); return rr === r && cc === c && pos !== K.HOME; });
   if (!here.length) return;
   // the chosen number first, then any other throw this pawn can use
@@ -382,39 +415,56 @@ async function move(i, k){
   save();
   if (S.turn !== p){ // turn passes: say what happened, pause, then hand over
     if (bits.length){ say(bits.concat(`${name(S.turn)}'s turn`).join(' '), p); await handoff(); } else { prompt(); render(); }
-  } else if (S.phase === 'throw'){ say(bits.concat('Throw again').join(' '), p); render(); }
-  else if (bits.length){ say(bits.join(' '), p); render(); setTimeout(() => { if (!busy && S.turn === p && S.phase === 'move') prompt(); }, 1400); }
+  } else if (S.phase === 'throw'){ say(bits.concat(cpuTurn() ? 'Computer throws again' : 'Throw again').join(' '), p); render(); }
+  else if (bits.length){ say(bits.join(' '), p); render(); setTimeout(() => { if (!busy && S.turn === p && S.phase === 'move' && !cpuTurn()) prompt(); }, 1400); }
   else { prompt(); render(); }
+  if (cpuTurn()){ clearTimeout(cpuTimer); cpuTimer = setTimeout(kick, bits.length ? 1000 : 0); }
 }
 function win(p){
-  stats.games++; stats.wins[p]++; store.set('chowka-stats', stats); store.set('chowka-game', null);
+  if (S.cpu){ const r = stats.cpu[S.cpu] || (stats.cpu[S.cpu] = [0, 0]); r[p === 0 ? 0 : 1]++; } else { stats.games++; stats.wins[p]++; }
+  store.set('chowka-stats', stats); store.set('chowka-game', null);
   say(`${name(p)} wins!`, p); render();
   setTimeout(() => {
-    $('endTitle').textContent = `${name(p)} wins!`;
     const left = S.pawns[1 - p].filter(x => x === K.HOME).length;
-    $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game.`;
+    if (S.cpu){
+      const r = stats.cpu[S.cpu], lv = LEVEL_NAMES[S.cpu];
+      $('endTitle').textContent = p === 0 ? `You beat the computer!` : 'The computer wins';
+      $('endNote').textContent = `${p === 0 ? `All four pawns home on ${lv}.` : `It got all four home${left ? `; you had ${left} in the centre` : ''}.`} Your record on ${lv}: ${r[0]} won, ${r[1]} lost. ${p === 0 ? 'The computer' : 'You'} start${p === 0 ? 's' : ''} the next game.`;
+    } else {
+      $('endTitle').textContent = `${name(p)} wins!`;
+      $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game.`;
+    }
     $('endSheet').hidden = false;
   }, 900);
 }
 function newGame(starter){
-  S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter;
-  sel = 0; busy = false; view = null; lay = rest(); drawShells();
+  S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter; S.cpu = set.mode === 'cpu' ? set.level : null;
+  sel = 0; busy = false; view = null; lay = rest(); drawShells(); clearTimeout(cpuTimer);
   $('endSheet').hidden = true; $('menuSheet').hidden = true;
-  save(); prompt(); render();
+  save(); prompt(); render(); kick();
 }
 
 // ---------- menu ----------
 function openMenu(){
-  $('n0').value = name(0); $('n1').value = name(1);
+  const mode = S.cpu ? 'cpu' : 'two', level = S.cpu || set.level;
+  $('segMode').innerHTML = [['two', 'Two players'], ['cpu', 'Vs computer']].map(([k, t]) => `<button type="button" data-k="${k}" aria-pressed="${k === mode}">${t}</button>`).join('');
+  $('segLevel').innerHTML = Object.entries(LEVEL_NAMES).map(([k, t]) => `<button type="button" data-k="${k}" aria-pressed="${k === level}">${t}</button>`).join('');
+  $('levelBox').hidden = mode !== 'cpu';
+  $('n1Box').hidden = mode === 'cpu'; $('n0Label').textContent = mode === 'cpu' ? 'Your name' : 'Player 1 (bottom)';
+  $('optFace').closest('.switch').hidden = mode === 'cpu';
+  $('n0').value = name(0); $('n1').value = (set.names[1] || '').trim() || 'Red';
   $('optKill').checked = set.killToEnter; $('optPairs').checked = set.pairs; $('optThree').checked = set.threeOut;
   $('optRoute').checked = set.route; $('optFace').checked = set.face;
   $('stGames').textContent = stats.games;
-  $('stW0').innerHTML = `${name(0)} <b>${stats.wins[0]}</b>`; $('stW1').innerHTML = `${name(1)} <b>${stats.wins[1]}</b>`;
+  $('stW0').innerHTML = `${name(0)} <b>${stats.wins[0]}</b>`; $('stW1').innerHTML = `${(set.names[1] || '').trim() || 'Red'} <b>${stats.wins[1]}</b>`;
+  $('stCpu').innerHTML = 'Vs computer (won–lost): ' + Object.entries(LEVEL_NAMES).map(([k, t]) => `${t} <b>${(stats.cpu[k] || [0, 0]).join('–')}</b>`).join(' · ');
   confirmNew = 0; $('newBtn').textContent = 'New game';
   $('endSheet').hidden = true; $('menuSheet').hidden = false;
 }
 const saveSet = () => store.set('chowka-settings', set);
-function closeMenu(){ $('menuSheet').hidden = true; if (S.phase === 'over') newGame(S.winner == null ? 0 : 1 - S.winner); else { prompt(); render(); } }
+function closeMenu(){ $('menuSheet').hidden = true; if (S.phase === 'over') newGame(S.winner == null ? 0 : 1 - S.winner); else { prompt(); render(); kick(); } }
+$('segMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.k === (S.cpu ? 'cpu' : 'two')) return; set.mode = b.dataset.k; saveSet(); newGame(0); openMenu(); });
+$('segLevel').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.k === S.cpu) return; set.level = b.dataset.k; saveSet(); newGame(0); openMenu(); });
 $('menuBtn').addEventListener('click', openMenu);
 $('closeMenu').addEventListener('click', closeMenu);
 $('menuSheet').addEventListener('click', e => { if (e.target === $('menuSheet')) closeMenu(); });
@@ -434,12 +484,12 @@ $('endMenu').addEventListener('click', openMenu);
 // ---------- input ----------
 $('mat').addEventListener('click', doThrow);
 $('mat').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doThrow(); } });
-$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b || b.disabled || busy) return; sel = +b.dataset.k; render(); });
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b || b.disabled || busy || cpuTurn()) return; sel = +b.dataset.k; render(); });
 board.addEventListener('click', e => { const t = e.target.closest('.cellhit'); if (t) tapCell(+t.dataset.r, +t.dataset.c); });
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || !$('menuSheet').hidden || !$('endSheet').hidden || e.target.tagName === 'INPUT') return;
   if ((e.key === ' ' || e.key === 'Enter') && e.target === document.body){ e.preventDefault(); doThrow(); }
-  if (/^[1-8]$/.test(e.key) && S.phase === 'move'){ const k = S.pool.findIndex(v => v === +e.key); if (k >= 0){ sel = k; render(); } }
+  if (/^[1-8]$/.test(e.key) && S.phase === 'move' && !cpuTurn()){ const k = S.pool.findIndex(v => v === +e.key); if (k >= 0){ sel = k; render(); } }
 });
 addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
@@ -449,7 +499,9 @@ buildBoard(); drawShells();
 const saved = store.get('chowka-game', null);
 if (saved && saved.pawns && saved.phase && saved.phase !== 'over'){
   S = Object.assign(K.newGame(rulesFromSet()), saved); S.opts = Object.assign({}, K.DEFAULTS, saved.opts || {});
-  prompt(); render();
+  if (S.cpu && !K.LEVELS[S.cpu]) S.cpu = 'medium';
+  set.mode = S.cpu ? 'cpu' : 'two'; if (S.cpu) set.level = S.cpu;
+  prompt(); render(); kick();
 } else newGame(0);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){

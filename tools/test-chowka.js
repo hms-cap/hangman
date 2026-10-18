@@ -79,5 +79,40 @@ for (let g = 0; g < 3000; g++){
   ok(G.phase === 'over', 'random game ' + g + ' finishes'); total += n; if (G.winner != null) wins[G.winner]++;
 }
 console.log(`3000 random games: avg ${Math.round(total / 3000)} actions, wins ${wins.join(' / ')}`);
+
+// Computer player
+for (const lv of ['easy', 'medium', 'hard']){
+  // takes a capture when it's the obvious move (Easy picks at random half the time, so only Medium and Hard are held to it)
+  const S2 = C.newGame(); S2.turn = 1; // player 0's square 6 is an ordinary square; put player 1 two behind it
+  const victim = C.PATHS[0][6], j = C.PATHS[1].findIndex(([r, c]) => r === victim[0] && c === victim[1]);
+  S2.pawns[0][0] = 6; S2.pawns[1][0] = j - 2; S2.pool = [2]; S2.phase = 'move';
+  const m = C.chooseMove(S2, lv, () => 0.99);
+  ok(m && C.destination(S2, 1, m.pawn, 2) != null, lv + ' picks a legal move');
+  if (lv !== 'easy') ok(m.pawn === 0, lv + ' takes the capture');
+}
+{ // Hard steps onto a safe square instead of next to an enemy pawn
+  const S3 = C.newGame(); S3.turn = 1; S3.killed = [true, true];
+  S3.pawns[1] = [3, 24, 24, 24]; // player 1 pawn three squares before its safe square at 4
+  const sq = C.PATHS[1][4], k0 = C.PATHS[0].findIndex(([r, c]) => r === sq[0] && c === sq[1]);
+  S3.pawns[0] = [k0 - 2, 24, 24, 24]; S3.pool = [1]; S3.phase = 'move';
+  ok(C.danger(S3, 1, 4) === 0, 'safe square has no danger');
+  ok(C.danger(S3, 1, 5) > 0.2, 'square two in front of an enemy pawn is dangerous');
+}
+{ // every level plays only legal moves through whole games, and the levels rank as expected
+  const mul = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const match = (a, b, games) => { let wa = 0;
+    for (let g = 0; g < games; g++){
+      const r = mul(g + 99), G = C.newGame(), who = g % 2 ? [b, a] : [a, b]; G.turn = (g >> 1) & 1; let n = 0;
+      while (G.phase !== 'over' && n++ < 5000){
+        if (G.phase === 'throw') C.applyThrow(G, C.roll(r));
+        else { const mv = C.chooseMove(G, who[G.turn], r); if (!mv || !C.applyMove(G, mv.pawn, mv.k)){ ok(false, 'computer move rejected'); break; } }
+      }
+      if (G.winner === (g % 2 ? 1 : 0)) wa++;
+    }
+    return wa / games; };
+  const me = match('medium', 'easy', 200), hm = match('hard', 'medium', 300);
+  ok(me > 0.7, `medium beats easy (${(me * 100).toFixed(0)}%)`); ok(hm > 0.54, `hard beats medium (${(hm * 100).toFixed(0)}%)`);
+  console.log(`Computer: medium beats easy ${(me * 100).toFixed(0)}%, hard beats medium ${(hm * 100).toFixed(0)}%`);
+}
 console.log(fails ? `${fails} failed` : 'All checks passed');
 process.exit(fails ? 1 : 0);
