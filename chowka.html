@@ -192,6 +192,7 @@
 </div>
 
 <script src="chowka-core.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const K = window.Chowka, $ = id => document.getElementById(id), NS = 'http://www.w3.org/2000/svg';
@@ -390,11 +391,11 @@ async function handoff(){ busy = true; render(); await sleep(1100); busy = false
 let cpuTimer = null;
 function kick(){
   clearTimeout(cpuTimer);
-  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden) return;
+  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden || (window.GameNav && GameNav.isOpen)) return;
   cpuTimer = setTimeout(cpuStep, S.phase === 'throw' ? 700 : 500);
 }
 async function cpuStep(){
-  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden) return;
+  if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden || (window.GameNav && GameNav.isOpen)) return;
   if (S.phase === 'throw'){
     say(S.pool.length ? 'Computer shakes again…' : 'Computer shakes the shells…', 1);
     shakeAnim(true); await sleep(750); shakeAnim(false);
@@ -662,7 +663,7 @@ function timeUp(){
 function clockTick(){
   const now = performance.now(), dt = now - clockLast; clockLast = now;
   if (!S || !S.time) return;
-  const live = S.phase !== 'over' && !document.hidden && $('menuSheet').hidden && $('endSheet').hidden;
+  const live = S.phase !== 'over' && !document.hidden && $('menuSheet').hidden && $('endSheet').hidden && !(window.GameNav && GameNav.isOpen);
   if (live){ S.time[S.turn] += dt; if (++saveTick % 25 === 0) save(); }
   const limited = set.limit > 0 && live && !cpuTurn();
   const sig = S.turn + '|' + S.phase + '|' + S.pool.join() + '|' + S.pawns.join(';');
@@ -688,6 +689,18 @@ if (saved && saved.pawns && saved.phase && saved.phase !== 'over'){
   set.mode = S.cpu ? 'cpu' : 'two'; if (S.cpu) set.level = S.cpu;
   prompt(); render(); kick();
 } else newGame(0);
+
+// ---- game menu (tap the title) ----
+const startedGame = () => S && S.phase !== 'over' && (S.pawns.some(a => a.some(x => x)) || S.pool.length || (S.time && S.time[0] + S.time[1] > 15000));
+GameNav.init({ id: 'chowka', note: () => startedGame() ? 'Your game is saved.' : '',
+  onClose: () => { clockLast = performance.now(); kick(); },
+  actions: () => [
+    startedGame() && { icon: 'restart', label: 'Restart', note: S.cpu ? `A new game against the computer (${LEVEL_NAMES[S.cpu]}).` : 'A new game with the same players.', confirm: 'Tap again to restart', run: () => newGame(0) },
+    startedGame() && { icon: 'quit', label: 'Quit this game', note: S.cpu ? 'Counts as a loss against the computer, then goes back to the games.' : 'Ends it without a winner and goes back to the games.', danger: true, confirm: 'Tap again to quit', leave: true,
+      run: () => { if (S.cpu){ const r = stats.cpu[S.cpu] || (stats.cpu[S.cpu] = [0, 0]); r[1]++; store.set('chowka-stats', stats); } S.phase = 'over'; clearTimeout(cpuTimer); store.set('chowka-game', null); } },
+    !startedGame() && S && S.phase !== 'over' && { icon: 'new', label: 'New game', run: () => newGame(0) },
+    { icon: 'mode', label: 'Players, level and rules', run: openMenu },
+  ] });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away

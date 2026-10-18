@@ -150,6 +150,7 @@
 </div>
 
 <script src="fivewords.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -387,6 +388,23 @@ applyHc();
 switchMode(mode);
 if (!store.get('five-seen-help', false)){ store.set('five-seen-help', true); open('helpSheet'); }
 else if (G.done && G.guesses.length) { if (!G.won) toast(G.answer.toUpperCase(), 0); }
+// ---- game menu (tap the title) ----
+function giveUp(){
+  if (!G || G.done || busy) return;
+  G.done = true; G.won = false; record(false); save(); cur = ''; drawAll();
+  toast(G.answer.toUpperCase(), 0); setTimeout(openStats, 1400);
+}
+function newPracticeWord(){ if (G && !G.done && G.guesses.length) record(false); store.set('five-practice', null); G = load('practice'); cur = ''; drawAll(); $('toast').hidden = true; }
+GameNav.init({ id: 'five', note: () => G && !G.done ? 'Your guesses are saved.' : '',
+  actions: () => mode === 'daily' ? [
+    G && !G.done && G.guesses.length && { icon: 'flag', label: "Give up today's word", note: 'Shows the word. Ends your daily streak.', danger: true, confirm: 'Tap again to give up', run: giveUp },
+    { icon: 'mode', label: 'Play practice words', note: 'Unlimited words with their own stats. Today’s word stays as it is.', run: () => switchMode('practice') },
+  ] : [
+    G && !G.done && { icon: 'flag', label: 'Give up this word', note: 'Shows the word. Counts as a loss.', danger: true, confirm: 'Tap again to give up', run: giveUp },
+    { icon: 'next', label: G && G.done ? 'Next word' : 'New word', note: G && !G.done && G.guesses.length ? 'Skipping a started word counts as a loss.' : '', confirm: G && !G.done && G.guesses.length ? 'Tap again for a new word' : false, run: newPracticeWord },
+    { icon: 'mode', label: "Today's word", run: () => switchMode('daily') },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

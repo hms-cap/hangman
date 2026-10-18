@@ -120,6 +120,7 @@
 </div>
 
 <script src="words.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const WORDS = Object.fromEntries(Object.entries(window.HANGMAN_WORDS).map(([c, s]) => [c, s.trim().split(/\s+/).map(w => w.replace(/_/g, ' '))]));
@@ -258,6 +259,18 @@ document.addEventListener('keydown', e => {
 
 buildKeyboard(); renderStats();
 newGame(store.get('hangman-game', null));
+// ---- game menu (tap the title) ----
+function giveUp(){ if (!S || S.over) return; S.wrong = MAX; render(); check(); save(); $('msg').textContent = 'You gave up. It was ' + S.word + '.'; }
+GameNav.init({ id: 'hangman', note: 'Your word in progress is saved.',
+  actions: () => S && !S.over ? [
+    { icon: 'flag', label: 'Give up this word', note: 'Shows the word. Counts as a loss.', danger: true, confirm: 'Tap again to give up', run: giveUp },
+    { icon: 'next', label: 'New word', note: S.guessed.size ? 'Skipping a started word counts as a loss.' : 'Pick a different word.', confirm: S.guessed.size ? 'Tap again for a new word' : false, run: () => { abandonIfStarted(); newGame(); } },
+    { icon: 'mode', label: 'Change category', run: openCats },
+  ] : [
+    { icon: 'next', label: 'Next word', run: () => newGame() },
+    { icon: 'mode', label: 'Change category', run: openCats },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

@@ -170,6 +170,7 @@
 </div>
 
 <script src="puzzles.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const P = window.SUDOKU_PUZZLES;
@@ -511,6 +512,18 @@ document.addEventListener('keydown', e => {
 if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) open('loseSheet'); } }
 else { newGame('easy'); }
 if (location.hash === '#new') openNew();
+// ---- game menu (tap the title) ----
+let navPaused = false;
+GameNav.init({ id: 'sudoku', note: () => S && !S.done ? 'Your puzzle and time are saved.' : '',
+  onOpen: () => { navPaused = !!(S && !S.done && !paused); if (navPaused) setPaused(true); },
+  onClose: byAction => { if (navPaused && !byAction && S && !S.done) setPaused(false); navPaused = false; },
+  actions: () => [
+    S && !S.done && { icon: 'restart', label: 'Restart this puzzle', note: 'Clears your numbers, notes and the timer.', confirm: 'Tap again to restart', run: restart },
+    { icon: 'new', label: 'New puzzle…', note: 'Choose a level or a puzzle number.', run: openNew },
+    S && !S.done && { icon: 'quit', label: 'Quit this puzzle', note: 'Throws it away and goes back to the games. Your stats are kept.', danger: true, confirm: 'Tap again to quit', leave: true,
+      run: () => { S.done = true; store.set('sudoku-game', null); } },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

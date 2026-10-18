@@ -142,6 +142,12 @@ The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for 
 - Player names, wins on this phone, a How to play summary, and the game saves itself
 - Rules and the computer player live in `chowka-core.js`; `node tools/test-chowka.js` checks the rules, plays 3,000 random games to make sure every game ends, and checks that the computer only makes legal moves and that each level beats the one below
 
+## Getting around
+Every game has a **‹ Games** link back to the home screen, and tapping the **game's title** opens its menu:
+- **Back to all games**, with the game in progress saved, and **Switch game** to jump straight to any other game
+- The game's own **restart and quit** options, for example Restart this puzzle, New word, Give up (shows the answer), Resign, End this game or Quit this game. Anything that throws away progress or counts as a loss asks for a second tap first. Daily puzzles can be given up but not restarted, so a daily result can't be replayed
+- While the menu is open the game is paused (Sudoku's timer, Snake, Chowka Bara's clocks and computer player) and keys don't reach the game
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -156,6 +162,7 @@ The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for 
 | `snake.html` | Snake game |
 | `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) and the computer player |
 | `paper.css` | Shared look and colors (light and dark) |
+| `game-nav.js` | The game menu behind each game's title: back to the games, switch game, restart and quit |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |
 

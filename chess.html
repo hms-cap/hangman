@@ -266,6 +266,7 @@
 <script src="chess-core.js"></script>
 <script src="chess-tutor.js"></script>
 <script src="chess-pieces.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const { Position, Engine, LEVELS, START, WHITE, BLACK, colorOf, typeOf, mFrom, mTo, mPromo, mFlags, F_PROMO, sqName } = window.Chess;
@@ -782,10 +783,14 @@ let resignArmed = null;
 $('resign').addEventListener('click', () => {
   if (G.over || !G.moves.length) return;
   if (!resignArmed){ toast('Tap Resign again to confirm', 2200); resignArmed = setTimeout(() => resignArmed = null, 2200); return; }
-  clearTimeout(resignArmed); resignArmed = null; cancelEngine();
+  clearTimeout(resignArmed); resignArmed = null; resignNow();
+});
+function resignNow(){
+  if (G.over || !G.moves.length) return;
+  cancelEngine();
   const loser = G.mode === 'ai' ? G.human : pos.turn;
   G.over = { result: loser === WHITE ? '0-1' : '1-0', reason: 'resignation' }; save(); render(); finish();
-});
+}
 $('moves').addEventListener('click', e => {
   const b = e.target.closest('button[data-ply]'); if (!b) return;
   const ply = +b.dataset.ply; viewPly = ply === G.moves.length && !analysis ? null : ply; selected = -1; targets = new Map(); render();
@@ -878,6 +883,16 @@ $('drawBtn').addEventListener('click', () => {
 // ---- boot ----
 if (load()){ render(); if (G.over) finish(); else maybeEngine(); maybeReview(); } // finish() only shows the result sheet again; a result is never counted twice
 else { newGame(pick); openNew(); }
+// ---- game menu (tap the title) ----
+function sameSetup(){ return { mode: G.mode, level: G.level, side: G.mode === 'ai' ? (G.human === WHITE ? 'w' : 'b') : 'w', tutor: G.tutor }; }
+function setupName(){ return G.mode === 'two' ? 'two players' : `vs ${LEVELS[G.level].name} as ${G.human === WHITE ? 'White' : 'Black'}`; }
+GameNav.init({ id: 'chess', note: () => G && !G.over && G.moves.length ? 'Your game is saved.' : '',
+  actions: () => [
+    G && !G.over && G.moves.length && { icon: 'flag', label: 'Resign', note: G.mode === 'ai' ? 'Counts as a loss against this level.' : `${pos.turn === WHITE ? 'White' : 'Black'} (to move) resigns.`, danger: true, confirm: 'Tap again to resign', run: resignNow },
+    G && { icon: 'restart', label: G.over ? 'Play again' : 'Restart', note: `Same setup: ${setupName()}.`, confirm: G.over || !G.moves.length ? false : 'Tap again to restart', run: () => { cancelEngine(); newGame(sameSetup()); } },
+    { icon: 'new', label: 'New game…', note: 'Choose the computer’s level, your side, or two players.', run: openNew },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

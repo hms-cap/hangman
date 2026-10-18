@@ -174,6 +174,7 @@
 <script src="trailwords.js"></script>
 <script src="trail-daily.js"></script>
 <script src="trail-core.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -491,6 +492,17 @@ $('mode').addEventListener('click', e => { const b = e.target.closest('button');
 // ---- boot ----
 loadMode(mode);
 if (!store.get('trail-seen-help', false)){ store.set('trail-seen-help', true); open('helpSheet'); }
+// ---- game menu (tap the title) ----
+GameNav.init({ id: 'trail', note: () => S && !S.done && S.found.length ? 'Your words are saved.' : '',
+  actions: () => mode === 'practice' ? [
+    S && !S.done && S.found.length && { icon: 'restart', label: 'Start this grid over', note: 'Clears the words you have found and the timer.', confirm: 'Tap again to start over',
+      run: () => { Object.assign(S, { found: [], bonus: [], hints: [], elapsed: 0, done: false }); save(); loadMode('practice'); } },
+    { icon: 'new', label: 'New grid…', note: '4×4 or 5×5.', run: openNew },
+    { icon: 'mode', label: "Today's grid", run: () => loadMode('daily') },
+  ] : [
+    { icon: 'mode', label: 'Practice grids', note: 'Unlimited fresh grids. Today’s grid stays as it is.', run: () => loadMode('practice') },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });

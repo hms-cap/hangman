@@ -111,6 +111,7 @@
   </div>
 </div>
 
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -404,6 +405,18 @@ function frame(now){
 readColors();
 if (!restore(store.get('snake-game', null))) newGame(); else refresh();
 requestAnimationFrame(frame);
+
+// ---- game menu (tap the title) ----
+GameNav.init({ id: 'snake', note: () => S && S.started && !S.over ? 'Paused. Your game is saved.' : '',
+  onOpen: () => { closeSheets(); pause(); },
+  actions: () => S && S.started && !S.over ? [
+    { icon: 'restart', label: 'Restart', note: 'A new game on the same board and speed.', confirm: 'Tap again to restart', run: newGame },
+    { icon: 'flag', label: 'End this game', note: `Stops here and keeps your score of ${S.score}.`, danger: true, confirm: 'Tap again to end it', run: () => { S.over = true; finish('You ended the game'); } },
+    { icon: 'mode', label: 'Settings', note: 'Board, speed, edges.', run: openMenu },
+  ] : [
+    { icon: 'new', label: 'New game', run: newGame },
+    { icon: 'mode', label: 'Settings', note: 'Board, speed, edges.', run: openMenu },
+  ] });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away

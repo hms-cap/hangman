@@ -194,6 +194,7 @@
 <script src="groups-data.js"></script>
 <script src="groups-bank.js"></script>
 <script src="groups-core.js"></script>
+<script src="game-nav.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -428,6 +429,21 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && mo
 { const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (LEVELS.includes(q.get('level'))) level = q.get('level'); if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
 load(mode);
 if (!store.get('groups-seen-help-2', false)){ store.set('groups-seen-help-2', true); open('helpSheet'); }
+// ---- game menu (tap the title) ----
+function giveUp(){
+  if (!G || G.done) return;
+  G.done = true; G.won = false; selected = []; record(); save(); render(); setTimeout(openStats, 1600);
+}
+GameNav.init({ id: 'groups', note: () => G && !G.done && G.guesses.length ? 'Your guesses are saved.' : '',
+  actions: () => [
+    G && !G.done && { icon: 'eye', label: 'Give up', note: mode === 'daily' ? 'Shows the groups. Counts as a miss for today.' : 'Shows the groups. Counts as a loss.', danger: true, confirm: 'Tap again to give up', run: giveUp },
+    mode === 'practice' && G && !G.done && G.guesses.length && { icon: 'restart', label: 'Start this puzzle over', note: 'Clears your guesses and mistakes.', confirm: 'Tap again to start over',
+      run: () => { delete progress[key]; store.set('groups-progress', progress); load('practice', key); } },
+    mode === 'practice' && { icon: 'next', label: 'New puzzle', note: `${LNAME[level]} level.`, run: nextPractice },
+    mode === 'practice' && { icon: 'new', label: 'Pick a puzzle…', note: 'Past dailies and the classics.', run: openPicker },
+    { icon: 'mode', label: mode === 'daily' ? 'Practice puzzles' : "Today's puzzles", run: () => load(mode === 'daily' ? 'practice' : 'daily') },
+  ] });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
   const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
