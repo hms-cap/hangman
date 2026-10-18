@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Word Trail and Four Groups on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Word Trail, Four Groups and Snake on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -111,6 +111,17 @@ A word-grouping puzzle in the style of Connections.
 - `node tools/check-groups.js` checks the bank (and uses the system Hunspell dictionary to find compound words a "___ ball" style list is missing), builds 300 puzzles per level and two years of dailies, and prints samples
 - Shuffle, deselect, share your result as colored squares, saved progress
 
+### Snake
+The classic: steer the snake to the apples, grow with each one, and don't hit the walls or your own tail.
+- Swipe anywhere to turn (one finger can make several turns), or use the on-screen arrow buttons; arrow keys or `WASD` on a keyboard
+- Turns are buffered, so a quick double swipe around a corner isn't lost, and a reverse turn into your own neck is ignored
+- Smooth movement between squares, drawn as a blue-pencil line on the graph paper
+- **Board:** Small (12×12), Medium (16×16) or Large (20×20). **Speed:** Slow, Normal or Fast, with an option to speed up a little with every apple
+- Optional wrap-around edges instead of walls
+- Best score kept for each board, speed and edge combination, plus games played, apples eaten and longest snake
+- Pauses automatically when you leave the app and saves the game, so you can continue later (the home tile shows where you left off)
+- Keyboard: `Space` or `P` to pause, `Enter` to play again
+
 ## Files
 | File | What it is |
 | --- | --- |
@@ -122,6 +133,7 @@ A word-grouping puzzle in the style of Connections.
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
+| `snake.html` | Snake game |
 | `paper.css` | Shared look and colors (light and dark) |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

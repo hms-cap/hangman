@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Snake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+/* Snake on graph paper: the snake is a thick blue-pencil line through the squares, apples are red-pencil dots.
+   Layout: header with menu, score line, square board that flexes, message, arrow pad at thumb height. */
+.app{touch-action:none}
+.icon-btn{justify-self:end;width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);padding:0}
+.icon-btn svg{width:24px;height:24px}
+.score{display:flex;gap:16px;justify-content:center;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.score span{display:flex;align-items:baseline;gap:5px;text-transform:uppercase;letter-spacing:.08em;font-size:.62rem}
+.score b{color:var(--ink);font-weight:600;font-size:1rem;letter-spacing:0}
+.score b.bump{animation:bump .25s ease-out}
+@keyframes bump{50%{transform:scale(1.35);color:var(--hit)}}
+
+.stage{flex:1 1 auto;min-height:200px;display:flex;align-items:center;justify-content:center;position:relative}
+.board{position:relative;touch-action:none}
+.board canvas{display:block;width:100%;height:100%}
+.over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none;text-align:center;padding:16px}
+.over b{font-family:var(--hand);font-weight:400;font-size:1.9rem;line-height:1.05;background:var(--paper);padding:2px 12px;border-radius:10px;text-wrap:balance}
+.over small{color:var(--muted);font-size:.85rem;background:var(--paper);padding:2px 8px;border-radius:6px}
+
+.msg{text-align:center;font-family:var(--hand);font-size:1.25rem;min-height:1.5em;margin:0;color:var(--muted)}
+
+.pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,52px);gap:6px;justify-content:center}
+.pad button{border:1px solid var(--key-edge);border-bottom-width:3px;border-radius:12px;background:var(--key);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform .06s}
+.pad button:active,.pad button.on{transform:translateY(2px);background:var(--sel)}
+.pad svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.pad .up{grid-column:2;grid-row:1} .pad .left{grid-column:1;grid-row:2} .pad .down{grid-column:2;grid-row:2} .pad .right{grid-column:3;grid-row:2}
+
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.big{font-family:var(--mono);font-size:2.6rem;font-weight:600;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.result{display:flex;align-items:flex-end;gap:22px}
+.result div{display:flex;flex-direction:column;gap:4px}
+.newbest{font-family:var(--hand);color:var(--hit);font-size:1.3rem}
+.note{font-size:.8rem;color:var(--muted);margin:-6px 0 0}
+.statrow{display:flex;gap:18px;font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.statrow b{color:var(--ink)}
+@media (max-height:640px){.pad{grid-template-rows:repeat(2,44px)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+    <h1>Snake</h1>
+    <button class="icon-btn" id="menuBtn" type="button" aria-label="Pause and settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>
+    </button>
+  </header>
+  <div class="score" aria-label="Score">
+    <span>Score <b id="sScore">0</b></span><span>Best <b id="sBest">0</b></span><span>Length <b id="sLen">3</b></span>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="board" id="board">
+      <canvas id="cv" role="img" aria-label="Snake board"></canvas>
+      <div class="over" id="over"><b id="overT"></b><small id="overS"></small></div>
+    </div>
+  </div>
+  <p class="msg" id="msg" aria-live="polite"></p>
+  <div class="pad" id="pad">
+    <button class="up" data-d="up" type="button" aria-label="Up"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg></button>
+    <button class="left" data-d="left" type="button" aria-label="Left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="down" data-d="down" type="button" aria-label="Down"><svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></button>
+    <button class="right" data-d="right" type="button" aria-label="Right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+</div>
+
+<div class="sheet" id="menuSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="menuTitle">
+    <h2 id="menuTitle">Paused</h2>
+    <div class="row"><button class="btn primary" id="resumeBtn" type="button">Resume</button><button class="btn" id="newBtn" type="button">New game</button></div>
+    <span class="label">Board</span>
+    <div class="seg three" id="segSize"></div>
+    <span class="label">Speed</span>
+    <div class="seg three" id="segSpeed"></div>
+    <p class="note">Changing the board, speed or edges starts a new game. Each combination keeps its own best score.</p>
+    <div>
+      <label class="switch"><span>Wrap around edges<small>Leave one side, come back on the other</small></span><input type="checkbox" id="optWrap"></label>
+      <label class="switch"><span>Speed up as you grow<small>A little faster with every apple</small></span><input type="checkbox" id="optRamp"></label>
+      <label class="switch"><span>Arrow buttons<small>You can always swipe on the screen instead</small></span><input type="checkbox" id="optPad"></label>
+    </div>
+    <span class="label">All games</span>
+    <div class="statrow"><span>Played <b id="stGames">0</b></span><span>Apples <b id="stApples">0</b></span><span>Longest <b id="stLong">0</b></span></div>
+  </div>
+</div>
+
+<div class="sheet" id="endSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="endTitle">
+    <h2 id="endTitle">Game over</h2>
+    <div class="result">
+      <div><span class="label">Score</span><span class="big" id="endScore">0</span></div>
+      <div><span class="label">Best</span><span class="big" id="endBest">0</span></div>
+    </div>
+    <p id="endNote"></p>
+    <div class="row"><button class="btn primary" id="againBtn" type="button">Play again</button><button class="btn" id="endMenu" type="button">Settings</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const SIZES = { s: ['Small', 12], m: ['Medium', 16], l: ['Large', 20] };
+const SPEEDS = { slow: ['Slow', 170], normal: ['Normal', 125], fast: ['Fast', 88] };
+const DIRS = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+const touch = matchMedia('(pointer: coarse)').matches;
+
+const set = Object.assign({ size: 'm', speed: 'normal', wrap: false, ramp: true, pad: true }, store.get('snake-settings', {}));
+if (!SIZES[set.size]) set.size = 'm'; if (!SPEEDS[set.speed]) set.speed = 'normal';
+const stats = Object.assign({ games: 0, apples: 0, longest: 0, best: {} }, store.get('snake-stats', {}));
+const bestKey = () => `${set.size}-${set.speed}-${set.wrap ? 'wrap' : 'walls'}`;
+const best = () => stats.best[bestKey()] || 0;
+
+let S;            // game state
+let lastTick = 0; // time of the last step
+let flash = 0;    // time of death, for the red flash
+
+// ---------- game ----------
+function newGame(){
+  const n = SIZES[set.size][1], y = n >> 1, x = (n >> 1) - 1;
+  S = { n, snake: [{ x, y }, { x: x - 1, y }, { x: x - 2, y }], dir: DIRS.right, queue: [], food: null, prevTail: null,
+        score: 0, over: false, started: false, paused: false, won: false, ate: 0 };
+  S.prevTail = { ...S.snake[2] };
+  placeFood(); flash = 0;
+  store.set('snake-game', null);
+  closeSheets(); refresh();
+}
+function placeFood(){
+  const used = new Set(S.snake.map(p => p.y * S.n + p.x)), free = [];
+  for (let i = 0; i < S.n * S.n; i++) if (!used.has(i)) free.push(i);
+  if (!free.length){ S.food = null; return; }
+  const i = free[(Math.random() * free.length) | 0];
+  S.food = { x: i % S.n, y: (i / S.n) | 0 }; S.ate = performance.now();
+}
+const tickMs = () => SPEEDS[set.speed][1] * (set.ramp ? Math.max(0.6, 1 - S.score * 0.012) : 1);
+
+function step(){
+  if (S.queue.length) S.dir = S.queue.shift();
+  const h = S.snake[0];
+  let nx = h.x + S.dir.x, ny = h.y + S.dir.y;
+  if (set.wrap){ nx = (nx + S.n) % S.n; ny = (ny + S.n) % S.n; }
+  else if (nx < 0 || ny < 0 || nx >= S.n || ny >= S.n) return die('Hit the wall');
+  const eat = S.food && S.food.x === nx && S.food.y === ny;
+  const body = eat ? S.snake : S.snake.slice(0, -1); // the tail moves out of the way unless we grow
+  if (body.some(p => p.x === nx && p.y === ny)) return die('Bit your own tail');
+  S.snake.unshift({ x: nx, y: ny });
+  if (eat){
+    S.prevTail = { ...S.snake[S.snake.length - 1] };
+    S.score++; bump('sScore'); bump('sLen');
+    try{ navigator.vibrate && navigator.vibrate(12); }catch(e){}
+    placeFood();
+    if (!S.food) return win();
+    save();
+  } else S.prevTail = S.snake.pop();
+  refresh();
+}
+function die(why){
+  S.over = true; flash = performance.now();
+  try{ navigator.vibrate && navigator.vibrate([40, 40, 60]); }catch(e){}
+  finish(why);
+}
+function win(){ S.over = true; S.won = true; finish('You filled the whole board!'); }
+function finish(why){
+  const prev = best();
+  stats.games++; stats.apples += S.score; stats.longest = Math.max(stats.longest, S.snake.length);
+  if (S.score > prev) stats.best[bestKey()] = S.score;
+  store.set('snake-stats', stats); store.set('snake-game', null);
+  refresh();
+  setTimeout(() => {
+    if (!S.over) return;
+    $('endTitle').textContent = S.won ? 'You win!' : 'Game over';
+    $('endScore').textContent = S.score; $('endBest').textContent = best();
+    $('endNote').innerHTML = S.score > prev && S.score > 0 ? `<span class="newbest">New best for ${SIZES[set.size][0]} · ${SPEEDS[set.speed][0]}${set.wrap ? ' · wrap' : ''}!</span>` : why + '.';
+    $('endSheet').hidden = false; $('againBtn').focus();
+  }, 750);
+}
+
+// Turns are queued (two at most) so quick double-swipes around a corner aren't lost.
+function turn(name){
+  if (!S || S.over || !$('menuSheet').hidden || !$('endSheet').hidden) return;
+  const d = DIRS[name], base = S.queue.length ? S.queue[S.queue.length - 1] : S.dir;
+  if (!S.started){
+    if (d.x === -S.dir.x && d.y === -S.dir.y){ S.snake.reverse(); S.prevTail = { ...S.snake[S.snake.length - 1] }; S.dir = d; }
+    else if (d !== S.dir) S.queue.push(d);
+    S.started = true; S.paused = false; lastTick = performance.now(); refresh(); return;
+  }
+  if (S.paused){ resume(); }
+  if (d === base || (d.x === -base.x && d.y === -base.y)) return;
+  if (S.queue.length < 2) S.queue.push(d);
+}
+function pause(){ if (S && S.started && !S.over && !S.paused){ S.paused = true; save(); refresh(); } }
+function resume(){ if (S && S.started && !S.over && S.paused){ S.paused = false; lastTick = performance.now(); refresh(); } }
+function save(){
+  if (!S || S.over || !S.started){ if (S && S.over) store.set('snake-game', null); return; }
+  store.set('snake-game', { n: S.n, snake: S.snake, dir: Object.keys(DIRS).find(k => DIRS[k] === S.dir), food: S.food, score: S.score,
+    size: set.size, speed: set.speed, wrap: set.wrap });
+}
+function restore(g){
+  if (!g || !Array.isArray(g.snake) || !g.snake.length || !SIZES[g.size] || SIZES[g.size][1] !== g.n) return false;
+  set.size = g.size; if (SPEEDS[g.speed]) set.speed = g.speed; set.wrap = !!g.wrap;
+  S = { n: g.n, snake: g.snake, dir: DIRS[g.dir] || DIRS.right, queue: [], food: g.food, score: g.score || 0,
+        over: false, started: true, paused: true, won: false, ate: 0 };
+  S.prevTail = { ...S.snake[S.snake.length - 1] };
+  if (!S.food) placeFood();
+  return true;
+}
+
+// ---------- ui ----------
+function bump(id){ const b = $(id); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+function refresh(){
+  $('sScore').textContent = S.score; $('sLen').textContent = S.snake.length; $('sBest').textContent = Math.max(best(), S.score);
+  const swipe = touch ? 'Swipe' : 'Press an arrow key';
+  let t = '', s = '';
+  if (!S.started){ t = 'Ready?'; s = set.pad && touch ? 'Swipe or tap an arrow to start' : `${swipe} to start`; }
+  else if (S.paused && !S.over){ t = 'Paused'; s = touch ? 'Swipe or tap to carry on' : 'Press an arrow key or Space'; }
+  $('overT').textContent = t; $('overS').textContent = s; $('over').hidden = !t;
+  $('msg').textContent = S.over ? (S.won ? 'The whole board is snake.' : 'Ouch.') : !S.started ? `${SIZES[set.size][0]} board · ${SPEEDS[set.speed][0]}${set.wrap ? ' · wrap' : ''}` : '';
+  $('pad').hidden = !set.pad;
+  requestAnimationFrame(layout);
+}
+
+function seg(id, list, cur, onPick){
+  $(id).innerHTML = Object.entries(list).map(([k, v]) => `<button type="button" data-k="${k}" aria-pressed="${k === cur}">${v[0]}</button>`).join('');
+  $(id).onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.k !== cur) onPick(b.dataset.k); };
+}
+function openMenu(){
+  if (!S.over) pause();
+  $('menuTitle').textContent = S.over ? 'Settings' : S.started ? 'Paused' : 'Settings';
+  $('resumeBtn').textContent = S.over ? 'Play again' : S.started ? 'Resume' : 'Start playing';
+  seg('segSize', SIZES, set.size, k => change('size', k));
+  seg('segSpeed', SPEEDS, set.speed, k => change('speed', k));
+  $('optWrap').checked = set.wrap; $('optRamp').checked = set.ramp; $('optPad').checked = set.pad;
+  $('stGames').textContent = stats.games; $('stApples').textContent = stats.apples; $('stLong').textContent = stats.longest;
+  $('endSheet').hidden = true; $('menuSheet').hidden = false;
+}
+function closeSheets(){ $('menuSheet').hidden = true; $('endSheet').hidden = true; }
+function change(k, v){ set[k] = v; store.set('snake-settings', set); newGame(); openMenu(); }
+
+$('menuBtn').addEventListener('click', () => $('menuSheet').hidden ? openMenu() : (closeSheets(), resume()));
+$('resumeBtn').addEventListener('click', () => { if (S.over) newGame(); else { closeSheets(); resume(); } });
+$('newBtn').addEventListener('click', newGame);
+$('againBtn').addEventListener('click', newGame);
+$('endMenu').addEventListener('click', openMenu);
+$('menuSheet').addEventListener('click', e => { if (e.target === $('menuSheet')){ closeSheets(); if (S.over) newGame(); else resume(); } });
+$('optWrap').addEventListener('change', e => change('wrap', e.target.checked));
+$('optRamp').addEventListener('change', e => { set.ramp = e.target.checked; store.set('snake-settings', set); });
+$('optPad').addEventListener('change', e => { set.pad = e.target.checked; store.set('snake-settings', set); refresh(); });
+
+// Arrow pad: react on press, not release, so turns feel instant.
+$('pad').addEventListener('pointerdown', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  e.preventDefault(); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 120); turn(b.dataset.d);
+});
+$('pad').addEventListener('click', e => { if (e.detail === 0){ const b = e.target.closest('button'); if (b) turn(b.dataset.d); } }); // keyboard activation
+
+// Swipes anywhere outside the buttons and sheets. One finger can make several turns: the origin resets after each.
+let sw = null;
+document.addEventListener('pointerdown', e => {
+  if (e.target.closest('button, a, .sheet, input, label')) return;
+  sw = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+});
+document.addEventListener('pointermove', e => {
+  if (!sw || e.pointerId !== sw.id) return;
+  const dx = e.clientX - sw.x, dy = e.clientY - sw.y, min = 18;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < min) return;
+  turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  sw.x = e.clientX; sw.y = e.clientY; sw.moved = true;
+});
+const endSwipe = e => {
+  if (!sw || e.pointerId !== sw.id) return;
+  if (!sw.moved && e.type === 'pointerup' && S.paused && $('menuSheet').hidden) resume(); // a tap carries on after a pause
+  sw = null;
+};
+document.addEventListener('pointerup', endSwipe); document.addEventListener('pointercancel', endSwipe);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' }[e.key];
+  const open = !$('menuSheet').hidden || !$('endSheet').hidden;
+  if (k && !open){ e.preventDefault(); turn(k); }
+  else if (e.key === ' ' || e.key === 'p' || e.key === 'P' || e.key === 'Escape'){
+    e.preventDefault();
+    if (!$('menuSheet').hidden){ closeSheets(); if (S.over) newGame(); else resume(); }
+    else if (S.over) newGame();
+    else if (S.paused) resume(); else if (S.started) pause();
+  } else if (e.key === 'Enter' && S.over && !$('endSheet').hidden){ e.preventDefault(); newGame(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+addEventListener('pagehide', save);
+addEventListener('blur', () => { if (!touch) pause(); });
+
+// ---------- drawing ----------
+const cv = $('cv'), ctx = cv.getContext('2d');
+let C = {}, px = 0;
+function readColors(){
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  C = { sheet: v('--sheet'), ink: v('--ink'), line: v('--line'), hit: v('--hit'), miss: v('--miss'), paper: v('--paper'), muted: v('--muted') };
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+function layout(){
+  const st = $('stage'), s = Math.floor(Math.min(st.clientWidth, st.clientHeight));
+  if (s <= 0 || s === px) return;
+  px = s; const dpr = window.devicePixelRatio || 1;
+  $('board').style.width = $('board').style.height = s + 'px';
+  cv.width = cv.height = Math.round(s * dpr);
+  ctx.setTransform(cv.width / s, 0, 0, cv.height / s, 0, 0);
+}
+new ResizeObserver(layout).observe($('stage'));
+
+function rrect(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+// A body segment from A toward B, drawn from fraction t0 to t1. Across a wrapped edge it is drawn on both sides; the clip hides the rest.
+function segment(A, B, t0, t1, cell, pts){
+  let dx = B.x - A.x, dy = B.y - A.y;
+  const wrapped = Math.abs(dx) > 1 || Math.abs(dy) > 1;
+  if (wrapped){ dx = -Math.sign(dx); dy = -Math.sign(dy); }
+  const line = (ox, oy) => {
+    const x0 = (ox + dx * t0 + .5) * cell, y0 = (oy + dy * t0 + .5) * cell, x1 = (ox + dx * t1 + .5) * cell, y1 = (oy + dy * t1 + .5) * cell;
+    ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); pts && pts.push([x1, y1, ox + dx * t1, oy + dy * t1]);
+  };
+  line(A.x, A.y);
+  if (wrapped) line(B.x - dx, B.y - dy);
+}
+
+function draw(now){
+  const s = px; if (!s || !S) return;
+  const n = S.n, cell = s / n;
+  ctx.clearRect(0, 0, s, s);
+  // paper and grid
+  rrect(1, 1, s - 2, s - 2, 8); ctx.fillStyle = C.sheet; ctx.fill();
+  ctx.save(); ctx.clip();
+  ctx.strokeStyle = C.line; ctx.globalAlpha = .55; ctx.lineWidth = 1; ctx.beginPath();
+  for (let i = 1; i < n; i++){ const p = Math.round(i * cell) + .5; ctx.moveTo(p, 0); ctx.lineTo(p, s); ctx.moveTo(0, p); ctx.lineTo(s, p); }
+  ctx.stroke(); ctx.globalAlpha = 1;
+
+  // apple: a red-pencil dot with a stem and leaf, popping in when it appears
+  if (S.food){
+    const k = Math.min(1, (now - S.ate) / 220), sc = k < 1 ? 0.6 + 0.4 * Math.sin(k * Math.PI / 2) * 1.15 : 1;
+    const fx = (S.food.x + .5) * cell, fy = (S.food.y + .55) * cell, r = cell * .32 * sc;
+    ctx.fillStyle = C.miss; ctx.beginPath(); ctx.arc(fx, fy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(1.2, cell * .07); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(fx, fy - r * .8); ctx.quadraticCurveTo(fx + r * .1, fy - r * 1.3, fx + r * .35, fy - r * 1.45); ctx.stroke();
+    ctx.fillStyle = C.paper; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(fx - r * .35, fy - r * .3, r * .22, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  // snake: one thick line through the squares, the head eased between steps
+  const a = S.started && !S.paused && !S.over ? Math.min(1, (now - lastTick) / tickMs()) : 1;
+  const body = S.snake, dead = S.over && !S.won && flash && Math.floor((now - flash) / 120) % 2 === 0 && now - flash < 720;
+  ctx.strokeStyle = dead || (S.over && !S.won) ? C.miss : C.hit;
+  ctx.lineWidth = cell * .62; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const headPts = [];
+  if (body.length > 1) segment(body[1], body[0], 0, a, cell, headPts);
+  else { const p = body[0]; ctx.moveTo((p.x + .5) * cell, (p.y + .5) * cell); ctx.lineTo((p.x + .5) * cell + .01, (p.y + .5) * cell); headPts.push([(p.x + .5) * cell, (p.y + .5) * cell, p.x, p.y]); }
+  for (let i = 1; i < body.length - 1; i++) segment(body[i], body[i + 1], 0, 1, cell);
+  const last = body[body.length - 1];
+  segment(last, S.prevTail, 0, 1 - a, cell);
+  ctx.stroke();
+
+  // head with eyes looking where it's going
+  const hp = headPts.find(p => p[2] >= -.5 && p[3] >= -.5 && p[2] <= n - .5 && p[3] <= n - .5) || headPts[0];
+  if (hp){
+    const [hx, hy] = hp, d = S.dir, e = cell * .17, side = cell * .14;
+    ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.arc(hx, hy, cell * .36, 0, Math.PI * 2); ctx.fill();
+    for (const sgn of [-1, 1]){
+      const ex = hx + d.x * e - d.y * side * sgn * 1.4, ey = hy + d.y * e + d.x * side * sgn * 1.4;
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, cell * .11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1d262d'; ctx.beginPath(); ctx.arc(ex + d.x * cell * .04, ey + d.y * cell * .04, cell * .055, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.restore();
+  // printed border
+  rrect(1, 1, s - 2, s - 2, 8); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function frame(now){
+  if (S && S.started && !S.paused && !S.over){
+    let guard = 0;
+    while (now - lastTick >= tickMs() && !S.over && guard++ < 3){ lastTick += tickMs(); step(); }
+    if (now - lastTick > tickMs() * 3) lastTick = now; // after a stall, don't race to catch up
+  }
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+readColors();
+if (!restore(store.get('snake-game', null))) newGame(); else refresh();
+requestAnimationFrame(frame);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller; // reload once when an update takes over, so the new version shows straight away
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
