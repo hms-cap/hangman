@@ -188,7 +188,7 @@
     <h2 id="endTitle">Blue wins!</h2>
     <p id="endNote"></p>
     <div class="row"><button class="btn primary" id="againBtn" type="button">Play again</button><button class="btn" id="endMenu" type="button">Menu</button></div>
-    <a class="btn homebtn" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>
+    <div id="endNav"></div>
   </div>
 </div>
 
@@ -469,6 +469,7 @@ function win(p){
       $('endTitle').textContent = `${name(p)} wins!`;
       $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game. ${times}`;
     }
+    GameNav.fillEnd('endNav', 'chowka');
     $('endSheet').hidden = false;
   }, 900);
 }

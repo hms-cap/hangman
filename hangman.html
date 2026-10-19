@@ -67,6 +67,11 @@
 .cats button small{font-family:var(--mono);color:var(--muted);font-size:.72rem;flex:none}
 .cats button[aria-pressed="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit);color:var(--hit)}
 .cats button.any{grid-column:1/-1}
+.endword{font-family:var(--mono);font-weight:600;font-size:clamp(1.3rem,6.5vw,1.9rem);letter-spacing:.12em;color:var(--ink);word-break:break-word}
+.endword.lost{color:var(--miss)}
+.endstats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.endstats b{display:block;font-family:var(--mono);font-size:1.5rem;font-weight:600;color:var(--ink)}
+.endstats span{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 @media (max-height:640px){.key{height:42px}.stage{min-height:110px}}
 </style>
 </head>
@@ -108,6 +113,18 @@
   <div class="actions">
     <button class="btn" id="hintBtn" type="button" title="Reveal a letter. Uses one guess.">Hint</button>
     <button class="btn" id="newBtn" type="button">New word</button>
+  </div>
+</div>
+
+<div class="sheet" id="endSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="endTitle">
+    <h2 id="endTitle">Solved!</h2>
+    <p id="endSub"></p>
+    <div class="endword" id="endWord"></div>
+    <div class="endstats" id="endStats"></div>
+    <div class="row"><button class="btn primary" id="endNext" type="button">Next word</button><button class="btn" id="endCat" type="button">Change category</button></div>
+    <div id="endNav"></div>
+    <button class="btn small" id="endClose" type="button">Look at the drawing</button>
   </div>
 </div>
 
@@ -165,6 +182,7 @@ function pick(){
 const letters = w => [...new Set(w.replace(/ /g, ''))];
 
 function newGame(restore){
+  if ($('endSheet')) $('endSheet').hidden = true;
   const p = restore && restore.word ? restore : pick();
   S = { word: p.word, cat: p.cat, guessed: new Set(p.guessed || []), hinted: new Set(p.hinted || []), wrong: 0, over: false };
   S.wrong = [...S.guessed].filter(c => !S.word.includes(c)).length + S.hinted.size;
@@ -227,7 +245,21 @@ function check(silent){
   }
   store.set('hangman-stats', stats); renderStats(); render();
   $('newBtn').className = 'btn primary'; $('newBtn').textContent = 'Next word';
+  if (!silent) setTimeout(() => showEnd(won), won ? 900 : 1300);
 }
+function showEnd(won){
+  if (!S || !S.over) return;
+  $('endTitle').textContent = won ? (S.wrong === 0 ? 'Flawless!' : 'Solved!') : 'Out of guesses';
+  $('endSub').textContent = won ? (S.wrong === 0 ? `No misses. ${S.cat}.` : `${MAX - S.wrong} guess${MAX - S.wrong === 1 ? '' : 'es'} to spare. ${S.cat}.`) : `The answer (${S.cat}) was`;
+  $('endWord').textContent = S.word; $('endWord').className = 'endword' + (won ? '' : ' lost');
+  $('endStats').innerHTML = [[stats.w, 'Won'], [stats.l, 'Lost'], [stats.s, 'Streak'], [stats.b, 'Best']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  GameNav.fillEnd('endNav', 'hangman');
+  $('catSheet').hidden = true; $('endSheet').hidden = false; $('endNext').focus({ preventScroll: true });
+}
+$('endNext').addEventListener('click', () => { $('endSheet').hidden = true; newGame(); });
+$('endCat').addEventListener('click', () => { $('endSheet').hidden = true; openCats(); });
+$('endClose').addEventListener('click', () => { $('endSheet').hidden = true; });
+$('endSheet').addEventListener('click', e => { if (e.target === $('endSheet')) $('endSheet').hidden = true; });
 function renderStats(){ $('sWins').textContent = stats.w; $('sLoss').textContent = stats.l; $('sStreak').textContent = stats.s; $('sBest').textContent = stats.b; }
 function save(){ store.set('hangman-game', S.over ? null : { word: S.word, cat: S.cat, guessed: [...S.guessed], hinted: [...S.hinted] }); }
 
@@ -252,6 +284,7 @@ $('hintBtn').addEventListener('click', hint);
 $('newBtn').addEventListener('click', () => { abandonIfStarted(); newGame(); }); // skipping a started word counts as a loss
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || !$('catSheet').hidden) return;
+  if (!$('endSheet').hidden){ if (e.key === 'Enter'){ e.preventDefault(); $('endSheet').hidden = true; newGame(); } else if (e.key === 'Escape') $('endSheet').hidden = true; return; }
   const k = e.key.toUpperCase();
   if (/^[A-Z]$/.test(k)) guess(k);
   else if (e.key === 'Enter' && S.over) newGame();

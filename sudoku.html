@@ -157,6 +157,7 @@
     <p id="winSub"></p>
     <div class="result" id="winResult"></div>
     <div class="row"><button class="btn primary" id="winNext" type="button">Next puzzle</button><button class="btn" id="winChange" type="button">Change level</button></div>
+    <div id="winNav"></div>
   </div>
 </div>
 
@@ -166,6 +167,7 @@
     <h2 id="loseTitle">Three mistakes</h2>
     <p>You hit the mistake limit for this puzzle. You can keep going without a limit, start over, or try another puzzle.</p>
     <div class="row"><button class="btn primary" id="loseGo" type="button">Keep going</button><button class="btn" id="loseRestart" type="button">Restart</button><button class="btn" id="loseNew" type="button">New puzzle</button></div>
+    <div id="loseNav"></div>
   </div>
 </div>
 
@@ -387,7 +389,7 @@ function restart(){
 }
 function after(){
   if (S.values.every((v,i) => v === S.solution[i])) return win();
-  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); return open('loseSheet'); }
+  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); return (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); }
   save(); render();
 }
 function win(){
@@ -401,7 +403,7 @@ function win(){
   $('winResult').innerHTML = `<div><span class="label">Time</span><b>${fmt(t)}</b>${newBest ? '<span class="newbest">new best</span>' : ''}</div>`
     + `<div><span class="label">Mistakes</span><b>${S.mistakes}</b></div><div><span class="label">Hints</span><b>${S.hints}</b></div>`;
   $('winNext').textContent = `Next ${name} puzzle`;
-  wave(); setTimeout(() => open('winSheet'), reduced ? 0 : 900);
+  wave(); setTimeout(() => (GameNav.fillEnd('winNav', 'sudoku'), open('winSheet')), reduced ? 0 : 900);
 }
 
 // ---- motion & feedback ----
@@ -509,7 +511,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ---- boot ----
-if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) open('loseSheet'); } }
+if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); } }
 else { newGame('easy'); }
 if (location.hash === '#new') openNew();
 // ---- game menu (tap the title) ----

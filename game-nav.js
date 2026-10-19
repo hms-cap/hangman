@@ -147,17 +147,20 @@ function dailyDone(id){
 }
 // HTML for the end of a results screen: "Up next" to the next unfinished daily (if any), then Back to all games.
 function endButtons(id){
-  const i = Math.max(0, DAILIES.findIndex(x => x[0] === id));
-  const order = DAILIES.slice(i + 1).concat(DAILIES.slice(0, i)), next = order.find(x => !dailyDone(x[0]));
+  const i = DAILIES.findIndex(x => x[0] === id), daily = i >= 0;
+  const order = daily ? DAILIES.slice(i + 1).concat(DAILIES.slice(0, i)) : DAILIES, next = order.find(x => !dailyDone(x[0]));
   const left = DAILIES.filter(x => !dailyDone(x[0])).length;
   const home = '<a class="btn homebtn" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>';
   const up = next ? `<a class="btn homebtn upnext" href="${next[2]}"><span class="label">Up next</span>${next[1]}${left > 1 ? ` <small>· ${left} daily puzzles left</small>` : ''}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>`
-    : '<p class="alldone">All of today\'s daily puzzles are done. See you tomorrow!</p>';
+    : daily ? '<p class="alldone">All of today\'s daily puzzles are done. See you tomorrow!</p>' : '';
   return `<div class="endnav">${up}${home}</div>`;
 }
 
+// Put the end buttons into a page element (by id) for the given game.
+const fillEnd = (elId, id) => { const e = document.getElementById(elId); if (e) e.innerHTML = endButtons(id); };
+
 window.GameNav = {
-  endButtons, dailyDone,
+  endButtons, dailyDone, fillEnd,
   init(c){ cfg = c; build(); },
   open, close,
   get isOpen(){ return isOpen && sheet && !sheet.hidden; },

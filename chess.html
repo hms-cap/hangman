@@ -241,7 +241,7 @@
     <div class="row"><button class="btn primary" id="overAna" type="button">Analyze game</button><button class="btn" id="overNew" type="button">New game</button></div>
     <div class="row"><button class="btn small" id="overReview" type="button">Look at the board</button><button class="btn small" id="overPgn" type="button">Copy game (PGN)</button></div>
     <div class="pgn" id="overPgnText" hidden></div>
-    <a class="btn homebtn" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>
+    <div id="overNav"></div>
   </div>
 </div>
 
@@ -466,7 +466,7 @@ function finish(){
   $('overPgnText').hidden = true;
   $('overAna').hidden = !G.moves.length;
   $('overAna').textContent = G.analysis && Object.keys(G.analysis.r).length >= G.moves.length ? 'See analysis' : 'Analyze game';
-  setTimeout(() => open('overSheet'), 500);
+  setTimeout(() => { GameNav.fillEnd('overNav', 'chess'); open('overSheet'); }, 500);
 }
 
 // ---- engine ----

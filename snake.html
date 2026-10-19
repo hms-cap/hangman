@@ -108,6 +108,7 @@
     </div>
     <p id="endNote"></p>
     <div class="row"><button class="btn primary" id="againBtn" type="button">Play again</button><button class="btn" id="endMenu" type="button">Settings</button></div>
+    <div id="endNav"></div>
   </div>
 </div>
 
@@ -190,6 +191,7 @@ function finish(why){
     $('endTitle').textContent = S.won ? 'You win!' : 'Game over';
     $('endScore').textContent = S.score; $('endBest').textContent = best();
     $('endNote').innerHTML = S.score > prev && S.score > 0 ? `<span class="newbest">New best for ${SIZES[set.size][0]} · ${SPEEDS[set.speed][0]}${set.wrap ? ' · wrap' : ''}!</span>` : why + '.';
+    GameNav.fillEnd('endNav', 'snake');
     $('endSheet').hidden = false; $('againBtn').focus();
   }, 750);
 }
