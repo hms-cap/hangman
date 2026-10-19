@@ -84,6 +84,52 @@
 .result b{font-family:var(--mono);font-weight:500;font-size:1.3rem}
 .newbest{color:var(--hit);font-family:var(--hand);font-size:1.2rem}
 @media (max-height:640px){.num{height:48px}.num b{font-size:1.3rem}.tool span.lbl{display:none}}
+
+/* ---- Teach mode: the board shows one lesson step at a time ---- */
+.board.teach .cell.t-unit::before{background:var(--same)}
+.board.teach .cell.t-dim .v,.board.teach .cell.t-dim .n{opacity:.35}
+.board.teach .cell.t-blocked::before{background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--miss) 38%,transparent) 5px 6.5px)}
+.board.teach .cell.t-unit.t-blocked::before{background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--miss) 38%,transparent) 5px 6.5px),var(--same)}
+.board.teach .cell.t-focus::after{content:"";position:absolute;inset:2px;border:3px solid var(--hit);border-radius:5px;pointer-events:none;animation:tring 1.6s ease-in-out infinite}
+.board.teach .cell.t-target::after{content:"";position:absolute;inset:2px;border:2.5px dashed var(--miss);border-radius:5px;pointer-events:none}
+.board.teach .cell.t-cause::after{content:"";position:absolute;inset:13%;border:2.5px solid var(--present);border-radius:50%;pointer-events:none}
+.board.teach .cell.t-digit .v{color:var(--hit)}
+.board.teach .cell.t-ghost .v{font-family:var(--hand);font-size:7.6cqw;color:var(--hit);animation:tghost 1.4s ease-in-out infinite}
+.board.teach .n span.key{color:var(--hit);font-weight:700}
+.board.teach .n span.key::before,.board.teach .n span.alt::before{content:"";position:absolute;width:2.9cqw;height:2.9cqw;border-radius:50%;background:var(--sel)}
+.board.teach .n span.alt{color:var(--present);font-weight:700}
+.board.teach .n span.alt::before{background:color-mix(in srgb,var(--present) 22%,transparent)}
+.board.teach .n span.elim{color:var(--miss);font-weight:700;text-decoration:line-through;text-decoration-thickness:2px}
+.board.teach .n span{position:relative;isolation:isolate}
+.board.teach .n span.key::before,.board.teach .n span.alt::before{z-index:-1}
+@keyframes tring{50%{border-color:color-mix(in srgb,var(--hit) 45%,transparent)}}
+@keyframes tghost{50%{opacity:.45}}
+.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.lines line{stroke-width:2.5;stroke-linecap:round;opacity:.6}
+.lines .ray{stroke:var(--present);stroke-dasharray:1 7}
+.lines .link{stroke:var(--hit)}
+.lines .chain{stroke:var(--hit);stroke-dasharray:7 6}
+.lines circle{fill:var(--present)}
+
+.coach{display:flex;flex-direction:column;gap:8px;min-height:128px;padding:12px 14px;border-radius:14px;background:var(--sheet);border:1.5px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.08);animation:rise .2s ease-out}
+.coachHead{display:flex;align-items:center;gap:8px}
+.coachHead h3{flex:1;margin:0;font-family:var(--hand);font-weight:400;font-size:1.45rem;line-height:1.05;min-width:0}
+.chip{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--peer);color:var(--hit);border:1px solid var(--line);white-space:nowrap}
+.chip:empty{display:none}
+.xbtn{border:0;background:transparent;font-size:1.5rem;line-height:1;padding:2px 6px;cursor:pointer;color:var(--muted)}
+.coachText{margin:0;line-height:1.42;font-size:.93rem}
+.idea{margin:0;font-size:.84rem;line-height:1.4;color:var(--muted);border-left:3px solid var(--line);padding-left:9px}
+.linkbtn{border:0;background:transparent;padding:0;color:var(--hit);font-size:.82rem;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px;align-self:flex-start}
+.coachFoot{display:flex;align-items:center;gap:8px;margin-top:auto}
+.dots{flex:1;display:flex;gap:5px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--hit)}
+.guide{display:flex;flex-direction:column}
+.guide button{display:flex;flex-direction:column;gap:2px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:10px 2px;cursor:pointer}
+.guide button b{font-weight:600;font-size:1rem}
+.guide button small{color:var(--muted);font-size:.8rem;line-height:1.35}
+.guide .label{margin-top:10px}
+.tool .badge.teach{left:calc(50% + 6px)}
 </style>
 </head>
 <body>
@@ -105,6 +151,7 @@
 
   <div class="boardWrap">
     <div class="board" id="board" role="grid" aria-label="Sudoku board"></div>
+    <svg class="lines" id="lines" aria-hidden="true"></svg>
     <div class="cover" id="cover" hidden><p>Paused</p><button class="btn primary" id="resume" type="button">Resume</button></div>
   </div>
 
@@ -113,11 +160,43 @@
     <button class="tool" id="redo" type="button"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg><span class="lbl">Redo</span></button>
     <button class="tool" id="erase" type="button"><svg viewBox="0 0 24 24"><path d="M7 20h13"/><path d="M4.5 14.5l9.4-9.4a2 2 0 012.8 0l2.2 2.2a2 2 0 010 2.8L11 18H7.9z"/><path d="M9.5 9.5l5 5"/></svg><span class="lbl">Erase</span></button>
     <button class="tool" id="notes" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 013 3L8 18.5z"/><path d="M13.5 7l3 3"/></svg><span class="lbl">Notes</span><span class="badge" id="notesBadge">OFF</span></button>
-    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span class="lbl">Hint</span></button>
+    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span class="lbl">Hint</span><span class="badge teach" id="teachBadge" hidden>TEACH</span></button>
     <button class="tool" id="more" type="button"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg><span class="lbl">More</span></button>
   </div>
 
   <div class="pad" id="pad"></div>
+
+  <div class="coach" id="coach" hidden aria-live="polite">
+    <div class="coachHead"><span class="chip" id="cLevel"></span><h3 id="cName"></h3><button class="xbtn" id="cClose" type="button" aria-label="Close the lesson">×</button></div>
+    <p class="coachText" id="cText"></p>
+    <button class="linkbtn" id="cIdeaBtn" type="button"></button>
+    <p class="idea" id="cIdea" hidden></p>
+    <div class="coachFoot"><div class="dots" id="cDots"></div><button class="btn small" id="cBack" type="button">Back</button><button class="btn small primary" id="cNext" type="button">Next</button></div>
+  </div>
+</div>
+
+<!-- Hint: reveal or teach -->
+<div class="sheet" id="hintSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="hintTitle">
+    <h2 id="hintTitle">Need a hand?</h2>
+    <div class="menu">
+      <button id="hintTeach" type="button">Teach me how<small>Walk through the next step on the board: which technique to use, where, and why it works</small></button>
+      <button id="hintReveal" type="button">Just show me a number<small>Fill in one square</small></button>
+      <button id="hintGuide" type="button">Technique guide<small>See each well-known technique demonstrated on an example board</small></button>
+    </div>
+    <label class="switch"><span>Teach mode<small>Hint always teaches the next technique, step by step</small></span><input type="checkbox" id="hintTeachMode"></label>
+    <button class="btn" id="hintClose" type="button">Back to the puzzle</button>
+  </div>
+</div>
+
+<!-- Technique guide -->
+<div class="sheet" id="guideSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="guideTitle">
+    <h2 id="guideTitle">Technique guide</h2>
+    <p>Tap a technique to see it worked through on an example board. Your puzzle and timer wait for you.</p>
+    <div class="guide" id="guideList"></div>
+    <button class="btn" id="guideClose" type="button">Back to the puzzle</button>
+  </div>
 </div>
 
 <!-- New game -->
@@ -140,6 +219,7 @@
   <div class="panel" role="dialog" aria-labelledby="moreTitle">
     <h2 id="moreTitle">Options</h2>
     <div class="menu">
+      <button id="openGuide" type="button">Technique guide<small>Learn the well-known solving techniques with worked examples</small></button>
       <button id="fillNotes" type="button">Fill in all notes<small>Pencil every possible number into each empty square</small></button>
       <button id="clearNotes" type="button">Clear all notes</button>
       <button id="restart" type="button">Restart this puzzle<small>Clears your entries and resets the timer</small></button>
@@ -173,6 +253,7 @@
 
 <script src="puzzles.js"></script>
 <script src="game-nav.js"></script>
+<script src="sudoku-coach.js"></script>
 <script>
 'use strict';
 const P = window.SUDOKU_PUZZLES;
@@ -190,6 +271,7 @@ const SETTINGS = [
   ['sameHL','Highlight matching numbers','Shade every square with the selected number', true],
   ['areaHL','Highlight row, column and box', '', true],
   ['showTimer','Show timer','', true],
+  ['teach','Teach mode','Hint teaches the next technique step by step instead of filling in a square', false],
 ];
 let settings = Object.assign(Object.fromEntries(SETTINGS.map(s => [s[0], s[3]])), store.get('sudoku-settings', {}));
 let stats = store.get('sudoku-stats', {});
@@ -243,7 +325,7 @@ function newGame(level, idx){
     idx = pool[(Math.random()*pool.length)|0];
   }
   const puzzle = disguise([...P[level].slice(idx*81, idx*81+81)].map(Number));
-  S = { level, idx, puzzle, solution: solve(puzzle), values: puzzle.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false),
+  S = { level, idx, puzzle, solution: solve(puzzle), values: puzzle.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false), elims:[],
         mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false };
   lv(level).played++; saveStats();
   paused = false; save(); render();
@@ -251,13 +333,13 @@ function newGame(level, idx){
 function restore(){
   const g = store.get('sudoku-game', null);
   if (!g || !g.puzzle || g.puzzle.length !== 81) return false;
-  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1, counted:[] }, g);
+  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1, counted:[], elims:[] }, g);
   S.solution = solve(S.puzzle);
   if (S.sel < 0) S.sel = S.values.indexOf(0);
   return true;
 }
 function save(){
-  if (!S) return;
+  if (!S || S.demo) return;
   const { solution, ...rest } = S; rest.history = S.history.slice(-300); rest.future = S.future.slice(-300);
   store.set('sudoku-game', rest);
 }
@@ -308,14 +390,17 @@ function render(){
   $('notes').setAttribute('aria-pressed', S.notesMode); $('notesBadge').textContent = S.notesMode ? 'ON' : 'OFF';
   $('undo').disabled = !S.history.length || S.done; $('redo').disabled = !S.future.length || S.done;
   $('erase').disabled = $('hint').disabled = S.done;
+  $('teachBadge').hidden = !settings.teach;
   const name = LEVELS.find(l => l[0] === S.level)[1];
-  $('lvl').innerHTML = `${name}<em>#${S.idx+1}</em>`;
+  $('lvl').innerHTML = S.demo ? `Example<em>${T ? T.lesson.name : ''}</em>` : `${name}<em>#${S.idx+1}</em>`;
   const lim = settings.limit && !S.limitOff;
+  $('score').hidden = !!S.demo; $('timer').hidden = !!S.demo;
   $('score').innerHTML = `Mistakes <b>${S.mistakes}${lim ? '/3' : ''}</b>` + (S.hints ? ` · Hints <b>${S.hints}</b>` : '');
   $('timer').classList.toggle('off', !settings.showTimer);
   $('board').classList.toggle('paused', paused);
   $('cover').hidden = !paused;
   tickLabel();
+  drawTeach();
 }
 
 // ---- actions ----
@@ -358,8 +443,14 @@ function erase(){
   const i = S.sel; if (S.done || paused || i < 0 || S.puzzle[i]) return;
   const ch = []; setCell(i, 0, 0, ch); S.hinted[i] = false; commit(ch); after();
 }
-function candidates(i){ let m = 511; for (const j of PEERS[i]) if (S.values[j]) m &= ~bit(S.values[j]); return m; }
+// Candidates from the numbers in, minus anything a lesson has crossed off (those are always true deductions)
+function candidates(i){ let m = 511; for (const j of PEERS[i]) if (S.values[j]) m &= ~bit(S.values[j]); for (const k of S.elims || []) if (((k/10)|0) === i) m &= ~bit(k%10); return m; }
 function hint(){
+  if (S.done || paused || T) return;
+  if (settings.teach) return teach();
+  $('hintTeachMode').checked = false; open('hintSheet');
+}
+function reveal(){
   if (S.done || paused) return;
   let i = S.sel;
   if (i < 0 || S.puzzle[i] || S.values[i] === S.solution[i]){
@@ -384,7 +475,7 @@ function undo(){ const c = S.history.pop(); if (!c || S.done) return; for (let k
 function redo(){ const c = S.future.pop(); if (!c || S.done) return; for (const x of c){ S.values[x.i]=x.v1; S.notes[x.i]=x.n1; } S.history.push(c); S.sel = c[0].i; after(); }
 function restart(){
   S.values = S.puzzle.slice(); S.notes.fill(0); S.hinted.fill(false); S.history = []; S.future = [];
-  S.mistakes = 0; S.counted = []; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
+  S.mistakes = 0; S.counted = []; S.elims = []; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
   paused = false; save(); render();
 }
 function after(){
@@ -421,7 +512,7 @@ const fmt = s => { const h=(s/3600)|0, m=((s%3600)/60)|0, x=s%60; return (h ? h+
 function tickLabel(){ if (S) $('time').textContent = fmt(Math.floor(S.elapsed/1000)); }
 setInterval(() => {
   const now = Date.now(), dt = Math.min(now - last, 5000); last = now;
-  if (!S || S.done || paused || S.failed || document.hidden || anySheet()) return;
+  if (!S || S.done || S.demo || paused || S.failed || document.hidden || anySheet()) return;
   S.elapsed += dt; tickLabel();
   if ((S.elapsed/1000|0) % 5 === 0) save();
 }, 1000);
@@ -481,8 +572,153 @@ $('loseGo').addEventListener('click', () => { S.limitOff = true; S.failed = fals
 $('loseRestart').addEventListener('click', () => { close(); restart(); });
 $('loseNew').addEventListener('click', openNew);
 
+// ---- teach mode ----
+// A lesson replaces the number pad with a coach card and walks through one technique on the board, step by step.
+const Coach = window.SudokuCoach;
+let T = null;     // current lesson: { lesson, step, done }
+let demo = null;  // technique guide example in progress: { saved: the real game, paused }
+// Where the guide's examples come from: puzzles in which each technique is the next step at some point
+const GUIDE = { fullHouse:['easy',0], hiddenSingle:['easy',0], nakedSingle:['easy',2], pointing:['medium',0], claiming:['medium',2], nakedPair:['medium',3],
+  hiddenPair:['medium',20], nakedTriple:['hard',28], hiddenTriple:['hard',11], xWing:['hard',4], xyWing:['hard',0], swordfish:['expert',12] };
+
+function teach(){
+  if (!S || S.done || paused || S.demo) return;
+  close();
+  const l = Coach.next(S.values, S.solution, new Set(S.elims), { givens: S.puzzle });
+  if (!l) return;
+  if (l.key !== 'mistake'){ S.hints++; save(); }
+  startLesson(l);
+}
+function startLesson(l){ T = { lesson:l, step:0, done:false }; $('cIdea').hidden = true; showCoach(); render(); }
+function endLesson(){
+  if (demo){ S = demo.saved; paused = demo.paused; demo = null; last = Date.now(); }
+  T = null; showCoach(); render();
+}
+const actionLabel = a => a.type === 'place' ? `Write in ${a.d}` : a.type === 'elim' ? 'Cross them off' : 'Erase it';
+function showCoach(){
+  const on = !!T;
+  document.querySelector('.tools').hidden = on; $('pad').hidden = on; $('coach').hidden = !on;
+  if (!on) return;
+  const l = T.lesson, n = l.steps.length;
+  $('cLevel').textContent = l.level; $('cName').textContent = l.name;
+  const plain = l.key === 'mistake' || l.key === 'reveal';
+  $('cIdeaBtn').hidden = plain || T.done; $('cIdeaBtn').textContent = $('cIdea').hidden ? `How ${l.name} works` : 'Hide';
+  $('cIdea').textContent = l.idea; if (T.done) $('cIdea').hidden = true;
+  if (T.done){
+    $('cText').textContent = S.demo ? `That's ${l.name}. Pick another technique to see, or go back to your puzzle.`
+      : l.action.type === 'elim' ? 'Crossed off. Fewer candidates often open up a single somewhere: have a look yourself, or see the next step.'
+      : l.action.type === 'erase' ? 'Erased. The board is clean again, so the coach can teach from here.'
+      : `Done. Try spotting the next move yourself, or let the coach show you.`;
+    $('cDots').innerHTML = '';
+    $('cBack').disabled = false; $('cBack').textContent = S.demo ? 'Guide' : 'Play on';
+    $('cNext').textContent = S.demo ? 'My puzzle' : 'Next step';
+    return;
+  }
+  $('cText').textContent = l.steps[T.step].text;
+  $('cDots').innerHTML = n > 1 ? l.steps.map((_, k) => `<i class="${k <= T.step ? 'on' : ''}"></i>`).join('') : '';
+  $('cBack').textContent = 'Back'; $('cBack').disabled = T.step === 0;
+  $('cNext').textContent = T.step === n - 1 ? actionLabel(l.action) : 'Next';
+}
+function applyLesson(){
+  const a = T.lesson.action;
+  if (S.demo){
+    if (a.type === 'place'){ S.values[a.i] = a.d; S.puzzle[a.i] = a.d; }
+    else if (a.type === 'elim') a.elims.forEach(([i,d]) => S.elims.push(i*10+d));
+    T.done = true; showCoach(); render(); if (a.type === 'place') pulse(a.i, 0); return;
+  }
+  const ch = [];
+  if (a.type === 'place'){ place(a.i, a.d, ch); S.hinted[a.i] = true; S.sel = a.i; }
+  else if (a.type === 'elim'){ for (const [i,d] of a.elims){ const k = i*10+d; if (!S.elims.includes(k)) S.elims.push(k); if (!S.values[i] && (S.notes[i] & bit(d))) setCell(i, 0, S.notes[i] & ~bit(d), ch); } }
+  else { setCell(a.i, 0, 0, ch); S.hinted[a.i] = false; S.sel = a.i; }
+  commit(ch); T.done = true;
+  if (S.values.every((v,i) => v === S.solution[i])){ T = null; showCoach(); return after(); }
+  showCoach(); after();
+  if (a.type === 'place') celebrateUnits(a.i), pulse(a.i, 0);
+}
+$('cNext').addEventListener('click', () => {
+  if (!T) return;
+  if (T.done) return S.demo ? endLesson() : teach();
+  if (T.step === T.lesson.steps.length - 1) return applyLesson();
+  T.step++; showCoach(); render();
+});
+$('cBack').addEventListener('click', () => {
+  if (!T) return;
+  if (T.done){ const wasDemo = !!S.demo; endLesson(); if (wasDemo) openGuide(); return; }
+  if (T.step > 0){ T.step--; showCoach(); render(); }
+});
+$('cClose').addEventListener('click', endLesson);
+$('cIdeaBtn').addEventListener('click', () => { $('cIdea').hidden = !$('cIdea').hidden; showCoach(); });
+
+// Board overlay for the current step: shaded houses, ringed squares, circled causes, hatched blocked squares, candidates with roles, lines.
+function drawTeach(){
+  // A finished example keeps its last picture up (struck-out candidates stay visible); in a real game the board goes back to normal
+  const svg = $('lines'), on = !!(T && (!T.done || S.demo));
+  $('board').classList.toggle('teach', on); svg.innerHTML = '';
+  if (!on) return;
+  const hl = T.lesson.steps[T.done ? T.lesson.steps.length - 1 : T.step].hl;
+  const focus = new Set(hl.focus||[]), target = new Set(hl.target||[]), cause = new Set(hl.cause||[]), blocked = new Set(hl.blocked||[]), marks = new Map();
+  for (const [i,d,r] of hl.marks||[]){ if (!marks.has(i)) marks.set(i, {}); marks.get(i)[d] = r; }
+  const inUnit = new Array(81).fill(false); for (const u of hl.units||[]) for (const i of Coach.UNITS[u]) inUnit[i] = true;
+  const clean = S.values.map((v,i) => v === S.solution[i] ? v : 0), cand = Coach.candidates(clean, new Set(S.elims));
+  const showAll = hl.cands === 'all', showSome = new Set(Array.isArray(hl.cands) ? hl.cands : []), ghost = hl.ghost || [-1, 0];
+  for (let i=0;i<81;i++){
+    const el = cells[i], isGhost = ghost[0] === i, v = isGhost ? ghost[1] : S.values[i], given = S.puzzle[i] !== 0 && !isGhost;
+    const isDigit = hl.digit && S.values[i] === hl.digit;
+    let cls = 'cell' + (given ? ' given' : v ? ' user' : '') + (S.hinted[i] && !isGhost ? ' hinted' : '');
+    if (inUnit[i]) cls += ' t-unit';
+    if (focus.has(i)) cls += ' t-focus';
+    if (cause.has(i)) cls += ' t-cause';
+    if (target.has(i)) cls += ' t-target';
+    if (blocked.has(i)) cls += ' t-blocked';
+    if (isDigit) cls += ' t-digit';
+    if (isGhost) cls += ' t-ghost';
+    if (!(inUnit[i] || focus.has(i) || target.has(i) || cause.has(i) || blocked.has(i) || marks.has(i) || isDigit || isGhost)) cls += ' t-dim';
+    el.className = cls;
+    el.firstChild.textContent = v || '';
+    const mk = marks.get(i) || {};
+    let m = !v && (showAll || showSome.has(i)) ? cand[i] : 0;
+    for (const d in mk) if (!S.values[i]) m |= bit(+d);
+    const ns = el.lastChild.children;
+    for (let d=1; d<=9; d++){ const has = m & bit(d); ns[d-1].textContent = has ? d : ''; ns[d-1].className = has && mk[d] ? mk[d] : ''; }
+  }
+  const box = svg.getBoundingClientRect(), mid = i => { const r = cells[i].getBoundingClientRect(); return [r.left + r.width/2 - box.left, r.top + r.height/2 - box.top]; };
+  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+  // A line between two squares that share a marked candidate joins those candidates, not the square centres
+  const at = (i, d) => { if (d){ const sp = cells[i].lastChild.children[d-1]; if (sp.textContent){ const r = sp.getBoundingClientRect(); return [r.left + r.width/2 - box.left, r.top + r.height/2 - box.top]; } } return mid(i); };
+  const common = (a, b) => { const ma = marks.get(a), mb = marks.get(b); if (!ma || !mb) return 0; for (const d in ma) if (mb[d]) return +d; return 0; };
+  svg.innerHTML = (hl.links||[]).map(([a,b,k]) => { const d = common(a, b), [x1,y1] = at(a, d), [x2,y2] = at(b, d); return `<line class="${k}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }).join('');
+}
+new ResizeObserver(() => { if (T) drawTeach(); }).observe($('board'));
+
+// Technique guide: each technique demonstrated on an example board, without touching the real game
+function openGuide(){
+  const groups = {};
+  for (const t of Coach.TECHNIQUES) if (GUIDE[t.key]) (groups[t.level] ||= []).push(t);
+  $('guideList').innerHTML = Object.entries(groups).map(([lvName, ts]) => `<div class="label">${lvName}</div>`
+    + ts.map(t => `<button type="button" data-k="${t.key}"><b>${t.name}</b><small>${t.idea}</small></button>`).join('')).join('');
+  open('guideSheet');
+}
+function startDemo(key){
+  const [lvk, n] = GUIDE[key], puzzle = [...P[lvk].slice(n*81, n*81+81)].map(Number), solution = solve(puzzle);
+  const ex = Coach.findExample(key, [puzzle], () => solution, 1);
+  if (!ex) return;
+  close();
+  if (!demo) demo = { saved: S, paused };
+  S = { demo:true, level:lvk, idx:n, puzzle: ex.values.slice(), solution, values: ex.values.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false),
+        elims: ex.elims.slice(), mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:true, history:[], future:[], sel:-1, notesMode:false };
+  paused = false; startLesson(ex.lesson);
+}
+$('guideList').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) startDemo(b.dataset.k); });
+$('guideClose').addEventListener('click', close);
+$('openGuide').addEventListener('click', openGuide);
+$('hintTeach').addEventListener('click', teach);
+$('hintReveal').addEventListener('click', () => { close(); reveal(); });
+$('hintGuide').addEventListener('click', openGuide);
+$('hintClose').addEventListener('click', close);
+$('hintTeachMode').addEventListener('change', e => { settings.teach = e.target.checked; store.set('sudoku-settings', settings); if (settings.teach) teach(); else render(); });
+
 // ---- input wiring ----
-$('board').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c || paused) return; S.sel = +c.dataset.i; render(); });
+$('board').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c || paused || T) return; S.sel = +c.dataset.i; render(); });
 $('pad').addEventListener('click', e => { const b = e.target.closest('.num'); if (b) input(+b.dataset.d); });
 $('undo').addEventListener('click', undo);
 $('redo').addEventListener('click', redo);
@@ -494,6 +730,12 @@ $('resume').addEventListener('click', () => setPaused(false));
 document.addEventListener('keydown', e => {
   if (!S || anySheet() || e.target.tagName === 'INPUT') return;
   const k = e.key, mod = e.metaKey || e.ctrlKey;
+  if (T){
+    if (k === 'Escape') return endLesson();
+    if (k === 'ArrowRight' || k === 'Enter'){ e.preventDefault(); return $('cNext').click(); }
+    if (k === 'ArrowLeft'){ e.preventDefault(); return $('cBack').click(); }
+    return;
+  }
   if (mod && k.toLowerCase() === 'z'){ e.preventDefault(); return e.shiftKey ? redo() : undo(); }
   if (mod && k.toLowerCase() === 'y'){ e.preventDefault(); return redo(); }
   if (mod || e.altKey) return;
@@ -501,6 +743,7 @@ document.addEventListener('keydown', e => {
   if (k === 'Backspace' || k === 'Delete' || k === '0') return erase();
   if (k === 'n' || k === 'N'){ S.notesMode = !S.notesMode; return render(); }
   if (k === 'h' || k === 'H') return hint();
+  if (k === 't' || k === 'T') return teach();
   if (k === 'p' || k === 'P' || k === ' '){ e.preventDefault(); return setPaused(!paused); }
   const mv = { ArrowUp:-9, ArrowDown:9, ArrowLeft:-1, ArrowRight:1 }[k];
   if (mv != null && !paused){
@@ -517,7 +760,7 @@ if (location.hash === '#new') openNew();
 // ---- game menu (tap the title) ----
 let navPaused = false;
 GameNav.init({ id: 'sudoku', note: () => S && !S.done ? 'Your puzzle and time are saved.' : '',
-  onOpen: () => { navPaused = !!(S && !S.done && !paused); if (navPaused) setPaused(true); },
+  onOpen: () => { if (S && S.demo) endLesson(); navPaused = !!(S && !S.done && !paused); if (navPaused) setPaused(true); },
   onClose: byAction => { if (navPaused && !byAction && S && !S.done) setPaused(false); navPaused = false; },
   actions: () => [
     S && !S.done && { icon: 'restart', label: 'Restart this puzzle', note: 'Clears your numbers, notes and the timer.', confirm: 'Tap again to restart', run: restart },

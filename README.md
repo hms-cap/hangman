@@ -35,7 +35,12 @@ Either way it opens full-screen from its own icon. The install steps on the home
 - Replayed puzzles are shuffled (digits relabelled, rows and columns permuted), so they look new while keeping the same difficulty
 - Notes (pencil marks), with an option to fill in all notes
 - Undo and redo
-- Hints
+- Hints: tap Hint to choose **Teach me how**, **Just show me a number** or the **Technique guide**
+- **Teach mode** (switch it on from the Hint sheet or Settings, then Hint always teaches): a coach card replaces the number pad and walks through the next logical step on the board, one tap at a time, then writes the number in or crosses off the candidates for you
+  - The board shows the reasoning: the houses involved are shaded, the numbers that rule squares out are circled with lines along their rows and columns, blocked squares are hatched, candidates in the pattern are circled in blue, candidates being removed are struck through in red, and patterns (pairs, X-Wings, XY-Wings, Swordfish) are joined with lines
+  - The coach always picks the simplest step available, from Full House, Hidden Single and Naked Single through Pointing, Claiming, Naked/Hidden Pairs and Triples to X-Wing, XY-Wing and Swordfish. A wrong number on the board is pointed out first. When a position needs something harder (some Expert puzzles), it says so and reveals one square
+  - Each lesson counts as a hint; candidates the coach crosses off are remembered and respected by Fill in all notes
+- **Technique guide** (from Hint or More): each technique demonstrated on an example board taken from the puzzle set, without touching your game or timer
 - Erase
 - Mistake checking, with an optional three-mistake limit (each wrong number in a square counts once, so putting it back after undo or erase isn't a new mistake)
 - Highlights for the selected row, column and box, and for matching numbers
@@ -44,7 +49,7 @@ Either way it opens full-screen from its own icon. The install steps on the home
 - Auto-save, so you can continue where you left off
 - Per-level stats: solved, best time and average time
 - Play a specific puzzle by its number
-- Keyboard controls: `1–9`, arrow keys, `Backspace`, `N` for notes, `H` for hint, `P` to pause, `Ctrl/Cmd+Z` to undo
+- Keyboard controls: `1–9`, arrow keys, `Backspace`, `N` for notes, `H` for hint, `T` to teach, `P` to pause, `Ctrl/Cmd+Z` to undo
 
 ### Five Letters
 A five-letter word-guessing game in the style of Wordle.
@@ -155,7 +160,7 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | --- | --- |
 | `index.html` | Home screen |
 | `hangman.html`, `words.js` | Hangman game and word list |
-| `sudoku.html`, `puzzles.js` | Sudoku game and puzzle set |
+| `sudoku.html`, `puzzles.js`, `sudoku-coach.js` | Sudoku game; puzzle set; coach (technique finder and step-by-step lessons for teach mode and the technique guide) |
 | `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
@@ -173,6 +178,12 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 node tools/generate-sudoku.js 1000 1000 1000 1000   # easy medium hard expert
 ```
 This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js`. The service worker fetches fresh files whenever the phone is online (falling back to the saved copy offline or after 3 seconds) and pages reload once when a new version takes over, so installed copies show updates on the next open.
+
+## Testing the Sudoku coach
+```sh
+node tools/test-sudoku-coach.js 100   # puzzles per level
+```
+Solves puzzles at every level with the coach alone and checks that every number it writes in and every candidate it crosses off agrees with the solution, that every lesson has its text, that wrong numbers are taught first, and that the technique guide finds an example of each technique.
 
 ## Testing the chess engine
 ```sh
