@@ -171,6 +171,7 @@ let settings = Object.assign({ hard: false, hc: false }, store.get('five-setting
 let stats = store.get('five-stats', {});
 const st = m => (stats[m] ||= { played: 0, won: 0, cur: 0, max: 0, dist: [0, 0, 0, 0, 0, 0], last: null });
 let mode = store.get('five-mode', 'daily');
+{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (q.has('practice')) mode = 'practice'; if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
 let G = null, cur = '', busy = false;
 
 // ---- scoring ----
@@ -337,6 +338,7 @@ function openStats(){
       + (mode === 'daily' ? `<button class="btn" id="toPractice" type="button">Play practice</button>` : `<button class="btn" id="nextWord" type="button">Next word</button>`) + `</div>`;
     if (mode === 'daily') after += `<div class="next"><span class="label">Next daily word in</span><b id="countdown"></b></div>`;
     after += `<div class="shareText" id="shareText" hidden></div>`;
+    after += GameNav.endButtons('five');
   }
   $('after').innerHTML = after;
   if (G.done){

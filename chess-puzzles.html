@@ -164,6 +164,7 @@
     <div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="toPractice" type="button">Practice puzzles</button></div>
     <div class="shareText" id="shareText" hidden></div>
     <div class="next"><span class="label">Next daily puzzle in</span><b id="countdown"></b></div>
+    <div id="dailyNav"></div>
     <button class="btn small" id="dailyClose" type="button">Look at the board</button>
   </div>
 </div>
@@ -251,6 +252,7 @@ function openDaily(){
     : `Daily No. ${D.day + 1}. The solution is on the board. A new puzzle comes at midnight.`;
   $('dstats4').innerHTML = [[DS.played, 'Played'], [DS.played ? Math.round(100 * DS.won / DS.played) : 0, 'Solved %'], [DS.cur, 'Current streak'], [DS.max, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
   $('shareText').hidden = true;
+  $('dailyNav').innerHTML = GameNav.endButtons('cpz');
   document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== 'dailySheet');
   tick();
 }

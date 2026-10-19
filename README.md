@@ -146,6 +146,7 @@ The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for 
 Every game has a **‹ Games** link back to the home screen, and tapping the **game's title** opens its menu:
 - **Back to all games**, with the game in progress saved, and **Switch game** to jump straight to any other game
 - The game's own **restart and quit** options, for example Restart this puzzle, New word, Give up (shows the answer), Resign, End this game or Quit this game. Anything that throws away progress or counts as a loss asks for a second tap first. Daily puzzles can be given up but not restarted, so a daily result can't be replayed
+- The end-of-game screens of Chess, Chowka Bara and the daily puzzles (Five Letters, Word Trail, Chess Puzzles and Four Groups) have **Back to all games**. The daily results screens also have **Up next**, which goes straight to the next of today's daily puzzles you haven't finished (or says they're all done)
 - While the menu is open the game is paused (Sudoku's timer, Snake, Chowka Bara's clocks and computer player) and keys don't reach the game
 
 ## Files

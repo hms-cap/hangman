@@ -190,6 +190,7 @@ const PRAISE = { 4: ['Good', 'Nice', 'Got it'], 5: ['Great', 'Nice one'], 6: ['E
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let mode = store.get('trail-mode', 'daily');
+{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (q.has('practice')) mode = 'practice'; if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
 let stats = store.get('trail-stats', {});
 const st = m => (stats[m] ||= { played: 0, done: 0, cur: 0, max: 0, last: null, best: null, bonus: 0 });
 let S = null, P = null; // S = saved progress, P = analyzed puzzle
@@ -416,7 +417,7 @@ document.addEventListener('visibilitychange', () => { last = Date.now(); if (!do
 const fmt = ms => { const s = Math.round(ms / 1000), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
 
 function complete(){
-  S.done = true;
+  S.done = true; save();
   const s = st(mode); s.played++; s.done++; s.bonus += S.bonus.length;
   if (mode === 'daily'){ s.cur = s.last === S.day - 1 ? s.cur + 1 : 1; s.last = S.day; s.max = Math.max(s.max, s.cur); }
   if (s.best == null || S.elapsed < s.best) s.best = S.elapsed;
@@ -443,6 +444,7 @@ function openStats(){
     after += `<div class="shareText" id="shareText" hidden></div>`;
   }
   if (mode === 'daily') after += `<div class="next"><span class="label">Next daily grid in</span><b id="countdown"></b></div>`;
+  if (S.done) after += GameNav.endButtons('trail');
   $('after').innerHTML = after;
   if (S.done){
     $('shareBtn').onclick = share;

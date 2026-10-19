@@ -386,6 +386,7 @@ function openStats(){
     });
   }
   if (mode === 'daily') after += `<div class="next"><span class="label">Next daily puzzles in</span><b id="countdown"></b></div>`;
+  if (G.done) after += GameNav.endButtons('groups');
   $('after').innerHTML = after;
   if (G.done) $('shareBtn').onclick = share;
   clearInterval(tick);

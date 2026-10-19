@@ -125,7 +125,39 @@ function close(byAction){
   if (cfg.onClose) cfg.onClose(!!byAction);
 }
 
+// ---- end-of-game buttons ----
+// Today's daily puzzles, in the order the home screen shows them, and whether each is finished
+// (same rules as the home screen: Four Groups counts once any level is solved, or all three are played).
+const DAILIES = [
+  ['five', 'Five Letters', 'fiveletters.html?daily', [2026, 9, 14]],
+  ['trail', 'Word Trail', 'trail.html?daily', [2026, 9, 16]],
+  ['cpz', 'Chess Puzzles', 'chess-puzzles.html?daily', [2026, 9, 17]],
+  ['groups', 'Four Groups', 'groups.html?daily', [2026, 9, 16]],
+];
+const read = k => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } };
+const dayOf = ([y, m, d]) => { const n = new Date(); return Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(y, m, d)) / 864e5); };
+function dailyDone(id){
+  const D = DAILIES.find(x => x[0] === id), day = dayOf(D[3]);
+  if (id === 'groups'){
+    const p = read('groups-progress') || {}, lv = ['e', 'm', 'h'].map(l => p['d' + day + l]);
+    return lv.some(x => x && x.done && x.won) || lv.every(x => x && x.done);
+  }
+  const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily' }[id]);
+  return !!(s && s.day === day && s.done);
+}
+// HTML for the end of a results screen: "Up next" to the next unfinished daily (if any), then Back to all games.
+function endButtons(id){
+  const i = Math.max(0, DAILIES.findIndex(x => x[0] === id));
+  const order = DAILIES.slice(i + 1).concat(DAILIES.slice(0, i)), next = order.find(x => !dailyDone(x[0]));
+  const left = DAILIES.filter(x => !dailyDone(x[0])).length;
+  const home = '<a class="btn homebtn" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>';
+  const up = next ? `<a class="btn homebtn upnext" href="${next[2]}"><span class="label">Up next</span>${next[1]}${left > 1 ? ` <small>· ${left} daily puzzles left</small>` : ''}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>`
+    : '<p class="alldone">All of today\'s daily puzzles are done. See you tomorrow!</p>';
+  return `<div class="endnav">${up}${home}</div>`;
+}
+
 window.GameNav = {
+  endButtons, dailyDone,
   init(c){ cfg = c; build(); },
   open, close,
   get isOpen(){ return isOpen && sheet && !sheet.hidden; },
