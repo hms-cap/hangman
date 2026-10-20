@@ -165,7 +165,7 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
     // each trap: the punishing move is the engine's choice and the line ends in mate or clearly ahead
     const badTrap = [];
     for (const t of O.traps) {
-      const pos = new Position(t.fen), sm = C.scoreMoves(pos, 5), first = pos.fromUci(t.line[0]);
+      const pos = new Position(t.fen), sm = C.scoreMoves(pos, t.depth || 5), first = pos.fromUci(t.line[0]); // some traps need a deeper look
       const p2 = new Position(t.fen); t.line.forEach(u => p2.make(p2.fromUci(u)));
       const mate = p2.status() && p2.status().reason === 'checkmate';
       if (sm[0].move !== first || (!mate && sm[0].score - (sm[1] ? sm[1].score : -1e9) < 50)) badTrap.push(t.name);
