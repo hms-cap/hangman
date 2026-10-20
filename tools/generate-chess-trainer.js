@@ -268,12 +268,14 @@ if (isMainThread) {
   // ---- combos: put a forcing check in front of a working single tactic ----
   // Two classic set-ups. Decoy: a piece lands next to Black's king with check and must be taken, pulling the king onto the
   // square where the tactic works. Drive: a check from a distance that leaves the king one or two squares to go to.
+  // Returns up to three different set-ups (no engine work here, so it can afford many tries)
   function addPrelude(pos1, gain) {
+    const out = [], seen = new Set();
     const P = {}; for (let s = 0; s < 64; s++) { const p = pos1.b[to88(s)]; if (p) P[s] = (C.colorOf(p) ? 'pnbrqk' : 'PNBRQK')[C.typeOf(p) - 1]; }
     const k1 = to64(pos1.king[1]);
     const k0s = ORTH.concat(DIAG).map(([a, b]) => at(R(k1) + a, F(k1) + b)).filter(s => s >= 0 && !P[s]);
-    for (let tries = 0; tries < 16; tries++) {
-      const k0 = pick(k0s); if (k0 == null) return null;
+    for (let tries = 0; tries < 80 && out.length < 3; tries++) {
+      const k0 = pick(k0s); if (k0 == null) return out;
       const Q = Object.assign({}, P); delete Q[k1]; Q[k0] = 'k';
       let w0, w1, decoy = false;
       if (rnd() < 0.55) {
@@ -293,9 +295,10 @@ if (isMainThread) {
       const check = pos0.inCheck(), replies = pos0.legal(), toK1 = replies.some(x => C.mFrom(x) === pos0.king[1] && to64(C.mTo(x)) === k1);
       pos0.unmake();
       if (!check || !toK1 || replies.length > (decoy ? 3 : 2)) continue;
-      return pos0;
+      const key = pos0.fen(); if (seen.has(key)) continue; seen.add(key);
+      out.push(pos0);
     }
-    return null;
+    return out;
   }
 
   // ---- mirror so Black is to move ----
@@ -314,15 +317,21 @@ if (isMainThread) {
     const pos1 = build(kind, busy && set !== 'combo' ? true : set === 'combo' ? rnd() < 0.5 : false);
     if (!pos1) return null;
     const depth = busy ? 5 : 4;
-    let pos = pos1, k = 0;
+    let pos = pos1, k = 0, res = null, mo = null;
     if (set === 'combo') {
       const r1 = lineFrom(pos1, depth, 2); if (!r1) return null;
       const mo1 = motifAt(pos1, r1.line, 0); if (!mo1) return null;
-      pos = addPrelude(pos1, r1.gain); if (!pos) return null; k = 1;
+      // try each forcing set-up until one checks out
+      for (const p0 of addPrelude(pos1, r1.gain)) {
+        const r = lineFrom(p0, 5, 3); if (!r || r.line.length < 5) continue;
+        const m = motifAt(p0, r.line, 1); if (!m) continue;
+        pos = p0; res = r; mo = m; k = 1; break;
+      }
+      if (!res) return null;
+    } else {
+      res = lineFrom(pos, depth, 2); if (!res) return null;
+      mo = motifAt(pos, res.line, 0); if (!mo) return null;
     }
-    const res = lineFrom(pos, set === 'combo' ? 5 : depth, set === 'combo' ? 3 : 2); if (!res) return null;
-    if (set === 'combo' && res.line.length < 5) return null;
-    const mo = motifAt(pos, res.line, k); if (!mo) return null;
     if (set === 'knightFork' && !(mo.theme === 'fork' && mo.mover === 2)) return null;
     if (set === 'fork' && !(mo.theme === 'fork' && mo.mover !== 2)) return null;
     if ((set === 'pin' || set === 'skewer') && mo.theme !== set) return null;
