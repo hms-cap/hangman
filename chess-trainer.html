@@ -117,6 +117,7 @@
 .sq.nope{box-shadow:inset 0 0 0 .7cqw var(--miss)}
 .why{color:var(--miss)}
 .track .pill{font-family:var(--ui);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--hit);color:var(--paper);align-self:center}
+.lv .opt{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);vertical-align:2px;margin-left:4px}
 .track.beginner{border-left:3px solid var(--hit);padding-left:10px}
 .sq .rk,.sq .fl{position:absolute;font-family:var(--mono);font-weight:600;font-size:2.1cqw;line-height:1;pointer-events:none}
 .sq .rk{top:3%;left:4%} .sq .fl{bottom:3%;right:5%}
@@ -266,23 +267,27 @@ const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', 
 
 // ---------- level map ----------
 const lvState = (tk, i) => (progress[tk] || {})[i] || null;
-const unlocked = (tk, i) => i === 0 || !!(lvState(tk, i - 1) && lvState(tk, i - 1).stars > 0);
+// Optional levels are always open and never block the next one; a required level needs the previous required level passed
+const levelsOf = tk => T.TRACKS.find(t => t.key === tk).levels;
+const prevRequired = (tk, i) => { const ls = levelsOf(tk); for (let j = i - 1; j >= 0; j--) if (!ls[j].optional) return j; return -1; };
+const unlocked = (tk, i) => { if (levelsOf(tk)[i].optional) return true; const j = prevRequired(tk, i); return j < 0 || !!(lvState(tk, j) && lvState(tk, j).stars > 0); };
+const required = t => t.levels.map((L, i) => [L, i]).filter(([L]) => !L.optional);
 const starSVG = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : 'off'}"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
 const starRow = (n, big) => `<span class="stars${big ? ' big' : ''}" aria-label="${n} of 3 stars">${[1, 2, 3].map(k => starSVG(k <= n)).join('')}</span>`;
 function drawMap(){
-  const total = T.TRACKS.reduce((n, t) => n + t.levels.length, 0);
-  const passed = T.TRACKS.reduce((n, t) => n + t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length, 0);
+  const total = T.TRACKS.reduce((n, t) => n + required(t).length, 0);
+  const passed = T.TRACKS.reduce((n, t) => n + required(t).filter(([, i]) => (lvState(t.key, i) || {}).stars > 0).length, 0);
   $('intro').innerHTML = passed
     ? `<b>${passed} of ${total}</b> levels passed. Pass a level to unlock the next one in its group.`
     : 'New to chess? Start with <b>Learn the moves</b>: how each piece moves, then check, checkmate and the special moves. The other groups are short drills for the skills you use in real games. Pass a level to unlock the next.';
   $('tracks').innerHTML = T.TRACKS.map(t => {
-    const done = t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length;
-    return `<section class="track${t.beginner ? ' beginner' : ''}"><h2>${t.name}${t.beginner ? '<span class="pill">Beginners</span>' : ''}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
+    const req = required(t), done = req.filter(([, i]) => (lvState(t.key, i) || {}).stars > 0).length;
+    return `<section class="track${t.beginner ? ' beginner' : ''}"><h2>${t.name}${t.beginner ? '<span class="pill">Beginners</span>' : ''}<small>${done}/${req.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
       t.levels.map((L, i) => {
         const st = lvState(t.key, i), open = unlocked(t.key, i), pass = st && st.stars > 0;
         return `<button class="lv${pass ? ' passed' : ''}${open ? '' : ' locked'}" type="button" data-t="${t.key}" data-i="${i}"${open ? '' : ' aria-disabled="true"'}>
           <span class="num">${i + 1}</span>
-          <span class="txt"><b>${L.name}</b><small>${open ? L.about : `Pass level ${i} to unlock`}</small></span>
+          <span class="txt"><b>${L.name}${L.optional ? ' <span class="opt">Optional</span>' : ''}</b><small>${open ? L.about : `Pass level ${prevRequired(t.key, i) + 1} to unlock`}</small></span>
           ${open ? (st ? starRow(st.stars) : '') : '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'}
         </button>`;
       }).join('') + '</div></section>';
@@ -406,9 +411,11 @@ function finishLevel(){
   p[D.li] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, score), plays: prev.plays + 1 };
   store.set('trainer-progress', progress);
   const t = T.TRACKS.find(x => x.key === D.tk), nextL = t.levels[D.li + 1];
+  // the level this pass opens up: the next required one (optional levels are open anyway)
+  const opened = D.L.optional ? null : t.levels.find((L, i) => i > D.li && !L.optional);
   $('resTitle').textContent = stars ? (stars === 3 ? 'Perfect!' : 'Level passed') : 'Not this time';
   $('resSub').textContent = stars
-    ? (firstPass && nextL ? `${nextL.name} is now open.` : nextL ? '' : `That's the last level of ${t.name}.`)
+    ? (firstPass && opened ? `${opened.name} is now open.` : nextL ? '' : `That's the last level of ${t.name}.`)
     : `You need ${L.pass} of ${L.count} to pass. Each try brings new positions.`;
   $('resStars').innerHTML = starRow(stars, true);
   const secs = Math.round((Date.now() - D.t0) / 1000);

@@ -405,7 +405,9 @@ let groupsDone = false;
   body += '<path d="M82 22V3M82 4h12l-3.5 4.5L94 13H82" class="tr-flag"/>';
   if (P) body += P.pieceSVG('n', 'w').replace('<svg ', '<svg x="1" y="76" width="23" height="23" ');
   $('artTrainer').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true"><clipPath id="tb"><rect width="100" height="100" rx="6"/></clipPath><g clip-path="url(#tb)">${body}</g></svg>`;
-  const total = 36, passed = Object.values(prog).reduce((n, t) => n + Object.values(t || {}).filter(l => l && l.stars > 0).length, 0);
+  // required levels only (the two opening-naming levels are optional); keep in step with chess-trainer-core.js
+  const OPTIONAL = { openings: ['0', '6'] }, total = 41;
+  const passed = Object.entries(prog).reduce((n, [tk, t]) => n + Object.entries(t || {}).filter(([i, l]) => l && l.stars > 0 && !(OPTIONAL[tk] || []).includes(i)).length, 0);
   if (passed){
     $('sTrainer').innerHTML = `<b>${passed}</b> of ${total} levels passed`;
     $('bTrainer').hidden = false; $('bTrainer').firstChild.style.width = Math.round(100 * passed / total) + '%';

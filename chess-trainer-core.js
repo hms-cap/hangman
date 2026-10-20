@@ -404,7 +404,7 @@ const TRACKS = [
       tip: 'En passant is only allowed straight away, on the very next move. In promotion you may choose any piece, but a queen is almost always best.' },
   ] },
   { key: 'openings', name: 'Openings', blurb: 'The main openings for both colours: play the moves from memory, learn why each move is played, punish the classic traps.', levels: [
-    { name: 'Name the opening', kind: 'oname', count: 10, pass: 8, clock: 20, p: { deep: false }, about: 'A few moves in. Which opening is it?',
+    { name: 'Name the opening', optional: true, kind: 'oname', count: 10, pass: 8, clock: 20, p: { deep: false }, about: 'A few moves in. Which opening is it?',
       tip: 'Look at the first moves: 1.e4 e5 leads to the open games (Italian, Ruy Lopez, Scotch), 1.e4 with anything else is a defence (Sicilian, French, Caro-Kann), 1.d4 d5 c4 is a Queen\'s Gambit, 1.d4 Nf6 is an Indian defence.' },
     { name: '1.e4 as White', kind: 'oline', count: 6, pass: 4, p: { lvl: 'e4w' }, about: 'Play White\'s moves in the Italian, Ruy Lopez, Scotch and gambits, and against the Sicilian, French and Caro-Kann. Each move comes with its idea.',
       tip: 'Every move has a job: claim the centre, develop a piece with a threat, castle, put a rook on an open file. Use Hint to see the idea of the next move without being told the move.' },
@@ -416,7 +416,7 @@ const TRACKS = [
       tip: 'Against 1.d4, ...d5 holds the centre with pawns; ...Nf6 and a fianchetto fight for it with pieces and hit back later.' },
     { name: 'Opening traps', kind: 'trap', count: 8, pass: 6, clock: 60, p: {}, about: 'Your opponent has just made a famous mistake. Find the move that punishes it: Legal\'s mate, the Elephant trap, the Lasker trap and more.',
       tip: 'The trap usually works because something is overloaded or pinned, or the king is short of squares. Look for checks first.' },
-    { name: 'Name the variation', kind: 'oname', count: 10, pass: 8, clock: 25, p: { deep: true }, about: 'Deeper into the opening: which variation is it?',
+    { name: 'Name the variation', optional: true, kind: 'oname', count: 10, pass: 8, clock: 25, p: { deep: true }, about: 'Deeper into the opening: which variation is it?',
       tip: 'Variations are named after their key moves: ...a6 in the Najdorf, ...g6 in the Dragon, ...Bb4 in the Winawer, d5 by Black in the Grünfeld.' },
   ] },
   { key: 'vision', name: 'Knight & board vision', blurb: 'See where pieces go and what they guard, without moving them.', levels: [

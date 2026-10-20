@@ -181,5 +181,13 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
     check('naming questions have four different options including the answer', !amb.length, amb.join(', '));
   }
 }
+// the home tile's level count and optional list match the level map
+{
+  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8'), tot = +(/total = (\d+);/.exec(html) || [])[1];
+  const req = T.TRACKS.reduce((n, t) => n + t.levels.filter(L => !L.optional).length, 0);
+  const opt = {}; T.TRACKS.forEach(t => t.levels.forEach((L, i) => { if (L.optional) (opt[t.key] ||= []).push(String(i)); }));
+  const m = /OPTIONAL = (\{[^}]*\})/.exec(html), optHtml = m ? JSON.parse(m[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":')) : {};
+  check('home tile counts the required levels', tot === req && JSON.stringify(optHtml) === JSON.stringify(opt), `tile ${tot}, map ${req}`);
+}
 console.log(fails ? `${fails} failed` : 'all passed');
 process.exit(fails ? 1 : 0);
