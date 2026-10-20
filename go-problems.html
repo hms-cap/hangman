@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Go Problems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+:root{
+  --gb:#e9dcb8; --gb-line:#5b4a2c; --st-b:#1f2a33; --st-b-edge:#0d1419; --st-w:#fbfbf6; --st-w-edge:#3a4650;
+  --mark:#c4353d; --good:#2f8a5b; --hintc:#2e5ea6; --zone:rgba(46,94,166,.14);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff; --zone:rgba(140,194,255,.16) }}
+:root[data-theme="dark"]{ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff; --zone:rgba(140,194,255,.16) }
+
+.app{gap:9px}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.8rem}
+@media (max-width:440px){.back .txt{display:none}}
+.rating{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;border:1px solid var(--key-edge);background:var(--key);border-radius:12px;padding:4px 10px;cursor:pointer;color:var(--ink)}
+.rating b{font-family:var(--mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.rating small{font-size:.66rem;color:var(--muted)}
+.rating .delta{font-family:var(--mono);font-size:.7rem;font-weight:600}
+.delta.up{color:var(--good)} .delta.down{color:var(--miss)}
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted)}
+.mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+.filters{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.filters::-webkit-scrollbar{display:none}
+.filters[hidden]{display:none}
+.filters button{flex:none;border:1px solid var(--line);background:var(--key);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.prompt{display:flex;align-items:center;gap:10px;min-height:44px}
+.prompt .side{width:22px;height:22px;border-radius:50%;flex:none;background:var(--st-b);border:2px solid var(--st-b-edge)}
+.prompt .txt{display:flex;flex-direction:column;min-width:0}
+.prompt .txt > b{font-family:var(--hand);font-weight:400;font-size:1.35rem;line-height:1.05}
+.prompt .txt small{color:var(--muted);font-size:.8rem}
+.prompt .txt small b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.prompt.good .txt > b{color:var(--good)} .prompt.bad .txt > b{color:var(--miss)}
+.tries{display:inline-flex;gap:3px;vertical-align:-1px;margin-left:4px}
+.tries i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
+.tries i.used{background:var(--miss);border-color:var(--miss)}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.goboard{width:min(100cqw,100cqh);height:min(100cqw,100cqh);display:block;touch-action:none;cursor:pointer;border-radius:6px}
+.goboard .bg{fill:var(--gb)}
+.goboard .ln{stroke:var(--gb-line);stroke-width:.32}
+.goboard .hoshi{fill:var(--gb-line)}
+.goboard .crd{font-family:var(--mono);font-size:2.6px;fill:var(--gb-line);opacity:.75;text-anchor:middle;dominant-baseline:central}
+.goboard .sb{fill:var(--st-b);stroke:var(--st-b-edge);stroke-width:.25}
+.goboard .sw{fill:var(--st-w);stroke:var(--st-w-edge);stroke-width:.3}
+.goboard .zone{fill:var(--zone)}
+.goboard .tm{fill:none;stroke:var(--mark);stroke-width:.7}
+.goboard .lastb{fill:none;stroke:var(--st-w);stroke-width:.55} .goboard .lastw{fill:none;stroke:var(--st-b);stroke-width:.55}
+.goboard .ring{fill:none;stroke-width:.7}
+.goboard .ring.hint{stroke:var(--hintc);stroke-dasharray:1.2 .8}
+.goboard .ring.bad{stroke:var(--mark)}
+.goboard .ring.good{stroke:var(--good)}
+.goboard .num{font-family:var(--mono);font-size:3.6px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.goboard .num.onb{fill:var(--st-w)} .goboard .num.onw{fill:var(--st-b)}
+
+.note{border:1.5px solid var(--line);background:var(--sheet);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;flex:none;min-height:54px}
+.note p{margin:0;font-size:.88rem;line-height:1.4}
+.note b.h{font-family:var(--hand);font-weight:400;font-size:1.15rem;line-height:1}
+.note.good{border-color:var(--good)} .note.bad{border-color:var(--miss)}
+.note.good b.h{color:var(--good)} .note.bad b.h{color:var(--miss)}
+.note .busy{color:var(--muted);font-style:italic}
+.actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.actions .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.toast{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.9rem;padding:9px 14px;border-radius:10px;pointer-events:none;max-width:90vw;text-align:center}
+.shareText{font-family:var(--mono);white-space:pre;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;line-height:1.3;font-size:.95rem}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.themes{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;font-size:.84rem;align-items:center}
+.themes span{color:var(--muted);font-family:var(--mono)}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.learnlink{color:var(--hit);font-size:.88rem;text-decoration:none}
+@media (max-height:680px){.filters button{padding:4px 10px}.note p{font-size:.82rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Go Problems</h1>
+    <button class="rating" id="ratingBtn" type="button" aria-label="Your problem rating and stats"><small>Rating</small><b id="rating">1000</b><span class="delta" id="delta"></span></button>
+  </header>
+
+  <div class="mode" id="mode" role="group" aria-label="Daily or practice">
+    <button type="button" data-m="daily">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="practice">Practice</button>
+  </div>
+  <div class="filters" id="filters" role="group" aria-label="Problem type"></div>
+
+  <div class="prompt" id="prompt"><span class="side"></span><div class="txt"><b id="pTitle"></b><small id="pSub"></small></div></div>
+  <div class="boardWrap"><svg class="goboard" id="board" role="img" aria-label="Go board"></svg></div>
+  <div class="note" id="note" aria-live="polite"><p id="noteText"></p></div>
+  <div class="actions" id="actions"></div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Problem stats</h2>
+    <div class="stats4" id="stats4"></div>
+    <div class="label">By kind of problem</div>
+    <div class="themes" id="themeStats"></div>
+    <p style="font-size:.85rem">Your rating goes up when you solve a problem with your first try and no hint, and down otherwise. Problems are picked near your rating. The daily problem doesn't change it.</p>
+    <a class="learnlink" href="go-trainer.html">New to these techniques? <b>The Go trainer teaches them step by step</b> →</a>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="dailySheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="dailyTitle">
+    <h2 id="dailyTitle"></h2>
+    <p id="dailySub"></p>
+    <div class="stats4" id="dstats4"></div>
+    <div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="toPractice" type="button">Practice problems</button></div>
+    <div class="shareText" id="shareText" hidden></div>
+    <div class="next"><span class="label">Next daily problem in</span><b id="countdown"></b></div>
+    <div id="dailyNav"></div>
+    <button class="btn small" id="dailyClose" type="button">Look at the board</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="go-core.js"></script>
+<script src="go-solver.js"></script>
+<script src="go-problem.js"></script>
+<script src="go-problems-data.js"></script>
+<script src="go-daily.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const { BLACK, WHITE, EMPTY } = Go;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PZ = window.GO_PROBLEMS || [];
+const TRIES = 3;
+const GROUPS = [
+  ['all', 'All', null],
+  ['capture', 'Capturing', ['atari', 'chase', 'ladder', 'net']],
+  ['tricks', 'Snapback & throw-in', ['snapback', 'throwin']],
+  ['escape', 'Saving stones', ['escape']],
+  ['life', 'Life & death', ['live', 'kill']],
+];
+let S = Object.assign({ rating: 1000, games: 0, solved: 0, failed: 0, streak: 0, best: 0, seen: {}, filter: 'all', themes: {}, current: null, daily: { played: 0, won: 0, streak: 0, best: 0, last: -9 } }, store.get('gpz-state', {}));
+const today = GoDaily.dayIndex(), dInfo = GoDaily.problemFor(today);
+let D = store.get('gpz-daily', null); if (!D || D.day !== today) D = { day: today, done: false, won: false, mistakes: 0, hinted: false, moves: [] };
+let mode = new URLSearchParams(location.search).has('daily') || (!S.games && !D.done) ? 'daily' : 'practice';
+// Z: the problem on the board. moves: names played so far (Black, White, ...); wrongAt: the learner's wrong move and White's refutation shown
+let Z = null, busy = false, lastDelta = 0;
+function save(){ store.set('gpz-state', S); if (mode === 'daily') store.set('gpz-daily', D); }
+
+// ---------- solver worker ----------
+const ask = (() => {
+  let w = null, seq = 0; const wait = new Map();
+  try { w = new Worker('go-problems-worker.js'); w.onmessage = e => { const f = wait.get(e.data.id); wait.delete(e.data.id); f && f(e.data); }; } catch (e) { w = null; }
+  return msg => new Promise(res => {
+    if (!w){ setTimeout(() => res(msg.type === 'hint' ? { move: GoProblem.hint(msg.problem, msg.moves) } : GoProblem.judge(msg.problem, msg.moves, msg.move)), 20); return; }
+    const id = ++seq; wait.set(id, res); w.postMessage(Object.assign({ id }, msg));
+  });
+})();
+
+// ---------- picking problems ----------
+function pool(){ const g = GROUPS.find(g => g[0] === S.filter) || GROUPS[0]; return g[2] ? PZ.filter(p => g[2].includes(p.theme)) : PZ; }
+function pickPractice(){
+  const src = pool(); if (!src.length) return null;
+  for (let width = 120; width < 3000; width *= 1.6){
+    const near = src.filter(p => Math.abs(p.rating - S.rating) <= width), fresh = near.filter(p => !S.seen[p.id]);
+    if (fresh.length >= 3 || (width > 1500 && fresh.length)) return fresh[(Math.random() * fresh.length) | 0];
+    if (width > 2500 && near.length) return near[(Math.random() * near.length) | 0];
+  }
+  return src[(Math.random() * src.length) | 0];
+}
+function load(p, keep){
+  Z = { p, moves: keep ? keep.moves : [], mistakes: keep ? keep.mistakes : 0, hinted: keep ? keep.hinted : false, done: keep ? keep.done : false, won: keep ? keep.won : false,
+    rated: keep ? keep.rated : false, wrong: null, hintAt: null, msg: null, showLine: false };
+  if (mode === 'practice') { S.current = { id: p.id, moves: Z.moves, mistakes: Z.mistakes, hinted: Z.hinted, done: Z.done, won: Z.won, rated: Z.rated }; save(); }
+  build(); render();
+}
+function build(){ const r = GoProblem.setup(Z.p, Z.wrong ? Z.moves.concat(Z.wrong) : Z.moves); Z.b = r.b; Z.o = r.o; }
+function remember(){
+  if (mode === 'daily'){ Object.assign(D, { moves: Z.moves, mistakes: Z.mistakes, hinted: Z.hinted, done: Z.done, won: Z.won }); }
+  else S.current = { id: Z.p.id, moves: Z.moves, mistakes: Z.mistakes, hinted: Z.hinted, done: Z.done, won: Z.won, rated: Z.rated };
+  save();
+}
+
+// ---------- drawing ----------
+const CELL = 10, PAD = 10, X = x => PAD + x * CELL;
+function render(){
+  const b = Z.b, N = b.N, size = (N - 1) * CELL + 2 * PAD, svg = $('board');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  let h = `<rect class="bg" x="0" y="0" width="${size}" height="${size}" rx="2"/>`;
+  if (Z.p.region && !Z.done) for (const s of Z.p.region){ const [x, y] = b.xy(b.parse(s)); h += `<rect class="zone" x="${X(x) - CELL / 2}" y="${X(y) - CELL / 2}" width="${CELL}" height="${CELL}"/>`; }
+  for (let i = 0; i < N; i++) h += `<line class="ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
+  for (const [x, y] of [[2, 2], [6, 2], [2, 6], [6, 6], [4, 4]]) h += `<circle class="hoshi" cx="${X(x)}" cy="${X(y)}" r=".9"/>`;
+  for (let i = 0; i < N; i++) h += `<text class="crd" x="${X(i)}" y="${PAD / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${X(i)}" y="${size - PAD / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${PAD / 2.8}" y="${X(i)}">${N - i}</text><text class="crd" x="${size - PAD / 2.8}" y="${X(i)}">${N - i}</text>`;
+  // the marked stones: the problem's target, as it stood at the start
+  const start = GoProblem.setup(Z.p, []).b, marked = new Set(start.stones(start.parse(Z.p.target)));
+  // numbers for the moves played, so explanations can be followed
+  const num = new Map(); const all = Z.moves.concat(Z.wrong || []);
+  { const t = GoProblem.setup(Z.p, []).b; all.forEach((m, k) => { if (m === 'pass') return; const q = t.parse(m); t.play(q); num.set(q, k + 1); }); }
+  for (const p of b.points){
+    const [x, y] = b.xy(p), v = b.c[p];
+    if (v !== BLACK && v !== WHITE) continue;
+    h += `<circle class="${v === BLACK ? 'sb' : 'sw'}" cx="${X(x)}" cy="${X(y)}" r="4.6"/>`;
+    if (num.has(p)) h += `<text class="num ${v === BLACK ? 'onb' : 'onw'}" x="${X(x)}" y="${X(y) + .2}">${num.get(p)}</text>`;
+    else if (marked.has(p) && !Z.done) h += `<rect class="tm" x="${X(x) - 1.6}" y="${X(y) - 1.6}" width="3.2" height="3.2" style="stroke:${v === BLACK ? 'var(--st-w)' : 'var(--mark)'}"/>`;
+  }
+  if (Z.wrong){ const [x, y] = b.xy(b.parse(Z.wrong[0])); h += `<circle class="ring bad" cx="${X(x)}" cy="${X(y)}" r="5.3"/>`; }
+  if (Z.hintAt){ const [x, y] = b.xy(b.parse(Z.hintAt)); h += `<circle class="ring hint" cx="${X(x)}" cy="${X(y)}" r="4.4"/>`; }
+  svg.innerHTML = h;
+  renderPrompt(); renderNote(); renderActions(); renderTop();
+}
+function renderTop(){
+  $('rating').textContent = Math.round(S.rating);
+  const d = $('delta'); d.textContent = lastDelta ? (lastDelta > 0 ? '+' : '') + Math.round(lastDelta) : ''; d.className = 'delta ' + (lastDelta > 0 ? 'up' : lastDelta < 0 ? 'down' : '');
+  $('mode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
+  $('dayNo').textContent = `No. ${today + 1}`;
+  $('filters').hidden = mode !== 'practice';
+  $('filters').innerHTML = GROUPS.map(([k, label]) => `<button type="button" data-f="${k}" aria-pressed="${S.filter === k}">${label}</button>`).join('');
+}
+function renderPrompt(){
+  const p = Z.p, el = $('prompt');
+  el.className = 'prompt' + (Z.done ? (Z.won ? ' good' : ' bad') : '');
+  $('pTitle').textContent = Z.done ? (Z.won ? 'Solved!' : 'Solution shown') : 'Black to play';
+  const theme = GoProblem.THEMES[p.theme] || ['', ''];
+  const dots = `<span class="tries" aria-label="${TRIES - Z.mistakes} tries left">${Array.from({ length: TRIES }, (_, i) => `<i class="${i < Z.mistakes ? 'used' : ''}"></i>`).join('')}</span>`;
+  $('pSub').innerHTML = (Z.done ? `${theme[0]} · rated <b>${p.rating}</b>` : GoProblem.GOALS[p.goal] + (mode === 'daily' ? ` · ${dInfo.weekday}` : ` · rated <b>${p.rating}</b>`)) + (Z.done ? '' : dots);
+}
+function renderNote(){
+  const n = $('note'), m = Z.msg;
+  n.className = 'note' + (m && m.kind ? ' ' + m.kind : '');
+  if (!m){ $('noteText').innerHTML = Z.p.goal === 'kill' || Z.p.goal === 'live' ? 'The shaded points are the eye space. Tap a point to play there.' : 'Tap a point to play there. The marked stones are the ones that matter.'; return; }
+  $('noteText').innerHTML = (m.head ? `<b class="h">${m.head}</b> ` : '') + (m.busy ? `<span class="busy">${m.text}</span>` : m.text);
+}
+function renderActions(){
+  const a = [];
+  if (Z.done){
+    if (mode === 'practice') a.push(['next', 'Next problem', true]);
+    else a.push(['dsum', 'Today\'s result', true], ['practice', 'Practice', false]);
+    if (!Z.showLine) a.push(['line', 'Replay solution', false]);
+  } else if (Z.wrong){
+    a.push(['retry', 'Try again', true]);
+  } else {
+    a.push(['hint', 'Hint', false], ['give', 'Show solution', false]);
+    if (mode === 'practice') a.push(['skip', 'Skip', false]);
+  }
+  $('actions').innerHTML = a.map(([id, l, pri]) => `<button class="btn${pri ? ' primary' : ''}" type="button" data-a="${id}"${busy ? ' disabled' : ''}>${l}</button>`).join('');
+}
+
+// ---------- playing ----------
+function pointAt(e){
+  const svg = $('board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(svg.getScreenCTM().inverse()), x = Math.round((q.x - PAD) / CELL), y = Math.round((q.y - PAD) / CELL);
+  if (x < 0 || y < 0 || x >= Z.b.N || y >= Z.b.N || Math.hypot(q.x - X(x), q.y - X(y)) > CELL * .62) return -1;
+  return Z.b.pt(x, y);
+}
+let toastT = null;
+function toast(t, ms = 2200){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+const wait = ms => new Promise(r => setTimeout(r, reduced ? 0 : ms));
+$('board').addEventListener('pointerdown', async e => {
+  if (!Z || busy || Z.done) return;
+  if (Z.wrong) return toast('Tap "Try again" to go back.');
+  const p = pointAt(e); if (p < 0) return;
+  const b = Z.b;
+  if (b.c[p] !== EMPTY) return toast('That point is taken.');
+  if (!b.legal(p)) return toast(p === b.ko ? 'Ko: you can\'t take back straight away.' : 'Suicide isn\'t allowed: the stone would have no liberties.');
+  const mv = b.name(p);
+  busy = true; Z.hintAt = null;
+  // show the stone straight away while the solver checks it
+  b.play(p); Z.msg = { text: 'Checking…', busy: true }; render();
+  const r = await ask({ type: 'judge', problem: Z.p, moves: Z.moves, move: mv });
+  if (r.status === 'error' || r.status === 'illegal'){ busy = false; build(); Z.msg = null; render(); return toast('Something went wrong. Try that again.'); }
+  if (r.status === 'solved'){
+    Z.moves.push(mv); busy = false;
+    const how = { captured: 'The stones are captured.', caught: 'The stones are caught: whatever White does now, they can\'t escape.', dead: 'The group is dead: White can\'t make two eyes, whatever White plays.', alive: 'Your group lives: White can\'t stop two eyes.', safe: 'The stones are safe: White can\'t capture them now.' }[r.how] || '';
+    return finish(true, how);
+  }
+  if (r.status === 'good'){
+    Z.moves.push(mv); Z.msg = { text: 'Good. White answers…', busy: true }; render();
+    await wait(420);
+    Z.moves.push(r.reply); build();
+    Z.msg = { kind: 'good', head: 'Good.', text: r.reply === 'pass' ? 'White passes. Keep going.' : `White answers at ${r.reply}. Keep going.` };
+    busy = false; remember(); render(); return;
+  }
+  // wrong: show White's refutation, then let the learner go back
+  Z.mistakes++; rate(false);
+  await wait(380);
+  Z.wrong = r.refute && r.refute !== 'pass' ? [mv, r.refute] : [mv];
+  build();
+  const left = TRIES - Z.mistakes;
+  Z.msg = { kind: 'bad', head: 'Not quite.', text: `${r.why}${left > 0 ? ` <b>${left}</b> ${left === 1 ? 'try' : 'tries'} left.` : ''}` };
+  busy = false;
+  if (left <= 0){ Z.msg.text += ' That was your last try.'; remember(); render(); await wait(1400); return giveUp(true); }
+  remember(); render();
+});
+function retry(){ Z.wrong = null; Z.msg = null; build(); render(); }
+async function hint(){
+  if (busy || Z.done) return;
+  busy = true; Z.hinted = true; rate(false); renderActions();
+  const r = await ask({ type: 'hint', problem: Z.p, moves: Z.moves });
+  busy = false; Z.hintAt = r.move || null;
+  Z.msg = r.move ? { text: `Try the ringed point.${Z.p.goal === 'kill' ? ' Look for the point that would give White an eye.' : ''}` } : { text: 'No hint here.' };
+  remember(); render();
+}
+async function giveUp(auto){
+  if (busy) return;
+  rate(false);
+  Z.wrong = null; Z.done = true; Z.won = false; Z.moves = []; build(); render();
+  await playLine();
+  finish(false, auto ? '' : '');
+}
+// play the stored solution from the start, one move at a time
+async function playLine(){
+  busy = true; Z.showLine = true; Z.moves = []; Z.wrong = null; Z.hintAt = null; build();
+  Z.msg = { text: 'The solution:', busy: true }; render();
+  for (const m of Z.p.line){ await wait(650); Z.moves.push(m); build(); render(); }
+  busy = false;
+}
+function finish(won, how){
+  Z.done = true; Z.won = won; Z.wrong = null;
+  if (won) rate(true);
+  const theme = GoProblem.THEMES[Z.p.theme];
+  Z.msg = { kind: won ? 'good' : 'bad', head: won ? (Z.mistakes ? 'Solved.' : 'Solved first try!') : 'The answer', text: `${how ? how + ' ' : ''}${theme ? theme[1] : ''}${won ? '' : ` The first move is ${Z.p.answers.join(' or ')}.`}` };
+  if (mode === 'practice'){ S.seen[Z.p.id] = 1; const t = (S.themes[Z.p.theme] ||= { w: 0, n: 0 }); t.n++; if (won && !Z.mistakes && !Z.hinted) t.w++; }
+  if (mode === 'daily' && !D.done){
+    D.done = true; D.won = won;
+    const st = S.daily; st.played++; if (won){ st.won++; st.streak = st.last === today - 1 ? st.streak + 1 : 1; st.best = Math.max(st.best, st.streak); } else st.streak = 0; st.last = today;
+  }
+  remember(); render();
+  if (won && !reduced) try{ navigator.vibrate && navigator.vibrate(20); }catch(_){}
+  if (mode === 'daily') setTimeout(openDaily, 900);
+}
+// rating: one result per practice problem; a mistake or a hint counts as a miss
+function rate(won){
+  if (mode !== 'practice' || Z.rated) return;
+  Z.rated = true;
+  const k = S.games < 15 ? 48 : S.games < 50 ? 32 : 24, exp = 1 / (1 + Math.pow(10, (Z.p.rating - S.rating) / 400));
+  const d = k * ((won ? 1 : 0) - exp);
+  S.rating = Math.max(100, S.rating + d); lastDelta = d; S.games++;
+  if (won){ S.solved++; S.streak++; S.best = Math.max(S.best, S.streak); } else { S.failed++; S.streak = 0; }
+  save(); renderTop();
+}
+function next(){ lastDelta = 0; const p = pickPractice(); if (p) load(p); }
+
+$('actions').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b || busy) return;
+  const a = b.dataset.a;
+  if (a === 'next' || a === 'skip'){ if (a === 'skip' && !Z.rated && Z.moves.length) rate(false); next(); }
+  else if (a === 'retry') retry();
+  else if (a === 'hint') hint();
+  else if (a === 'give') giveUp(false);
+  else if (a === 'line'){ const keep = Z.msg; await playLine(); Z.msg = keep; render(); }
+  else if (a === 'dsum') openDaily();
+  else if (a === 'practice') setMode('practice');
+});
+$('filters').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || busy) return; S.filter = b.dataset.f; save(); if (Z && !Z.done && Z.moves.length === 0 && !Z.mistakes) next(); else renderTop(); if (Z.done) next(); });
+$('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && !busy) setMode(b.dataset.m); });
+function setMode(m){
+  mode = m; lastDelta = 0;
+  if (m === 'daily'){ const p = PZ[dInfo.index]; load(p, D); if (D.done) render(); }
+  else { const c = S.current && PZ.find(p => p.id === S.current.id); if (c && !S.current.done) load(c, S.current); else next(); }
+  history.replaceState(null, '', m === 'daily' ? '?daily' : location.pathname);
+}
+
+// ---------- sheets ----------
+function open(id){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = s.id !== id); }
+function close(){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = true); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) close(); }));
+function openStats(){
+  const tot = S.solved + S.failed;
+  $('stats4').innerHTML = [[Math.round(S.rating), 'Rating'], [S.solved, 'Solved first try'], [tot ? Math.round(100 * S.solved / tot) + '%' : '–', 'Success'], [S.best, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  const rows = Object.keys(GoProblem.THEMES).map(k => { const t = S.themes[k]; return `<b>${GoProblem.THEMES[k][0]}</b><div></div><span>${t ? `${t.w}/${t.n}` : '–'}</span>`; });
+  $('themeStats').innerHTML = rows.join('');
+  open('statsSheet');
+}
+$('ratingBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', close);
+function shareText(){
+  const marks = Array.from({ length: TRIES }, (_, i) => i < D.mistakes ? '🟥' : (D.won && i === D.mistakes ? '🟩' : '⬜')).join('');
+  return `Daily Go Problem No. ${today + 1} (${dInfo.weekday})\n${GoProblem.GOALS[PZ[dInfo.index].goal]}\n${marks}${D.hinted ? ' 💡' : ''}`;
+}
+function openDaily(){
+  $('dailyTitle').textContent = D.won ? (D.mistakes ? 'Solved' : 'Solved first try') : 'Not today';
+  $('dailySub').textContent = `Daily Go Problem No. ${today + 1}, the ${dInfo.weekday} problem${dInfo.band >= 5 ? ' (one of the hardest of the week)' : dInfo.band <= 1 ? ' (one of the easier ones)' : ''}.`;
+  const st = S.daily;
+  $('dstats4').innerHTML = [[st.played, 'Played'], [st.played ? Math.round(100 * st.won / st.played) + '%' : '–', 'Solved'], [st.streak, 'Streak'], [st.best, 'Best']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  $('shareText').hidden = true;
+  if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('dailyNav', 'gpz');
+  open('dailySheet'); tick();
+}
+function tick(){
+  if ($('dailySheet').hidden) return;
+  const now = new Date(), mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), s = Math.max(0, Math.round((mid - now) / 1000));
+  $('countdown').textContent = `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  setTimeout(tick, 1000);
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied'); }
+  catch(e){ const box = $('shareText'); box.textContent = text; box.hidden = false; toast('Select and copy the result'); }
+}
+$('shareBtn').addEventListener('click', share);
+$('toPractice').addEventListener('click', () => { close(); setMode('practice'); });
+$('dailyClose').addEventListener('click', close);
+
+// ---------- boot ----------
+if (!PZ.length){ document.querySelector('.boardWrap').innerHTML = '<p>No problems found.</p>'; }
+else setMode(mode);
+GameNav.init({ id: 'gpz', note: () => '',
+  actions: () => [
+    { icon: 'mode', label: mode === 'daily' ? 'Practice problems' : 'Today\'s daily problem', note: mode === 'daily' ? 'Problems picked near your rating.' : `No. ${today + 1}, the ${dInfo.weekday} problem.`, run: () => setMode(mode === 'daily' ? 'practice' : 'daily') },
+    { icon: 'eye', label: 'Stats', note: 'Rating, streaks and results by kind of problem.', run: openStats },
+  ] });
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

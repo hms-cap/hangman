@@ -28,16 +28,16 @@
   --snake:#4f7f2a; --snake-edge:#375d1a;
   --chowka:#a8592c; --chowka-edge:#7c3d1a;
   --trainer:#8a4f7d; --trainer-edge:#663859;
-  --go:#5a6b3a; --go-edge:#3f4c27;
+  --go:#5a6b3a; --go-edge:#3f4c27; --gpz:#7a6a2e; --gpz-edge:#54481c; --gtr:#3f6f5a; --gtr-edge:#284a3b;
   --on:#ffffff; --on-soft:rgba(255,255,255,.78); --on-faint:rgba(255,255,255,.22); --on-line:rgba(255,255,255,.4);
   --flame:#e0782a;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --flame:#f08c3c}}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --gpz:#8a7a3a; --gpz-edge:#5e5124; --gtr:#4c8069; --gtr-edge:#325746; --flame:#f08c3c}}
 :root[data-theme="dark"]{
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --flame:#f08c3c}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --gpz:#8a7a3a; --gpz-edge:#5e5124; --gtr:#4c8069; --gtr-edge:#325746; --flame:#f08c3c}
 
 html,body{height:auto;min-height:100%}
 .hub{max-width:820px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
@@ -64,7 +64,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
   background-image:linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px);background-size:16px 16px}
 .t-five{--bg:var(--five);--edge:var(--five-edge)} .t-trail{--bg:var(--trail);--edge:var(--trail-edge)}
-.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)} .t-cpz{--bg:var(--cpz);--edge:var(--cpz-edge)} .t-snake{--bg:var(--snake);--edge:var(--snake-edge)} .t-chowka{--bg:var(--chowka);--edge:var(--chowka-edge)} .t-trainer{--bg:var(--trainer);--edge:var(--trainer-edge)} .t-go{--bg:var(--go);--edge:var(--go-edge)}
+.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)} .t-cpz{--bg:var(--cpz);--edge:var(--cpz-edge)} .t-snake{--bg:var(--snake);--edge:var(--snake-edge)} .t-chowka{--bg:var(--chowka);--edge:var(--chowka-edge)} .t-trainer{--bg:var(--trainer);--edge:var(--trainer-edge)} .t-go{--bg:var(--go);--edge:var(--go-edge)} .t-gpz{--bg:var(--gpz);--edge:var(--gpz-edge)} .t-gtr{--bg:var(--gtr);--edge:var(--gtr-edge)}
 .tile h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.65rem;line-height:1;text-wrap:balance}
 .tile .status{margin:0;font-size:.86rem;line-height:1.35;color:var(--on-soft)}
 .tile .status b{color:var(--on);font-weight:600}
@@ -106,7 +106,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .f-correct{fill:var(--on)} .f-present{fill:rgba(255,255,255,.55)} .f-absent{fill:rgba(0,0,0,.22)} .f-empty{fill:none;stroke:var(--on-line);stroke-width:1.6}
 .su-given{fill:var(--on)} .su-user{fill:rgba(255,255,255,.55)} .su-empty{fill:var(--on-faint)}
 .ch-l{fill:rgba(255,255,255,.88)} .ch-d{fill:rgba(255,255,255,.45)}
-.go-bd{fill:#e9dcb8} .go-ln{stroke:#5b4a2c;stroke-width:1.2} .go-b{fill:#1f2a33} .go-w{fill:#fbfbf6;stroke:#3a4650;stroke-width:1.2}
+.gt-dot{fill:#2f8a5b} .go-bd{fill:#e9dcb8} .go-ln{stroke:#5b4a2c;stroke-width:1.2} .go-b{fill:#1f2a33} .go-w{fill:#fbfbf6;stroke:#3a4650;stroke-width:1.2}
 .tr-path{fill:none;stroke:var(--trainer-edge);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 6}
 .tr-flag{fill:#f2a196;stroke:var(--trainer-edge);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .pc .pb{stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
@@ -189,6 +189,14 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <div class="art" id="artGo"></div>
       <div class="meta"><h3>Go</h3><p class="status" id="sGo"></p><span class="cta" id="cGo">Play</span></div>
     </a>
+    <a class="tile wide t-gpz" href="go-problems.html?daily" id="tGpz">
+      <div class="art" id="artGpz"></div>
+      <div class="meta"><h3>Go Problems</h3><p class="status" id="sGpz"></p><span class="cta" id="cGpz">Solve</span></div>
+    </a>
+    <a class="tile wide t-gtr" href="go-trainer.html">
+      <div class="art" id="artGtr"></div>
+      <div class="meta"><h3>Go Trainer</h3><p class="status" id="sGtr"></p><div class="prog" id="bGtr" hidden><i></i></div><span class="cta" id="cGtr">Learn</span></div>
+    </a>
     <a class="tile wide t-trainer" href="chess-trainer.html">
       <div class="art" id="artTrainer"></div>
       <div class="meta"><h3>Chess Trainer</h3><p class="status" id="sTrainer"></p><div class="prog" id="bTrainer" hidden><i></i></div><span class="cta" id="cTrainer">Train</span></div>
@@ -237,6 +245,8 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 <script src="chess-core.js"></script>
 <script src="chess-pieces.js"></script>
 <script src="go-core.js"></script>
+<script src="go-problems-data.js"></script>
+<script src="go-daily.js"></script>
 <script src="chess-puzzles.js"></script>
 <script src="chess-daily.js"></script>
 <script src="groups-bank.js"></script>
@@ -422,6 +432,45 @@ let groupsDone = false;
     const st = get('go-stats', {}) || {}, w = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
     $('sGo').innerHTML = w ? `<b>${w}</b> win${w > 1 ? 's' : ''} against the computer` : '9 × 9 and 13 × 13, against the computer or a friend';
   }
+})();
+
+// ---- Go Problems: today's daily problem (a corner of it), and the practice rating ----
+(function(){
+  const info = window.GoDaily && GoDaily.problemFor(GoDaily.dayIndex()), P = info && (window.GO_PROBLEMS || [])[info.index];
+  if (!P){ $('tGpz').hidden = true; return; }
+  const day = GoDaily.dayIndex(), N = 9, c = 100 / (N + 1), X = i => c * (i + 1);
+  let body = `<rect class="go-bd" width="100" height="100" rx="6"/>`;
+  for (let i = 0; i < N; i++) body += `<line class="go-ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="go-ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
+  for (let k = 0; k < P.stones.length; k++){ const v = P.stones[k]; if (v === '.') continue; body += `<circle class="${v === 'X' ? 'go-b' : 'go-w'}" cx="${X(k % N)}" cy="${X(Math.floor(k / N))}" r="${c * 0.46}"/>`; }
+  $('artGpz').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+  const goal = { capture: 'capture', save: 'save the stones', kill: 'kill', live: 'live' }[P.goal];
+  const d = get('gpz-daily', null), playing = d && d.day === day;
+  if (playing && d.done){
+    badge($('tGpz'));
+    $('sGpz').innerHTML = d.won ? `No. ${day + 1} solved${d.mistakes ? `, <b>${d.mistakes}</b> wrong move${d.mistakes > 1 ? 's' : ''}` : ' <b>first try</b>'}` : `No. ${day + 1}: not today`;
+    $('cGpz').textContent = 'Practice'; $('tGpz').href = 'go-problems.html';
+  } else if (playing && (d.mistakes || d.hinted)){
+    $('sGpz').innerHTML = `Black to ${goal}, <b>${3 - d.mistakes}</b> tr${3 - d.mistakes === 1 ? 'y' : 'ies'} left`; $('cGpz').textContent = 'Continue';
+  } else $('sGpz').innerHTML = `Daily No. ${day + 1}: Black to ${goal}`;
+  const st = get('gpz-state', null);
+  if (st && st.games) $('sGpz').innerHTML += `<br>Practice rating <b>${Math.round(st.rating)}</b>`;
+})();
+
+// ---- Go Trainer: a stone in atari with its last liberty, and levels passed ----
+(function(){
+  const N = 5, c = 100 / (N + 1), X = i => c * (i + 1), prog = get('go-trainer-progress', {}) || {};
+  let body = `<rect class="go-bd" width="100" height="100" rx="6"/>`;
+  for (let i = 0; i < N; i++) body += `<line class="go-ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="go-ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
+  for (const [x, y, v] of [[2, 1, 1], [1, 2, 1], [3, 2, 1], [2, 2, 2], [1, 3, 2], [3, 4, 2]]) body += `<circle class="${v === 1 ? 'go-b' : 'go-w'}" cx="${X(x)}" cy="${X(y)}" r="${c * 0.46}"/>`;
+  body += `<circle cx="${X(2)}" cy="${X(3)}" r="${c * 0.2}" class="gt-dot"/>`;
+  $('artGtr').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+  const total = 18; // levels in go-trainer-core.js (checked by tools/test-go-trainer.js)
+  const passed = Object.values(prog).reduce((n, t) => n + Object.values(t || {}).filter(l => l && l.stars > 0).length, 0);
+  if (passed){
+    $('sGtr').innerHTML = `<b>${passed}</b> of ${total} levels passed`;
+    $('bGtr').hidden = false; $('bGtr').firstChild.style.width = Math.round(100 * passed / total) + '%';
+    $('cGtr').textContent = passed === total ? 'Practise' : 'Continue';
+  } else $('sGtr').textContent = 'Learn the rules step by step, then ladders, nets, snapbacks and life and death';
 })();
 
 // ---- Chess Trainer: a knight's route to a flag, and levels passed ----

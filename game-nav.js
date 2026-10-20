@@ -16,6 +16,8 @@ const GAMES = [
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html', '#2b6c84'],
   ['trainer', 'Chess Trainer', 'chess-trainer.html', '#8a4f7d'],
   ['go', 'Go', 'go.html', '#5a6b3a'],
+  ['gpz', 'Go Problems', 'go-problems.html', '#7a6a2e'],
+  ['gtrainer', 'Go Trainer', 'go-trainer.html', '#3f6f5a'],
   ['snake', 'Snake', 'snake.html', '#4f7f2a'],
   ['chowka', 'Chowka Bara', 'chowka.html', '#a8592c'],
 ];

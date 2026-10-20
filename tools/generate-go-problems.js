@@ -12,13 +12,29 @@ const { BLACK, WHITE, EMPTY, other } = G;
 const THEMES = process.env.ONLY ? process.env.ONLY.split(',') : ['atari', 'ladder', 'net', 'snapback', 'throwin', 'escape', 'live', 'kill'];
 const N = 9;
 
+// Re-check a stored problem with the current solver: same answers, urgent (moving second fails), no ko in the reading
+function verify(p) {
+  const P = require('../go-problem.js'), { b, o } = P.setup(p, []);
+  const good = S.goodMoves(b, Object.assign({}, o, { depth: p.depth, nodes: 150000 }));
+  if (!good || good.map(q => b.name(q)).sort().join() !== p.answers.slice().sort().join()) return false;
+  const bw = b.clone(true); bw.turn = WHITE; bw.seen = new Set([bw.key()]);
+  const sw = S.solve(bw, Object.assign({}, o, { depth: p.depth, nodes: 150000 }));
+  if (sw.aborted || sw.win !== (o.attacker === WHITE)) return false;
+  for (const q of good) { const t = b.clone(true); t.play(q); const r = S.solve(t, Object.assign({}, o, { depth: p.depth, nodes: 150000 })); if (r.aborted || (o.attacker === BLACK ? r.ko : r.dko)) return false; }
+  // play it through the way the pages do: each move judged, then the hint after White's answer
+  const moves = []; let mv = p.answers[0], st = null;
+  for (let k = 0; k < 30; k++) { st = P.judge(p, moves, mv); if (st.status !== 'good') break; moves.push(mv, st.reply); mv = P.hint(p, moves); if (!mv) return false; }
+  return st.status === 'solved';
+}
 if (isMainThread) {
   const per = +(process.argv[2] || 40), out = process.argv[3] || path.join(__dirname, '..', 'go-problems-data.js'), maxMin = +(process.argv[4] || 60);
   const want = Object.fromEntries(THEMES.map(t => [t, t === 'live' || t === 'kill' ? Math.round(per * 1.5) : per]));
   const got = Object.fromEntries(THEMES.map(t => [t, []])), seen = new Set(), t0 = Date.now(), kept = [];
   if (fs.existsSync(out)) {
     const c = { window: {} }; require('vm').runInNewContext(fs.readFileSync(out, 'utf8'), c);
-    for (const p of (c.window.GO_PROBLEMS || [])) { if (seen.has(p.stones)) continue; seen.add(p.stones); (got[p.theme] && got[p.theme].length < want[p.theme] ? got[p.theme] : kept).push(p); }
+    let dropped = 0;
+    for (const p of (c.window.GO_PROBLEMS || [])) { if (seen.has(p.stones)) continue; if (!verify(p)) { dropped++; continue; } seen.add(p.stones); (got[p.theme] && got[p.theme].length < want[p.theme] ? got[p.theme] : kept).push(p); }
+    if (dropped) console.log('dropped', dropped, 'problems that the current solver no longer confirms');
   }
   const done = () => THEMES.every(t => got[t].length >= want[t]);
   const report = () => console.log(`[${((Date.now() - t0) / 60000).toFixed(1)} min] ` + THEMES.map(t => `${t} ${got[t].length}/${want[t]}`).join('  '));
@@ -78,6 +94,7 @@ if (isMainThread) {
     // White to move would escape (so the problem is urgent)
     const bw = b.clone(true); bw.turn = WHITE; bw.seen = new Set([bw.key()]);
     const sw = S.solve(bw, o); if (sw.aborted || sw.win) return null;
+    if (good.some(p => koIn(b, o, p))) return null;
     const line = mainLine(b, o, good[0]); if (!line) return null;
     return finishProblem(b, 'capture', o, good, line);
   }
@@ -109,6 +126,7 @@ if (isMainThread) {
     // the natural-looking escape (extending at a liberty) shouldn't always be it: keep half of the plain ones
     const plain = good.every(p => libs.includes(p));
     if (plain && r() < 0.5) return null;
+    if (good.some(p => koIn(b, o, p))) return null;
     const line = mainLine(b, o, good[0], true); if (!line) return null;
     return finishProblem(b, 'save', o, good, line);
   }
@@ -146,9 +164,12 @@ if (isMainThread) {
     let pb = b, po = o;
     if (goal === 'live') { pb = recolour(bd); po = Object.assign({}, o, { attacker: other(att) }); }
     const good = S.goodMoves(pb, po); if (!good || !good.length || good.length > 2) return null;
+    if (good.some(p => koIn(pb, po, p))) return null;
     const line = mainLine(pb, po, good[0], goal === 'live'); if (!line) return null;
     return finishProblem(pb, goal, po, good, line);
   }
+  // does the reading after this first move involve a ko anywhere? (then the problem isn't clean)
+  function koIn(b, o, p) { const t = b.clone(true); t.play(p); const r = S.solve(t, o); return r.aborted || (o.attacker === BLACK ? r.ko : r.dko); }
   function recolour(b) { const cells = new Map(); for (const p of b.points) if (b.c[p]) cells.set(p, other(b.c[p])); return boardFrom(cells, other(b.turn)); }
 
   // best play from the solver's first move: the opponent resists as long as it can

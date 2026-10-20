@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Go Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+/* Board colours match Go and Go Problems */
+:root{
+  --gb:#e9dcb8; --gb-line:#5b4a2c; --st-b:#1f2a33; --st-b-edge:#0d1419; --st-w:#fbfbf6; --st-w-edge:#3a4650;
+  --mark:#c4353d; --good:#2f8a5b; --hintc:#2e5ea6; --zone:rgba(46,94,166,.14); --star:#d9a03a;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff; --zone:rgba(140,194,255,.16); --star:#e6b04c }}
+:root[data-theme="dark"]{ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff; --zone:rgba(140,194,255,.16); --star:#e6b04c }
+
+.app{gap:9px}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.8rem}
+@media (max-width:440px){.back .txt{display:none}}
+.iconbtn{justify-self:end;border:1px solid var(--key-edge);background:var(--key);border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+#mapView{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -16px;padding:0 16px 20px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch}
+.intro{margin:0;color:var(--muted);line-height:1.45}
+.intro b{color:var(--ink)}
+.track h2{font-family:var(--hand);font-weight:400;font-size:1.6rem;margin:0;line-height:1.05;display:flex;align-items:baseline;gap:8px}
+.track h2 small{font-family:var(--ui);font-size:.75rem;color:var(--muted);font-weight:600;margin-left:auto;white-space:nowrap}
+.track > p{margin:2px 0 8px;color:var(--muted);font-size:.86rem}
+.track.beginner{border-left:3px solid var(--hit);padding-left:10px}
+.track .pill{font-family:var(--ui);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--hit);color:var(--paper);align-self:center}
+.lvls{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
+.lv{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:10px 12px;cursor:pointer;color:var(--ink)}
+.lv:last-child{border-bottom:0}
+.lv .num{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:.9rem;border:2px solid var(--ink)}
+.lv.passed .num{background:var(--ink);color:var(--paper)}
+.lv .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.lv .txt b{font-weight:600;font-size:.97rem}
+.lv .txt small{color:var(--muted);font-size:.78rem;line-height:1.3}
+.lv.locked{cursor:default;color:var(--muted)}
+.lv.locked .num{border-color:var(--line);color:var(--muted)}
+.lv .lock{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.stars{display:inline-flex;gap:1px;flex:none}
+.stars svg{width:16px;height:16px}
+.stars .on{fill:var(--star);stroke:var(--star)} .stars .off{fill:none;stroke:var(--line)}
+.stars svg path{stroke-width:1.6;stroke-linejoin:round}
+.stars.big svg{width:34px;height:34px}
+.links{display:flex;flex-direction:column;gap:6px;font-size:.88rem}
+.links a{color:var(--hit);text-decoration:none}
+
+#drillView{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+.dstatus{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted)}
+.dstatus .lname{font-family:var(--hand);font-size:1.25rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dots{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line)}
+.dots i.cur{border-color:var(--ink)}
+.dots i.ok{background:var(--good);border-color:var(--good)} .dots i.retry{background:var(--present);border-color:var(--present)} .dots i.miss{background:var(--miss);border-color:var(--miss)} .dots i.help{background:var(--star);border-color:var(--star)}
+.prompt{display:flex;align-items:center;gap:10px;min-height:42px}
+.prompt .side{width:20px;height:20px;border-radius:50%;flex:none;background:var(--st-b);border:2px solid var(--st-b-edge)}
+.prompt .side.w{background:var(--st-w);border-color:var(--st-w-edge)} .prompt .side.none{display:none}
+.prompt .ptxt{display:flex;flex-direction:column;min-width:0}
+.prompt .ptxt > b{font-family:var(--hand);font-weight:400;font-size:1.35rem;line-height:1.05}
+.prompt .ptxt small{color:var(--muted);font-size:.8rem;line-height:1.3}
+.prompt .ptxt small b{font-family:var(--mono);color:var(--ink)}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.goboard{width:min(100cqw,100cqh);height:min(100cqw,100cqh);display:block;touch-action:none;cursor:pointer;border-radius:6px}
+.goboard .bg{fill:var(--gb)}
+.goboard .ln{stroke:var(--gb-line);stroke-width:.32}
+.goboard .hoshi{fill:var(--gb-line)}
+.goboard .crd{font-family:var(--mono);font-size:2.6px;fill:var(--gb-line);opacity:.75;text-anchor:middle;dominant-baseline:central}
+.goboard .sb{fill:var(--st-b);stroke:var(--st-b-edge);stroke-width:.25}
+.goboard .sw{fill:var(--st-w);stroke:var(--st-w-edge);stroke-width:.3}
+.goboard .zone{fill:var(--zone)}
+.goboard .tm{fill:none;stroke-width:.7}
+.goboard .ring{fill:none;stroke-width:.7}
+.goboard .ring.hint{stroke:var(--hintc);stroke-dasharray:1.2 .8}
+.goboard .ring.bad{stroke:var(--mark)} .goboard .ring.good{stroke:var(--good)} .goboard .ring.ask{stroke:var(--hintc);stroke-width:.9}
+.goboard .dot{fill:var(--good)} .goboard .dot.bad{fill:var(--mark)} .goboard .dot.miss{fill:none;stroke:var(--mark);stroke-width:.6;stroke-dasharray:1 .7}
+.goboard .ownb{fill:var(--st-b);opacity:.75} .goboard .ownw{fill:var(--st-w);stroke:var(--st-w-edge);stroke-width:.2}
+.goboard .num{font-family:var(--mono);font-size:3.6px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.goboard .num.onb{fill:var(--st-w)} .goboard .num.onw{fill:var(--st-b)}
+.goboard .lastb{fill:none;stroke:var(--st-w);stroke-width:.55} .goboard .lastw{fill:none;stroke:var(--st-b);stroke-width:.55}
+.busy{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.busy span{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+
+.act{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:44px;align-items:center}
+.act .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.act .btn.opt{flex:1 1 calc(25% - 8px);min-width:0;font-family:var(--mono);font-size:1.05rem;padding:9px 4px}
+.act .btn.ans{flex:1 1 0;min-width:0;white-space:normal;line-height:1.2;font-size:.92rem;padding:10px 8px}
+.act .btn.gone{visibility:hidden}
+.act .tool{border:0;background:transparent;display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--ink);font-weight:600;font-size:.88rem}
+.act .tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fb{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:var(--sheet);border:1.5px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.fb.ok{border-color:var(--good)} .fb.miss{border-color:var(--miss)} .fb.help{border-color:var(--star)} .fb.retry,.fb.again{border-color:var(--present)}
+.fb h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.4rem;line-height:1.05}
+.fb.ok h3{color:var(--good)} .fb.miss h3{color:var(--miss)} .fb.help h3{color:var(--star)} .fb.again h3,.fb.retry h3{color:var(--present)}
+.fb p{margin:0;line-height:1.42;font-size:.92rem}
+.fb .row{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.fb .row .left{flex-basis:100%;color:var(--muted);font-size:.84rem;font-weight:600}
+.fb .row .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:8px 18px}
+.tip{font-size:.84rem;color:var(--muted);border-left:3px solid var(--line);padding-left:9px}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.result div{display:flex;flex-direction:column;gap:2px;align-items:center}
+.result b{font-family:var(--mono);font-weight:500;font-size:1.3rem}
+.lvinfo{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.lvinfo b{color:var(--ink)}
+.lesson{display:flex;justify-content:center}
+.lesson svg{width:min(220px,60vw);height:auto;border-radius:6px}
+@media (max-height:680px){.prompt .ptxt > b{font-size:1.15rem}.fb p{font-size:.86rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Go Trainer</h1>
+    <button class="iconbtn" id="setBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+  </header>
+
+  <div id="mapView">
+    <p class="intro" id="intro"></p>
+    <div id="tracks"></div>
+    <div class="links"><a href="go.html">Play a game against the computer, with the tutor on →</a><a href="go-problems.html">Daily Go problem and rated practice →</a></div>
+  </div>
+
+  <div id="drillView" hidden>
+    <div class="dstatus"><span class="lname" id="dName"></span><div class="dots" id="dDots"></div></div>
+    <div class="prompt"><span class="side" id="pSide"></span><div class="ptxt"><b id="pTitle"></b><small id="pSub"></small></div></div>
+    <div class="boardWrap">
+      <svg class="goboard" id="board" role="img" aria-label="Go board"></svg>
+      <div class="busy" id="busy" hidden><span id="busyText">Checking…</span></div>
+    </div>
+    <div class="act" id="act"></div>
+    <div class="fb" id="fb" hidden></div>
+  </div>
+</div>
+
+<div class="sheet" id="lvSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="lvTitle">
+    <span class="label" id="lvTrack"></span>
+    <h2 id="lvTitle"></h2>
+    <p id="lvAbout"></p>
+    <div class="lvinfo" id="lvInfo"></div>
+    <p class="tip" id="lvTip"></p>
+    <button class="btn primary" id="lvGo" type="button">Start</button>
+    <button class="btn" id="lvCancel" type="button">Back</button>
+  </div>
+</div>
+
+<div class="sheet" id="resSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="resTitle">
+    <h2 id="resTitle"></h2>
+    <p id="resSub"></p>
+    <div class="stars big" id="resStars"></div>
+    <div class="result" id="resGrid"></div>
+    <div class="row" id="resRow"></div>
+    <div id="resNav"></div>
+  </div>
+</div>
+
+<div class="sheet" id="setSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="setTitle">
+    <h2 id="setTitle">Settings</h2>
+    <label class="switch"><span>Coordinates<small>Letters and numbers around the board, used in the explanations</small></span><input type="checkbox" id="setCoords"></label>
+    <button class="btn" id="setReset" type="button">Reset all progress</button>
+    <button class="btn primary" id="setClose" type="button">Done</button>
+  </div>
+</div>
+
+<script src="go-core.js"></script>
+<script src="go-solver.js"></script>
+<script src="go-problem.js"></script>
+<script src="go-problems-data.js"></script>
+<script src="go-trainer-core.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const T = window.GoTrainer, { BLACK, WHITE, EMPTY } = Go;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, reduced ? Math.min(ms, 60) : ms));
+let progress = store.get('go-trainer-progress', {});   // { track: { levelIndex: { stars, best, plays } } }
+let settings = Object.assign({ coords: true }, store.get('go-trainer-settings', {}));
+let seen = new Set(store.get('go-trainer-seen', []));  // problem ids played recently
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// ---------- solver worker (problem drills) ----------
+const ask = (() => {
+  let w = null, seq = 0; const wait = new Map();
+  try { w = new Worker('go-problems-worker.js'); w.onmessage = e => { const f = wait.get(e.data.id); wait.delete(e.data.id); f && f(e.data); }; } catch (e) { w = null; }
+  return msg => new Promise(res => {
+    if (!w){ setTimeout(() => res(msg.type === 'hint' ? { move: GoProblem.hint(msg.problem, msg.moves) } : GoProblem.judge(msg.problem, msg.moves, msg.move)), 20); return; }
+    const id = ++seq; wait.set(id, res); w.postMessage(Object.assign({ id }, msg));
+  });
+})();
+
+// ---------- level map ----------
+const lvState = (tk, i) => (progress[tk] || {})[i] || null;
+const levelsOf = tk => T.TRACKS.find(t => t.key === tk).levels;
+const unlocked = (tk, i) => i === 0 || !!(lvState(tk, i - 1) && lvState(tk, i - 1).stars > 0);
+const starSVG = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : 'off'}"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const starRow = (n, big) => `<span class="stars${big ? ' big' : ''}" aria-label="${n} of 3 stars">${[1, 2, 3].map(k => starSVG(k <= n)).join('')}</span>`;
+function drawMap(){
+  const total = T.TRACKS.reduce((n, t) => n + t.levels.length, 0);
+  const passed = T.TRACKS.reduce((n, t) => n + t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length, 0);
+  $('intro').innerHTML = passed
+    ? `<b>${passed} of ${total}</b> levels passed. Pass a level to unlock the next one in its group.`
+    : 'New to Go? Start with <b>Learn the rules</b>: liberties, capturing, the moves you may not play, and counting. The other groups teach the techniques you need in real games. Every drill gives you three tries, and explains what went wrong.';
+  $('tracks').innerHTML = T.TRACKS.map(t => {
+    const done = t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length;
+    return `<section class="track${t.beginner ? ' beginner' : ''}"><h2>${t.name}${t.beginner ? '<span class="pill">Beginners</span>' : ''}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
+      t.levels.map((L, i) => {
+        const st = lvState(t.key, i), open = unlocked(t.key, i), pass = st && st.stars > 0;
+        return `<button class="lv${pass ? ' passed' : ''}${open ? '' : ' locked'}" type="button" data-t="${t.key}" data-i="${i}"${open ? '' : ' aria-disabled="true"'}>
+          <span class="num">${i + 1}</span>
+          <span class="txt"><b>${L.name}</b><small>${open ? L.about : `Pass level ${i} to unlock`}</small></span>
+          ${open ? (st ? starRow(st.stars) : '') : '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'}
+        </button>`;
+      }).join('') + '</div></section>';
+  }).join('');
+}
+let chosen = null;
+$('tracks').addEventListener('click', e => { const b = e.target.closest('.lv'); if (!b || b.classList.contains('locked')) return; openLevel(b.dataset.t, +b.dataset.i); });
+function openLevel(tk, i){
+  const t = T.TRACKS.find(x => x.key === tk), L = t.levels[i], st = lvState(tk, i);
+  chosen = { tk, i };
+  $('lvTrack').textContent = `${t.name} · level ${i + 1}`;
+  $('lvTitle').textContent = L.name; $('lvAbout').textContent = L.about;
+  $('lvInfo').innerHTML = `<span><b>${L.count}</b> drills · pass with <b>${L.pass}</b></span>` + (st ? `<span>Best <b>${st.best}/${L.count}</b> ${starRow(st.stars)}</span>` : '');
+  $('lvTip').textContent = L.tip;
+  open('lvSheet');
+}
+$('lvGo').addEventListener('click', () => { close(); startLevel(chosen.tk, chosen.i); });
+$('lvCancel').addEventListener('click', close);
+function open(id){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = s.id !== id); }
+function close(){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = true); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'resSheet') close(); }));
+$('setBtn').addEventListener('click', () => { $('setCoords').checked = settings.coords; $('setReset').textContent = 'Reset all progress'; open('setSheet'); });
+$('setClose').addEventListener('click', close);
+$('setCoords').addEventListener('change', e => { settings.coords = e.target.checked; store.set('go-trainer-settings', settings); if (D) render(); });
+let resetArmed = null;
+$('setReset').addEventListener('click', () => {
+  const b = $('setReset');
+  if (resetArmed){ clearTimeout(resetArmed); resetArmed = null; progress = {}; store.set('go-trainer-progress', progress); b.textContent = 'Progress reset'; drawMap(); return; }
+  b.textContent = 'Tap again to reset'; resetArmed = setTimeout(() => { resetArmed = null; b.textContent = 'Reset all progress'; }, 3000);
+});
+
+// ---------- a run through a level ----------
+let D = null;  // { tk, li, L, items, k, results[], tries[], ctl, done, helped, busy, t0 }
+function startLevel(tk, li){
+  const L = levelsOf(tk)[li];
+  D = { tk, li, L, items: T.makeSet(tk, li, (Date.now() ^ (Math.random() * 1e9)) >>> 0, seen), k: 0, results: [], tries: [], ctl: null, done: false, helped: false, busy: false, t0: Date.now() };
+  if (L.kind === 'pz'){ D.items.forEach(it => seen.add(it.p.id)); seen = new Set([...seen].slice(-300)); store.set('go-trainer-seen', [...seen]); }
+  D.L = Object.assign({}, L, { count: D.items.length, pass: Math.min(L.pass, D.items.length) });
+  $('mapView').hidden = true; $('drillView').hidden = false; $('dName').textContent = L.name;
+  startItem(0);
+}
+function backToMap(){ D = null; close(); $('drillView').hidden = true; $('mapView').hidden = false; drawMap(); }
+function startItem(k){
+  D.k = k; D.helped = false; D.done = false; D.busy = false; $('fb').hidden = true;
+  const item = D.items[k]; D.ctl = CTL[item.kind](item);
+  render(); drawDots();
+}
+function drawDots(){ $('dDots').innerHTML = D.items.map((_, k) => `<i class="${D.results[k] || (k === D.k ? 'cur' : '')}"${!D.results[k] && D.tries[k] ? ' style="border-color:var(--present)"' : ''}></i>`).join(''); }
+const TRIES = 3;
+const triesUsed = () => D.tries[D.k] || 0;
+// A wrong attempt: explain it, then another go or the answer. Returns true if the learner gets another go.
+function wrong(title, why, final, retry, tries = TRIES){
+  if (D.done) return false;
+  D.tries[D.k] = triesUsed() + 1;
+  const left = tries - D.tries[D.k];
+  try{ navigator.vibrate && navigator.vibrate(60); }catch(_){}
+  if (left <= 0){ D.busy = false; final(why); return false; }
+  D.busy = true;
+  const fb = $('fb');
+  fb.className = 'fb again';
+  fb.innerHTML = `<h3>${title}</h3><p>${why}</p><div class="row"><span class="left">${left === 1 ? 'One try left' : 'Two tries left'}</span><button class="btn" id="fbShow" type="button">Show the answer</button><button class="btn primary" id="fbRetry" type="button">Try again</button></div>`;
+  fb.hidden = false; drawDots(); render();
+  $('fbRetry').onclick = () => { fb.hidden = true; D.busy = false; retry(); render(); };
+  $('fbShow').onclick = () => { fb.hidden = true; D.busy = false; final(why); };
+  return true;
+}
+function resolve(ok, title, body){
+  if (D.done) return;
+  D.done = true;
+  const res = ok ? (D.helped ? 'help' : triesUsed() ? 'retry' : 'ok') : 'miss';
+  if (res === 'retry' && (!title || title === 'Correct')) title = `Correct on try ${triesUsed() + 1}`;
+  D.results[D.k] = res; drawDots();
+  const last = D.k === D.items.length - 1, fb = $('fb');
+  fb.className = 'fb ' + res;
+  fb.innerHTML = `<h3>${title || (res === 'ok' ? 'Correct' : res === 'help' ? 'Solved with a hint' : 'Not quite')}</h3>${body ? `<p>${body}</p>` : ''}<div class="row"><button class="btn primary" id="fbNext" type="button">${last ? 'See results' : 'Next'}</button></div>`;
+  fb.hidden = false;
+  $('fbNext').onclick = () => last ? finishLevel() : startItem(D.k + 1);
+  try{ navigator.vibrate && navigator.vibrate(ok ? 20 : 60); }catch(_){}
+  render();
+}
+function finishLevel(){
+  const L = D.L, first = D.results.filter(r => r === 'ok').length, score = first + D.results.filter(r => r === 'retry').length, stars = T.stars(L, score, first);
+  const p = (progress[D.tk] ||= {}), prev = p[D.li] || { stars: 0, best: 0, plays: 0 }, firstPass = stars > 0 && !(prev.stars > 0);
+  p[D.li] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, score), plays: prev.plays + 1 };
+  store.set('go-trainer-progress', progress);
+  const t = T.TRACKS.find(x => x.key === D.tk), nextL = t.levels[D.li + 1];
+  $('resTitle').textContent = stars ? (stars === 3 ? 'Perfect!' : 'Level passed') : 'Not this time';
+  $('resSub').textContent = stars ? (firstPass && nextL ? `${nextL.name} is now open.` : nextL ? '' : `That's the last level of ${t.name}.`) : `You need ${L.pass} of ${L.count} to pass. Each try brings new positions.`;
+  if (score > first) $('resSub').textContent += ` ${T.plural(score - first, 'drill')} solved on a second or third try${stars === 2 && score === L.count ? ': three stars need every one first time' : ''}.`;
+  $('resStars').innerHTML = starRow(stars, true);
+  const secs = Math.round((Date.now() - D.t0) / 1000);
+  $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${L.count}</b></div><div><span class="label">Best</span><b>${p[D.li].best}/${L.count}</b></div><div><span class="label">Time</span><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></div>`;
+  const btns = [];
+  if (stars && nextL) btns.push('<button class="btn primary" type="button" data-a="next">Next level</button>');
+  btns.push(`<button class="btn${stars && nextL ? '' : ' primary'}" type="button" data-a="again">Try again</button>`, '<button class="btn" type="button" data-a="map">All drills</button>');
+  $('resRow').innerHTML = btns.join('');
+  if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'gtrainer');
+  open('resSheet');
+}
+$('resRow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const a = b.dataset.a, { tk, li } = D;
+  if (a === 'next'){ close(); startLevel(tk, li + 1); } else if (a === 'again'){ close(); startLevel(tk, li); } else backToMap();
+});
+
+// ---------- the board ----------
+const CELL = 10, X = (x, P) => P + x * CELL;
+function render(){
+  if (!D || !D.ctl) return;
+  const c = D.ctl, v = c.view(), b = v.board, N = b.N, P = settings.coords ? 10 : 6, size = (N - 1) * CELL + 2 * P, svg = $('board');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  let h = `<rect class="bg" x="0" y="0" width="${size}" height="${size}" rx="2"/>`;
+  for (const s of v.zone || []){ const [x, y] = b.xy(s); h += `<rect class="zone" x="${X(x, P) - CELL / 2}" y="${X(y, P) - CELL / 2}" width="${CELL}" height="${CELL}"/>`; }
+  for (let i = 0; i < N; i++) h += `<line class="ln" x1="${X(0, P)}" y1="${X(i, P)}" x2="${X(N - 1, P)}" y2="${X(i, P)}"/><line class="ln" x1="${X(i, P)}" y1="${X(0, P)}" x2="${X(i, P)}" y2="${X(N - 1, P)}"/>`;
+  const hs = N === 9 ? [[2, 2], [6, 2], [2, 6], [6, 6], [4, 4]] : N === 7 ? [[3, 3]] : [];
+  for (const [x, y] of hs) h += `<circle class="hoshi" cx="${X(x, P)}" cy="${X(y, P)}" r=".9"/>`;
+  if (settings.coords) for (let i = 0; i < N; i++) h += `<text class="crd" x="${X(i, P)}" y="${P / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${X(i, P)}" y="${size - P / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${P / 2.8}" y="${X(i, P)}">${N - i}</text><text class="crd" x="${size - P / 2.8}" y="${X(i, P)}">${N - i}</text>`;
+  for (const p of b.points){
+    const [x, y] = b.xy(p), s = b.c[p];
+    if (s === BLACK || s === WHITE){
+      h += `<circle class="${s === BLACK ? 'sb' : 'sw'}" cx="${X(x, P)}" cy="${X(y, P)}" r="4.6"/>`;
+      if (v.nums && v.nums.has(p)) h += `<text class="num ${s === BLACK ? 'onb' : 'onw'}" x="${X(x, P)}" y="${X(y, P) + .2}">${v.nums.get(p)}</text>`;
+      else if (v.marked && v.marked.has(p)) h += `<rect class="tm" x="${X(x, P) - 1.6}" y="${X(y, P) - 1.6}" width="3.2" height="3.2" style="stroke:${s === BLACK ? 'var(--st-w)' : 'var(--mark)'}"/>`;
+    } else if (v.own && v.own[p]) h += `<rect class="${v.own[p] === BLACK ? 'ownb' : 'ownw'}" x="${X(x, P) - 1.7}" y="${X(y, P) - 1.7}" width="3.4" height="3.4"/>`;
+  }
+  if (v.last){ const [x, y] = b.xy(v.last); h += `<circle class="${b.c[v.last] === BLACK ? 'lastb' : 'lastw'}" cx="${X(x, P)}" cy="${X(y, P)}" r="2.1"/>`; }
+  for (const [p, cls] of v.rings || []){ const [x, y] = b.xy(p); h += `<circle class="ring ${cls}" cx="${X(x, P)}" cy="${X(y, P)}" r="${cls === 'ask' ? 4.4 : 5.3}"/>`; }
+  for (const [p, cls] of v.dots || []){ const [x, y] = b.xy(p); h += `<circle class="dot ${cls || ''}" cx="${X(x, P)}" cy="${X(y, P)}" r="1.9"/>`; }
+  svg.innerHTML = h;
+  const pr = c.prompt();
+  $('pSide').className = 'side' + (pr.side === WHITE ? ' w' : pr.side === BLACK ? '' : ' none');
+  $('pTitle').textContent = pr.title; $('pSub').innerHTML = pr.sub || '';
+  // buttons: the controller's own (answers) and the hint
+  const btns = (c.buttons ? c.buttons() : []).map(([id, label, cls]) => `<button class="btn ${cls || ''}" type="button" data-b="${id}"${D.busy || D.done ? ' disabled' : ''}>${label}</button>`);
+  if (c.hint && !D.done) btns.push(`<button class="tool" type="button" data-b="hint"${D.busy || D.helped ? ' disabled' : ''}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>Hint</button>`);
+  $('act').innerHTML = btns.join('');
+}
+$('act').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !D || D.busy || D.done) return;
+  if (b.dataset.b === 'hint'){ D.helped = true; D.ctl.hint(); render(); return; }
+  D.ctl.press && D.ctl.press(b.dataset.b);
+});
+function pointAt(e){
+  const v = D.ctl.view(), b = v.board, P = settings.coords ? 10 : 6, svg = $('board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(svg.getScreenCTM().inverse()), x = Math.round((q.x - P) / CELL), y = Math.round((q.y - P) / CELL);
+  if (x < 0 || y < 0 || x >= b.N || y >= b.N || Math.hypot(q.x - X(x, P), q.y - X(y, P)) > CELL * .62) return -1;
+  return b.pt(x, y);
+}
+$('board').addEventListener('pointerdown', e => {
+  if (!D || D.busy || D.done || !D.ctl.tap) return;
+  const p = pointAt(e); if (p < 0) return;
+  D.ctl.tap(p);
+});
+function showBusy(t){ $('busy').hidden = !t; if (t) $('busyText').textContent = t; }
+
+// ---------- drills ----------
+const colourName = c => c === 'B' ? 'black' : 'white';
+const CTL = {
+  // tap every liberty of the marked stones
+  libs(it){
+    const b = T.boardOf(it.N, it.stones), tgt = b.parse(it.target), marked = new Set(b.stones(tgt)), libs = new Set(it.libs.map(s => b.parse(s)));
+    const c = { found: new Set(), bad: null, reveal: false };
+    const isDiag = p => [...marked].some(s => { const [x, y] = b.xy(s), [a, d] = b.xy(p); return Math.abs(x - a) === 1 && Math.abs(y - d) === 1; });
+    return Object.assign(c, {
+      prompt: () => ({ title: `Tap every liberty`, sub: D.done ? '' : `of the marked ${colourName(it.color)} ${it.size === 1 ? 'stone' : 'stones'}: <b>${c.found.size}</b> of ${libs.size} found`, side: it.color === 'B' ? BLACK : WHITE }),
+      view: () => ({ board: b, marked, dots: [...[...c.found].map(p => [p, '']), ...(c.bad ? [[c.bad, 'bad']] : []), ...(c.reveal ? [...libs].filter(p => !c.found.has(p)).map(p => [p, 'miss']) : [])] }),
+      tap(p){
+        if (c.found.has(p)) return;
+        if (libs.has(p)){ c.found.add(p); render(); if (c.found.size === libs.size) resolve(true, 'All found', `The marked ${it.size === 1 ? 'stone has' : 'stones have'} ${T.plural(libs.size, 'liberty')}. ${libs.size === 1 ? `With only one left ${it.size === 1 ? 'it is' : 'they are'} in atari: one more ${it.color === 'B' ? 'white' : 'black'} move captures ${it.size === 1 ? 'it' : 'them'}.` : 'Each enemy stone placed on a liberty takes one away; when none are left, the stones are captured.'}`); return; }
+        const why = b.c[p] !== EMPTY ? `${b.name(p)} has a stone on it. Liberties are empty points.`
+          : isDiag(p) ? `${b.name(p)} only touches the marked stones diagonally. Liberties are the empty points directly next to them along the lines.`
+          : `${b.name(p)} isn't next to the marked stones.`;
+        c.bad = p; render();
+        wrong('Not a liberty', why, w => { c.bad = null; c.reveal = true; resolve(false, 'The liberties', `${w} The ringed points you didn't find are liberties too.`); }, () => { c.bad = null; });
+      },
+    });
+  },
+  // is the marked point a legal move? (one try: the explanation would give the answer away)
+  legal(it){
+    const b = T.boardOf(it.N, it.stones); let last = null;
+    if (it.play){ b.turn = WHITE; b.seen = new Set([b.key()]); last = b.parse(it.play); b.play(last); }
+    const pt = b.parse(it.point);
+    const c = { picked: null };
+    return Object.assign(c, {
+      prompt: () => ({ title: `Can Black play at ${it.point}?`, sub: it.play ? `White just played ${it.play} (ringed).` : 'The point with the blue ring.', side: BLACK }),
+      view: () => ({ board: b, last, rings: [[pt, D.done ? (c.picked === it.answer ? 'good' : 'bad') : 'ask']] }),
+      buttons: () => [['yes', 'Yes, it\'s legal', 'ans'], ['no', 'No, it isn\'t', 'ans']],
+      press(id){
+        c.picked = id === 'yes';
+        const ok = c.picked === it.answer;
+        resolve(ok, ok ? (it.answer ? 'Yes, it\'s legal' : 'Right, it isn\'t') : (it.answer ? 'It is legal' : 'It isn\'t legal'), it.why);
+      },
+    });
+  },
+  // count Black's area
+  count(it){
+    const b = T.boardOf(it.N, it.stones); b.komi = 0;
+    const own = b.score(new Set()).owner;
+    const c = { gone: new Set(), show: false };
+    const explain = () => `Black has ${it.stonesB} stones and surrounds ${it.black - it.stonesB} empty points: <b>${it.black}</b>. White has ${it.stonesW} stones and ${it.white - it.stonesW} empty points: ${it.white}. With komi of ${it.komi} White has ${it.white + it.komi}, so ${it.black > it.white + it.komi ? `Black wins by ${it.black - it.white - it.komi}` : `White wins by ${it.white + it.komi - it.black}`}.`;
+    return Object.assign(c, {
+      prompt: () => ({ title: 'How many points does Black have?', sub: 'Stones plus the empty points Black surrounds.', side: BLACK }),
+      view: () => ({ board: b, own: c.show ? own : null }),
+      buttons: () => it.options.map(n => [String(n), String(n), 'opt' + (c.gone.has(n) ? ' gone' : '')]),
+      press(id){
+        const n = +id;
+        if (n === it.answer){ c.show = true; return resolve(true, 'Correct', explain()); }
+        const why = n === it.stonesB ? 'That counts only Black\'s stones. Add the empty points inside Black\'s wall.'
+          : n === it.white ? 'That\'s White\'s count. Count the black side of the board.'
+          : n < it.answer ? 'Too few. Count every black stone and every empty point on Black\'s side of the wall.' : 'Too many. Only empty points surrounded by black stones count for Black.';
+        c.gone.add(n); render();
+        wrong('Not quite', why, () => { c.show = true; resolve(false, `Black has ${it.answer}`, explain()); }, () => {});
+      },
+    });
+  },
+  // a solver-checked problem
+  pz(it){
+    const p = it.p, c = { moves: [], wrongAt: null, hintAt: null, line: false };
+    const start = GoProblem.setup(p, []).b, marked = new Set(start.stones(start.parse(p.target))), zone = p.region ? p.region.map(s => start.parse(s)) : null;
+    let b = start;
+    const build = () => { b = GoProblem.setup(p, c.wrongAt ? c.moves.concat(c.wrongAt) : c.moves).b; };
+    const nums = () => { const m = new Map(), t = GoProblem.setup(p, []).b; c.moves.concat(c.wrongAt || []).forEach((s, k) => { if (s === 'pass') return; const q = t.parse(s); t.play(q); m.set(q, k + 1); }); return m; };
+    const theme = () => GoProblem.THEMES[p.theme] || ['', ''];
+    async function showLine(title, pre){
+      D.busy = true; c.wrongAt = null; c.hintAt = null; c.moves = []; build(); render();
+      for (const m of p.line){ await wait(650); if (!D || D.ctl !== c) return; c.moves.push(m); build(); render(); }
+      D.busy = false;
+      resolve(false, title, `${pre ? pre + ' ' : ''}${theme()[1]} The first move is ${p.answers.join(' or ')}.`);
+    }
+    return Object.assign(c, {
+      prompt: () => ({ title: D.done ? (D.results[D.k] === 'miss' ? 'The solution' : 'Solved') : 'Black to play', sub: D.done ? `${theme()[0]}` : GoProblem.GOALS[p.goal], side: BLACK }),
+      view: () => ({ board: b, marked: D.done ? null : marked, zone: D.done ? null : zone, nums: nums(), rings: [...(c.wrongAt ? [[b.parse(c.wrongAt[0]), 'bad']] : []), ...(c.hintAt ? [[b.parse(c.hintAt), 'hint']] : [])] }),
+      async tap(q){
+        if (b.c[q] !== EMPTY) return;
+        if (!b.legal(q)) return;
+        const mv = b.name(q);
+        D.busy = true; c.hintAt = null; b.play(q); render(); showBusy('Checking…');
+        const r = await ask({ type: 'judge', problem: p, moves: c.moves, move: mv });
+        showBusy(null);
+        if (!D || D.ctl !== c) return;
+        if (r.status === 'solved'){
+          c.moves.push(mv); build(); D.busy = false;
+          const how = { captured: 'The stones are captured.', caught: 'The stones are caught: whatever White does, they can\'t escape.', dead: 'The group is dead: White can\'t make two eyes.', alive: 'Your group lives.', safe: 'The stones are safe.' }[r.how] || '';
+          return resolve(true, 'Correct', `${how} ${theme()[1]}`);
+        }
+        if (r.status === 'good'){
+          c.moves.push(mv); await wait(400); if (!D || D.ctl !== c) return;
+          c.moves.push(r.reply); build(); D.busy = false; render(); return;
+        }
+        if (r.status !== 'wrong'){ build(); D.busy = false; render(); return; }
+        await wait(350); if (!D || D.ctl !== c) return;
+        c.wrongAt = r.refute && r.refute !== 'pass' ? [mv, r.refute] : [mv]; build(); render();
+        wrong('Not quite', r.why, w => showLine('Not quite', w), () => { c.wrongAt = null; build(); });
+      },
+      async hint(){
+        D.busy = true; render();
+        const r = await ask({ type: 'hint', problem: p, moves: c.moves });
+        D.busy = false; c.hintAt = r.move || null; render();
+      },
+    });
+  },
+};
+
+// ---------- boot ----------
+drawMap();
+GameNav.init({ id: 'gtrainer', note: () => D ? 'Leaving now ends this level.' : '',
+  actions: () => [
+    D && { icon: 'restart', label: 'Restart this level', note: 'New positions, score back to zero.', run: () => startLevel(D.tk, D.li) },
+    D && { icon: 'mode', label: 'All drills', note: 'Back to the list of levels.', run: backToMap },
+  ] });
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

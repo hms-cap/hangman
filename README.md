@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Go, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -120,6 +120,22 @@ Short drills that build the skills you use to calculate in real games, plus a be
 - **Tutor mode:** each of your moves is graded (Best, Good, Inaccuracy, Mistake, Blunder) against the computer's search, with the reason in plain words: stones left in atari, a group in atari that could have escaped, a missed capture, filling your own eye, a small edge move early on, a slow move next to a safe group, or the winning chances after your move and the better one. Before you move it rings your stones in atari and enemy stones you can capture. Show the better move, or take yours back. Tutor games don't count toward your record
 - Your record against each strength on each board size
 
+### Go Problems
+Tsumego on a 9 × 9 board, Black to play: capture (atari, ladders, nets, throw-ins, snapbacks), save stones, kill, and live.
+- Every problem is built and checked by a solver (`go-solver.js`): the listed first moves are the only ones that work, moving second would fail, and no ko is involved
+- Any correct move is accepted, not just the stored one: the solver judges each move as you play it and answers with White's strongest defence
+- A wrong move shows White's refutation and says why it fails (the stones escape with three liberties, White captures your stone, White makes two eyes…); three tries per problem
+- **Daily** problem (No. 1 = 20 Oct 2026), the same for everyone, easiest on Monday and hardest on Sunday; streaks, share and a countdown. It isn't part of the home page streak
+- **Practice**: rated problems picked near your rating (Elo; a first-try solve without a hint counts as a win), filters by kind, stats by kind
+- Hint, show the solution (played out move by move), numbered moves on the board
+
+### Go Trainer
+A course from the rules to life and death, 18 levels in four groups; pass a level to open the next, with up to three stars.
+- **Learn the rules:** liberties (tap them all), capture, escape from atari, where you may play (suicide, captures that only look like suicide, ko), and counting a finished game by area
+- **Capturing techniques:** chasing, ladders, nets, throw-ins, snapbacks, and a mix
+- **Saving stones** and **Life and death:** killing and living in small and bigger corners, then a mix
+- Every drill allows three tries and explains each wrong answer; the technique levels use the checked problems from Go Problems
+
 ### Word Trail
 A letter-grid word search in the style of Squares.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
@@ -192,6 +208,9 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
 | `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
+| `go-solver.js`, `go-problem.js`, `go-problems-worker.js` | Capture and life-and-death reading; judging a move in a problem and explaining wrong ones; worker (`node tools/test-go-solver.js`) |
+| `go-problems.html`, `go-problems-data.js`, `go-daily.js` | Go Problems page; the problem set, made by `node tools/generate-go-problems.js` (resumable; rechecks stored problems); daily schedule (`node tools/test-go-problems.js` plays every problem through) |
+| `go-trainer.html`, `go-trainer-core.js` | Go Trainer page; the course and its drills (`node tools/test-go-trainer.js`) |
 | `chess-trainer.html`, `chess-trainer-core.js`, `chess-trainer-data.js`, `chess-openings.js` (opening lines, ideas and traps), `chess-endgames.js`, `chess-endgames-worker.js` | Chess Trainer page; drill generators and level map; engine-checked fork, pin, skewer and combination positions (`tools/generate-chess-trainer.js`); exact K+Q, K+R and K+P vs K tables built on first use (about a second) in a worker |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |

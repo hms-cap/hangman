@@ -17,7 +17,7 @@ function solve(b0, opts) {
   const b = b0.clone();
   const path = new Set([b.key()]);
   const win = search(b, S, opts.depth || 20, path);
-  return { win, ko: S.ko, nodes: S.used, aborted: S.aborted };
+  return { win, ko: !!S.ko, dko: !!S.dko, koSeen: !!S.koSeen, nodes: S.used, aborted: S.aborted };
 }
 const captured = (b, S) => b.c[S.target] !== (other(S.attacker));
 function movesFor(b, S, side, ply = 0) {
@@ -41,6 +41,8 @@ function movesFor(b, S, side, ply = 0) {
       libs.forEach(add);
       // capture an attacking stone that is in atari next to the target, or one of its neighbours
       for (const s of b.stones(t)) for (const d of b.DIRS) { const q = s + d; if (b.c[q] === S.attacker && b.inAtari(b.chain[q])) add(b.atariLib(b.chain[q])); }
+      // counter-atari: put a short-of-liberties attacking chain next to the target in atari
+      for (const s of b.stones(t)) for (const d of b.DIRS) { const q = s + d; if (b.c[q] === S.attacker && b.libCount(q) === 2) b.libs(q).forEach(add); }
     }
   }
   // order: for the attacker, moves that take liberties and leave the target shortest of them first
@@ -81,12 +83,11 @@ function search(b, S, depth, path, ply = 0) {
     const pass = b.clone(); pass.turn = other(side); pass.lastMove = 0; pass.ko = 0;
     const options = moves.map(p => ['m', p]).concat([['pass']]);
     for (const [kind, p] of options) {
-      let t;
-      if (kind === 'pass') t = pass;
-      else { t = b.clone(); const n = t._play(p, side); t.turn = other(side); t.lastMove = p; if (n === 1 && t.ko) S.koSeen = true; }
+      let t = pass, n = 0;
+      if (kind !== 'pass') { t = b.clone(); n = t._play(p, side); t.turn = other(side); t.lastMove = p; if (n === 1 && t.ko) S.koSeen = true; }
       const k = t.key(); if (kind !== 'pass' && path.has(k)) continue;
       path.add(k); const r = search(t, S, depth - 1, path, ply + 1); path.delete(k);
-      if (!r) { result = false; break; }
+      if (!r) { result = false; if (n === 1 && t.ko) S.dko = true; break; }
       if (S.aborted) return false;
     }
   }
