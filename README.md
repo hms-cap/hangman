@@ -4,6 +4,8 @@ Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Go, Go Problems, Go Trainer
 
 **Play:** https://hms-cap.github.io/hangman/
 
+The home page has three tabs: **Chess** (Chess Puzzles daily, Chess, Chess Trainer), **Go** (Go Problems daily, Go, Go Trainer) and **More** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara). It reopens on the last tab you used (or `#chess`, `#go`, `#more` in the address), and a dot marks a tab whose daily puzzle is still waiting.
+
 ## Install
 **iPhone and iPad**
 1. Open the link above in **Safari**.
