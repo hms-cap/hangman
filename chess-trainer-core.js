@@ -403,6 +403,22 @@ const TRACKS = [
     { name: 'Promotion & en passant', kind: 'special', count: 6, pass: 5, p: {}, about: 'A pawn reaching the far row becomes a queen. And when a pawn steps two squares past an enemy pawn, that pawn may capture it as if it had moved one: en passant.',
       tip: 'En passant is only allowed straight away, on the very next move. In promotion you may choose any piece, but a queen is almost always best.' },
   ] },
+  { key: 'openings', name: 'Openings', blurb: 'The main openings for both colours: play the moves from memory, learn why each move is played, punish the classic traps.', levels: [
+    { name: 'Name the opening', kind: 'oname', count: 10, pass: 8, clock: 20, p: { deep: false }, about: 'A few moves in. Which opening is it?',
+      tip: 'Look at the first moves: 1.e4 e5 leads to the open games (Italian, Ruy Lopez, Scotch), 1.e4 with anything else is a defence (Sicilian, French, Caro-Kann), 1.d4 d5 c4 is a Queen\'s Gambit, 1.d4 Nf6 is an Indian defence.' },
+    { name: '1.e4 as White', kind: 'oline', count: 6, pass: 4, p: { lvl: 'e4w' }, about: 'Play White\'s moves in the Italian, Ruy Lopez, Scotch and gambits, and against the Sicilian, French and Caro-Kann. Each move comes with its idea.',
+      tip: 'Every move has a job: claim the centre, develop a piece with a threat, castle, put a rook on an open file. Use Hint to see the idea of the next move without being told the move.' },
+    { name: 'Facing 1.e4 as Black', kind: 'oline', count: 6, pass: 4, p: { lvl: 'e4b' }, about: 'Play Black in the Sicilian, French, Caro-Kann, Scandinavian, Pirc, Alekhine, Petrov, Two Knights and Marshall.',
+      tip: 'Black\'s first question is how to fight for the centre: directly with ...e5, from the side with ...c5, or with a solid ...e6/...c6 and ...d5.' },
+    { name: '1.d4 and flank openings', kind: 'oline', count: 6, pass: 4, p: { lvl: 'd4w' }, about: 'Play White in the Queen\'s Gambit, London, Catalan, English and Réti.',
+      tip: 'Queen\'s pawn openings are about the c-pawn: c4 attacks d5 from the side, and the bishops often find long diagonals.' },
+    { name: 'Facing 1.d4 as Black', kind: 'oline', count: 6, pass: 4, p: { lvl: 'd4b' }, about: 'Play Black in the Slav, Queen\'s Gambit Declined, King\'s Indian, Nimzo-Indian, Grünfeld, Queen\'s Indian and Dutch.',
+      tip: 'Against 1.d4, ...d5 holds the centre with pawns; ...Nf6 and a fianchetto fight for it with pieces and hit back later.' },
+    { name: 'Opening traps', kind: 'trap', count: 8, pass: 6, clock: 60, p: {}, about: 'Your opponent has just made a famous mistake. Find the move that punishes it: Legal\'s mate, the Elephant trap, the Lasker trap and more.',
+      tip: 'The trap usually works because something is overloaded or pinned, or the king is short of squares. Look for checks first.' },
+    { name: 'Name the variation', kind: 'oname', count: 10, pass: 8, clock: 25, p: { deep: true }, about: 'Deeper into the opening: which variation is it?',
+      tip: 'Variations are named after their key moves: ...a6 in the Najdorf, ...g6 in the Dragon, ...Bb4 in the Winawer, d5 by Black in the Grünfeld.' },
+  ] },
   { key: 'vision', name: 'Knight & board vision', blurb: 'See where pieces go and what they guard, without moving them.', levels: [
     { name: 'Knight hops', kind: 'kpath', count: 10, pass: 8, clock: 20, p: { min: 2, max: 3 }, about: 'Take the knight to the flag in the fewest moves.' },
     { name: 'Long routes', kind: 'kpath', count: 10, pass: 8, clock: 25, p: { min: 4, max: 6 }, about: 'Longer trips, including corner to corner. Count the moves before you start.' },
@@ -609,6 +625,55 @@ function genEg(p, r) {
 }
 
 // Mates come from the puzzle set (verified with an exact solver); `part` splits mate-in-2 into easier and harder halves by rating
+// ---------- openings ----------
+const OPENINGS = () => root.CHESS_OPENINGS || (typeof require !== 'undefined' ? (() => { const fs = require('fs'), vm = require('vm'), c = { window: {} }; vm.runInNewContext(fs.readFileSync(__dirname + '/chess-openings.js', 'utf8'), c); return c.window.CHESS_OPENINGS; })() : null);
+const stripSan = s => s.replace(/[+#!?]/g, '');
+// Play a list of moves in standard notation from a position: [{ uci, san }] (throws on an illegal move)
+function playSans(fen, sans) {
+  const pos = new Position(fen || C.START), out = [];
+  for (const s of sans) {
+    const m = pos.legal().find(x => stripSan(pos.san(x)) === stripSan(s));
+    if (!m) throw new Error(`Illegal move ${s} after ${out.map(x => x.san).join(' ')}`);
+    out.push({ uci: Position.uci(m), san: pos.san(m) }); pos.make(m);
+  }
+  return { list: out, fen: pos.fen() };
+}
+const moveText = sans => sans.map((s, i) => (i % 2 ? '' : (i / 2 + 1) + '.') + s).join(' ');
+let OCACHE = null;
+function openingData() {
+  if (OCACHE) return OCACHE;
+  const O = OPENINGS(); if (!O) return null;
+  const lines = O.lines.map((L, k) => { const sans = L.moves.split(' '), pl = playSans(null, sans);
+    return Object.assign({}, L, { id: k, full: L.fam + ': ' + L.name, sans: pl.list.map(x => x.san), ucis: pl.list.map(x => x.uci) }); });
+  const traps = O.traps.map(t => { const set = playSans(null, t.moves.split(' ')), win = playSans(set.fen, t.win.split(' '));
+    return Object.assign({}, t, { fen: set.fen, before: set.list.map(x => x.san), last: set.list[set.list.length - 1].uci, line: win.list.map(x => x.uci), sansWin: win.list.map(x => x.san) }); });
+  return (OCACHE = { families: O.families, lines, traps });
+}
+// Name the opening: the position after the moves that define the family (or, deep, the whole line) and four names to pick from
+function openingNameItems(p, r) {
+  const D = openingData(), out = [], seenPos = new Set();
+  const cands = [];
+  for (const L of D.lines) {
+    const n = p.deep ? L.sans.length : L.famPly, sans = L.sans.slice(0, n), key = sans.join(' ');
+    if (seenPos.has(key)) continue; seenPos.add(key);
+    const answer = p.deep ? L.full : L.fam;
+    // a position that also belongs to a different answer can't be asked
+    if (D.lines.some(M => (p.deep ? M.full : M.fam) !== answer && M.sans.slice(0, n).join(' ') === key)) continue;
+    cands.push({ L, sans, answer });
+  }
+  for (const c of shuffle(cands, r)) {
+    const all = [...new Set(D.lines.map(M => p.deep ? M.full : M.fam))].filter(x => x !== c.answer);
+    // the closest names first: same family (for variations), or the same first move
+    const near = all.filter(x => p.deep ? x.startsWith(c.L.fam + ':') : D.lines.some(M => M.fam === x && M.sans[0] === c.sans[0]));
+    const far = all.filter(x => !near.includes(x));
+    const pickN = (arr, n) => shuffle(arr.slice(), r).slice(0, n);
+    const dis = pickN(near, 2); dis.push(...pickN(far.filter(x => !dis.includes(x)), 3 - dis.length));
+    const fen = playSans(null, c.sans).fen, last = playSans(null, c.sans).list.pop();
+    out.push({ kind: 'oname', deep: !!p.deep, fen, last: last.uci, moves: moveText(c.sans), answer: c.answer, options: shuffle([c.answer].concat(dis), r), fam: c.L.fam, about: D.families[c.L.fam], line: c.L });
+  }
+  return out;
+}
+
 function mateItems(p) {
   const all = PUZZLES().filter(x => x[3].split(',')[0] === 'mateIn' + p.n).sort((a, b) => a[2] - b[2]);
   const half = Math.floor(all.length / 2);
@@ -624,6 +689,12 @@ function tacticItems(p) {
 // A fresh set of drills for a level. `seen` (optional): keys of fixed items played recently, to avoid repeats.
 function makeSet(trackKey, levelIdx, seed, seen) {
   const L = TRACKS.find(t => t.key === trackKey).levels[levelIdx], r = rng(seed), out = [];
+  if (L.kind === 'oline') {
+    const pool = openingData().lines.filter(x => x.lvl === L.p.lvl).map(x => Object.assign({ kind: 'oline' }, x));
+    return shuffle(pool, r).slice(0, L.count);
+  }
+  if (L.kind === 'oname') return openingNameItems(L.p, r).slice(0, L.count);
+  if (L.kind === 'trap') return shuffle(openingData().traps.map(t => Object.assign({ kind: 'trap', set: 'trap' }, t)), r).slice(0, L.count);
   if (L.kind === 'mate' || L.kind === 'tactic') {
     const pool = L.kind === 'mate' ? mateItems(L.p) : tacticItems(L.p);
     const fresh = pool.filter(x => !(seen && seen.has(x.fen)));
@@ -657,7 +728,7 @@ function makeSet(trackKey, levelIdx, seed, seen) {
 // Stars for a finished set: 1 = passed, 2 = at most one miss, 3 = perfect
 function stars(L, score) { return score < L.pass ? 0 : score === L.count ? 3 : score >= L.count - 1 ? 2 : 1; }
 
-const api = { TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
+const api = { openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
   squareFacts, egKey, egValue, egMoves, routeMoves, routeWhy, routeSolve, genRoute, genPawnRoute, checkers, attacks, escapeWay, isCheckMove, isMateMove,
   genCheck, genEscape, genMate1, genCastle, genSpecial, to88, to64, nm64, KNIGHT, PTS, NAME, plural, genCount, genSquare, genEg, genLoose, genKpath, genGrab };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ChessTrainer = api;

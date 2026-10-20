@@ -148,5 +148,38 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
   }
   check('engine agrees with stored first moves (spot check)', bad === 0, `${n - bad}/${n}`);
 }
+// ---- openings ----
+{
+  let O; try { O = T.openingData(); } catch (e) { check('opening lines and traps are all legal moves', false, e.message); }
+  if (O) {
+    check('opening lines and traps are all legal moves', true, `${O.lines.length} lines, ${O.traps.length} traps`);
+    const badWhy = O.lines.filter(L => L.why.length !== L.ucis.filter((_, k) => (k % 2 === 0) === (L.side === 'w')).length || L.why.some(w => !w || /undefined/.test(w)));
+    check('every learner move in a line has its idea', !badWhy.length, badWhy.map(L => L.full).join(', '));
+    check('every line belongs to a described family', O.lines.every(L => O.families[L.fam]));
+    // no book move for the learner simply loses material (engine, 3 plies)
+    const weak = [];
+    for (const L of O.lines) { const pos = new Position(); L.ucis.forEach((u, k) => { const m = pos.fromUci(u);
+      if ((k % 2 === 0) === (L.side === 'w')) { const sm = C.scoreMoves(pos, 3), mine = sm.find(x => x.move === m); if (sm[0].score - mine.score > 160) weak.push(`${L.full} ${L.sans[k]}`); }
+      pos.make(m); }); }
+    check('no learner book move loses material', !weak.length, weak.join(', '));
+    // each trap: the punishing move is the engine's choice and the line ends in mate or clearly ahead
+    const badTrap = [];
+    for (const t of O.traps) {
+      const pos = new Position(t.fen), sm = C.scoreMoves(pos, 5), first = pos.fromUci(t.line[0]);
+      const p2 = new Position(t.fen); t.line.forEach(u => p2.make(p2.fromUci(u)));
+      const mate = p2.status() && p2.status().reason === 'checkmate';
+      if (sm[0].move !== first || (!mate && sm[0].score - (sm[1] ? sm[1].score : -1e9) < 50)) badTrap.push(t.name);
+      if ((pos.turn === 0) !== (t.side === 'w')) badTrap.push(t.name + ' (side)');
+    }
+    check('every trap: the refutation is the best move and it works', !badTrap.length, badTrap.join(', '));
+    // naming: every family and every variation can be asked, answers are unambiguous
+    const fams = new Set(), vars = new Set();
+    for (let sd = 1; sd < 150; sd++) { T.makeSet('openings', 0, sd).forEach(x => fams.add(x.answer)); T.makeSet('openings', 6, sd).forEach(x => vars.add(x.answer)); }
+    check('name the opening covers every family', fams.size === Object.keys(O.families).length, `${fams.size}/${Object.keys(O.families).length}`);
+    check('name the variation covers every variation', vars.size === new Set(O.lines.map(L => L.full)).size, `${vars.size}`);
+    const amb = []; for (const x of T.makeSet('openings', 0, 3).concat(T.makeSet('openings', 6, 3))) if (new Set(x.options).size !== 4 || !x.options.includes(x.answer)) amb.push(x.answer);
+    check('naming questions have four different options including the answer', !amb.length, amb.join(', '));
+  }
+}
 console.log(fails ? `${fails} failed` : 'all passed');
 process.exit(fails ? 1 : 0);

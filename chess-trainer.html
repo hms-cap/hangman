@@ -145,6 +145,11 @@
 .act{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:44px;align-items:center}
 .act .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
 .act .btn.ans{flex:1 1 0;min-width:0;white-space:normal;line-height:1.2;font-size:.9rem;padding:10px 8px}
+.act .btn.opt{flex:1 1 calc(50% - 8px);min-width:0;white-space:normal;line-height:1.2;font-size:.86rem;padding:9px 8px}
+.act .btn.opt.gone{visibility:hidden}
+.onote{font-size:.84rem;line-height:1.35}
+.onote b{font-family:var(--mono);font-weight:600}
+.onote.bad b{color:var(--miss)}
 .act .tool{border:0;background:transparent;display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--ink);font-weight:600;font-size:.88rem}
 .act .tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .act .tool:disabled{opacity:.35;cursor:default}
@@ -236,6 +241,7 @@
 <script src="chess-endgames.js"></script>
 <script src="chess-puzzles.js"></script>
 <script src="chess-trainer-data.js"></script>
+<script src="chess-openings.js"></script>
 <script src="chess-trainer-core.js"></script>
 <script src="game-nav.js"></script>
 <script>
@@ -835,6 +841,82 @@ const CTL = {
 
   // Forks, pins, skewers, combinations: play the winning line
   tactic(it){ return lineCtl(it, false); },
+  trap(it){ return lineCtl(it, false); },
+
+  // Play your side of an opening line from memory; each move comes with its idea
+  oline(it){
+    const pos = new Position(), me = it.side === 'w' ? WHITE : BLACK;
+    const c = { pos, me, flip: me === BLACK, moves: true, sel: -1, targets: new Map(), k: 0, mistakes: 0, note: '', noteBad: false, hintIdea: false, arrows: null };
+    const whyAt = k => it.why[Math.floor(k / 2)];     // learner moves are every other ply
+    const myTurn = () => c.k < it.ucis.length && pos.turn === me;
+    const mine = () => it.ucis.filter((_, k) => (k % 2 === 0) === (me === WHITE)).length;
+    const finish = () => {
+      const txt = it.sans.map((x, i) => (i % 2 ? '' : (i / 2 + 1) + '.') + x).join(' ');
+      resolve(c.mistakes === 0, c.mistakes ? `${T.plural(c.mistakes, 'slip')}` : 'Line complete',
+        `<p><b>${esc(it.fam)}: ${esc(it.name)}.</b> ${esc(T.openingData().families[it.fam] || '')}</p><p class="tip"><span class="mono">${esc(txt)}</span></p>`);
+    };
+    const opponent = async () => {
+      while (c.k < it.ucis.length && pos.turn !== me){
+        D.busy = true; await wait(450); if (!D || D.ctl !== c) return;
+        play(c, pos.fromUci(it.ucis[c.k]), null); c.k++;
+      }
+      D.busy = false;
+      if (c.k >= it.ucis.length) return finish();
+      render();
+    };
+    c.move = m => {
+      const uci = Position.uci(m), book = it.ucis[c.k], why = whyAt(c.k - (me === WHITE ? 0 : 1)), bookSan = it.sans[c.k];
+      c.arrows = null; c.hintIdea = false;
+      if (uci === book){
+        play(c, m, 'good'); c.k++;
+        c.note = `<b>${esc(bookSan)}</b> ${esc(why)}`; c.noteBad = false;
+        return opponent();
+      }
+      // a different move: show it, take it back, then show the book move and why
+      c.mistakes++;
+      const san = pos.san(m);
+      play(c, m, 'bad'); D.busy = true;
+      setTimeout(async () => {
+        if (!D || D.ctl !== c) return;
+        pos.unmake(); c.last = null; c.mark = null;
+        const bm = pos.fromUci(book);
+        c.arrows = [[to64(mFrom(bm)), to64(mTo(bm)), 'good']];
+        c.note = `Not ${esc(san)}. The book move is <b>${esc(bookSan)}</b>: ${esc(why)}`; c.noteBad = true;
+        render(); await wait(1500); if (!D || D.ctl !== c) return;
+        c.arrows = null; play(c, bm, 'good'); c.k++;
+        opponent();
+      }, reduced ? 50 : 650);
+    };
+    // Black to play: White's first move comes first
+    setTimeout(() => { if (D && D.ctl === c && !myTurn()) opponent(); }, 50);
+    return Object.assign(c, {
+      prompt(){
+        const done = it.ucis.slice(0, c.k).filter((_, k) => (k % 2 === 0) === (me === WHITE)).length;
+        const sub = c.hintIdea && myTurn() ? `<span class="onote">Idea: ${esc(whyAt(c.k - (me === WHITE ? 0 : 1)))}</span>`
+          : c.note ? `<span class="onote${c.noteBad ? ' bad' : ''}">${c.note}</span>` : `Play ${sideName(me)}'s moves from memory. ${mine()} to play.`;
+        return { title: `${it.fam}: ${it.name}`, sub: D.done ? '' : `<span class="mono">${done}/${mine()}</span> · ` + sub, side: me };
+      },
+      view: () => moveView(c),
+      hint(){ c.hintIdea = true; },
+    });
+  },
+
+  // Which opening is this?
+  oname(it){
+    const pos = new Position(it.fen), c = { gone: new Set() };
+    const last = [C.sqFrom(it.last.slice(0, 2)), C.sqFrom(it.last.slice(2, 4))].map(to64);
+    const answer = a => {
+      const ok = a === it.answer;
+      resolve(ok, ok ? 'Correct' : 'Not quite', `<p><b>${esc(it.answer)}.</b> ${esc(it.about)}</p>` + (it.deep ? `<p class="tip">${esc(it.line.why[it.line.why.length - 1])}</p>` : ''));
+    };
+    return Object.assign(c, {
+      prompt: () => ({ title: it.deep ? 'Which variation is this?' : 'Which opening is this?', sub: `<span class="mono">${esc(it.moves)}</span>`, side: null }),
+      view: () => { const v = { pieces: posPieces(pos), cls: {}, arrows: [], flip: false }; v.cls[last[0]] = 'last'; v.cls[last[1]] = 'last'; return v; },
+      buttons: () => it.options.map(o => ({ label: esc(o), cls: 'opt' + (c.gone.has(o) ? ' gone' : ''), run: () => answer(o) })),
+      hint(){ const wrong = it.options.filter(o => o !== it.answer); c.gone = new Set(wrong.slice(0, 2)); },
+      timeout(){ answer(null); },
+    });
+  },
   mate(it){ return lineCtl(it, true); },
 
   // Endgames against the exact tables
@@ -905,7 +987,7 @@ function lineCtl(it, isMate){
   if (it.last){ c.last = [C.sqFrom(it.last.slice(0, 2)), C.sqFrom(it.last.slice(2, 4))].map(to64); }
   const mateLeft = () => it.n - Math.floor(c.step / 2);
   const sans = (() => { const p = new Position(it.fen); return it.line.map(u => { const m = p.fromUci(u); const s = p.san(m); p.make(m); return s; }); })();
-  const explain = () => isMate ? `<p>Mate in ${it.n}: <span class="mono">${sans.map(esc).join(' ')}</span></p>` : `<p>${esc(it.text)}</p><p class="tip">Line: <span class="mono">${sans.map(esc).join(' ')}</span> · wins ${it.gain} point${it.gain === 1 ? '' : 's'} of material</p>`;
+  const explain = () => it.kind === 'trap' ? `<p><b>${esc(it.name)}.</b> ${esc(it.text)}</p><p class="tip">Line: <span class="mono">${sans.map(esc).join(' ')}</span></p>` : isMate ? `<p>Mate in ${it.n}: <span class="mono">${sans.map(esc).join(' ')}</span></p>` : `<p>${esc(it.text)}</p><p class="tip">Line: <span class="mono">${sans.map(esc).join(' ')}</span> · wins ${it.gain} point${it.gain === 1 ? '' : 's'} of material</p>`;
   const showSolution = async (title, pre) => {
     D.done = false; D.busy = true; c.sel = -1; c.targets = new Map();
     // replay from the start
@@ -949,6 +1031,7 @@ function lineCtl(it, isMate){
       const who = sideName(me);
       if (D.done) return { title: isMate ? `${who} to move: mate in ${it.n}` : `${who} to move`, sub: '', side: me };
       if (isMate) return { title: `${who} to move: mate in ${mateLeft()}`, sub: c.step ? 'Good. Keep going.' : 'Find the first move. Your opponent\'s best defence comes next.', side: me };
+      if (it.kind === 'trap') return { title: `${who} to move. Punish the mistake`, sub: c.step ? 'Good. Keep going.' : `Your opponent just played <span class="mono">${esc(it.before[it.before.length - 1])}</span>.`, side: me };
       const label = { knightFork: 'Find the knight fork', fork: 'Find the fork', pin: 'Find the pin', skewer: 'Find the skewer', mixed: 'Win material', combo: 'Win material in two moves' }[it.set];
       return { title: `${who} to move. ${label}`, sub: c.step ? 'Good. Now collect.' : it.set === 'mixed' ? 'A fork, a pin or a skewer is hiding here.' : it.set === 'combo' ? 'Something forcing comes first: a check, a sacrifice or a capture.' : 'One move wins material.', side: me };
     },
