@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <style>
 /* Game hub: graph-paper ground, one solid color per game, chunky pressable tiles whose art is the player's live game state.
-   Layout: header with streak, then three tabs (Chess, Go, More); each tab has its "Today" daily tiles and a library of wide tiles. */
+   Layout: header with streak, then three tabs (Casual, Chess, Go); each tab has its "Today" daily tiles and a library of wide tiles. */
 :root{
   --five:#d38c1f; --five-edge:#a86a0e;
   --trail:#2e5ea6; --trail-edge:#1f4580;
@@ -166,12 +166,49 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
   <p class="greet" id="greet"></p>
 
   <nav class="tabs" role="tablist" aria-label="Game groups">
+    <button type="button" role="tab" id="tab-more" aria-controls="p-more" data-tab="more">Casual<i class="tdot" hidden></i></button>
     <button type="button" role="tab" id="tab-chess" aria-controls="p-chess" data-tab="chess">Chess<i class="tdot" hidden></i></button>
     <button type="button" role="tab" id="tab-go" aria-controls="p-go" data-tab="go">Go<i class="tdot" hidden></i></button>
-    <button type="button" role="tab" id="tab-more" aria-controls="p-more" data-tab="more">More<i class="tdot" hidden></i></button>
   </nav>
 
-  <div class="panel-tab" id="p-chess" role="tabpanel" aria-labelledby="tab-chess">
+  <div class="panel-tab" id="p-more" role="tabpanel" aria-labelledby="tab-more">
+    <h2 class="sec">Today</h2>
+    <section class="today" aria-label="Today's word puzzles">
+      <a class="tile daily t-five" href="fiveletters.html" id="tFive">
+        <div class="art" id="artFive"></div>
+        <div class="meta"><h3>Five Letters</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
+      </a>
+      <a class="tile daily t-trail" href="trail.html" id="tTrail">
+        <div class="art" id="artTrail"></div>
+        <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
+      </a>
+      <a class="tile wide t-groups span" href="groups.html?daily" id="tGroups">
+        <div class="art" id="artGroups"></div>
+        <div class="meta"><h3>Four Groups</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
+      </a>
+    </section>
+    <h2 class="sec">Casual games</h2>
+    <section class="library" aria-label="Casual games">
+      <a class="tile wide t-sudoku" href="sudoku.html">
+        <div class="art" id="artSudoku"></div>
+        <div class="meta"><h3>Sudoku</h3><p class="status" id="sSudoku"></p><div class="prog" id="bSudoku" hidden><i></i></div><span class="cta" id="cSudoku">Play</span></div>
+      </a>
+      <a class="tile wide t-hang" href="hangman.html">
+        <div class="art" id="artHang"></div>
+        <div class="meta"><h3>Hangman</h3><p class="status" id="sHang"></p><span class="cta" id="cHang">Play</span></div>
+      </a>
+      <a class="tile wide t-snake" href="snake.html">
+        <div class="art" id="artSnake"></div>
+        <div class="meta"><h3>Snake</h3><p class="status" id="sSnake"></p><span class="cta" id="cSnake">Play</span></div>
+      </a>
+      <a class="tile wide t-chowka" href="chowka.html">
+        <div class="art" id="artChowka"></div>
+        <div class="meta"><h3>Chowka Bara</h3><p class="status" id="sChowka"></p><span class="cta" id="cChowka">Play</span></div>
+      </a>
+    </section>
+  </div>
+
+  <div class="panel-tab" id="p-chess" role="tabpanel" aria-labelledby="tab-chess" hidden>
     <h2 class="sec">Today</h2>
     <section class="today" aria-label="Today's chess puzzle">
       <a class="tile wide t-cpz span" href="chess-puzzles.html?daily" id="tDaily">
@@ -209,43 +246,6 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <a class="tile wide t-gtr" href="go-trainer.html">
         <div class="art" id="artGtr"></div>
         <div class="meta"><h3>Go Trainer</h3><p class="status" id="sGtr"></p><div class="prog" id="bGtr" hidden><i></i></div><span class="cta" id="cGtr">Learn</span></div>
-      </a>
-    </section>
-  </div>
-
-  <div class="panel-tab" id="p-more" role="tabpanel" aria-labelledby="tab-more" hidden>
-    <h2 class="sec">Today</h2>
-    <section class="today" aria-label="Today's word puzzles">
-      <a class="tile daily t-five" href="fiveletters.html" id="tFive">
-        <div class="art" id="artFive"></div>
-        <div class="meta"><h3>Five Letters</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
-      </a>
-      <a class="tile daily t-trail" href="trail.html" id="tTrail">
-        <div class="art" id="artTrail"></div>
-        <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
-      </a>
-      <a class="tile wide t-groups span" href="groups.html?daily" id="tGroups">
-        <div class="art" id="artGroups"></div>
-        <div class="meta"><h3>Four Groups</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
-      </a>
-    </section>
-    <h2 class="sec">More games</h2>
-    <section class="library" aria-label="More games">
-      <a class="tile wide t-sudoku" href="sudoku.html">
-        <div class="art" id="artSudoku"></div>
-        <div class="meta"><h3>Sudoku</h3><p class="status" id="sSudoku"></p><div class="prog" id="bSudoku" hidden><i></i></div><span class="cta" id="cSudoku">Play</span></div>
-      </a>
-      <a class="tile wide t-hang" href="hangman.html">
-        <div class="art" id="artHang"></div>
-        <div class="meta"><h3>Hangman</h3><p class="status" id="sHang"></p><span class="cta" id="cHang">Play</span></div>
-      </a>
-      <a class="tile wide t-snake" href="snake.html">
-        <div class="art" id="artSnake"></div>
-        <div class="meta"><h3>Snake</h3><p class="status" id="sSnake"></p><span class="cta" id="cSnake">Play</span></div>
-      </a>
-      <a class="tile wide t-chowka" href="chowka.html">
-        <div class="art" id="artChowka"></div>
-        <div class="meta"><h3>Chowka Bara</h3><p class="status" id="sChowka"></p><span class="cta" id="cChowka">Play</span></div>
       </a>
     </section>
   </div>
@@ -611,16 +611,16 @@ let gpzDone = false;
   $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${['', '', 'Two', 'Three', 'Four'][left.length]} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
-// ---- Tabs: Chess, Go, and everything else. The last one you opened comes back; a dot marks a tab with a daily waiting ----
+// ---- Tabs: Casual (word puzzles and the other games; the landing tab), Chess and Go. A dot marks a tab with a daily waiting ----
 (function(){
-  const TABS = ['chess', 'go', 'more'];
+  const TABS = ['more', 'chess', 'go'];
   const waiting = { chess: !chessDone, go: !gpzDone, more: !fiveDone || !trailDone || !groupsDone };
   const btns = [...document.querySelectorAll('.tabs [role=tab]')];
   function show(key, focus){
     btns.forEach(b => { const on = b.dataset.tab === key; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
     TABS.forEach(k => $('p-' + k).hidden = k !== key);
-    try { localStorage.setItem('hub-tab', JSON.stringify(key)); } catch (e) {}
-    if (location.hash.slice(1) !== key) history.replaceState(null, '', '#' + key);
+    const h = key === 'more' ? '' : '#' + key; // the landing tab keeps a plain address
+    if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h);
   }
   btns.forEach(b => {
     b.querySelector('.tdot').hidden = !waiting[b.dataset.tab];
@@ -631,9 +631,9 @@ let gpzDone = false;
       if (d){ e.preventDefault(); show(TABS[(k + d + TABS.length) % TABS.length], true); }
     });
   });
-  const fromHash = location.hash.slice(1), saved = get('hub-tab', null);
-  show(TABS.includes(fromHash) ? fromHash : TABS.includes(saved) ? saved : 'chess');
-  addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h)) show(h); });
+  const tabOf = h => h === 'casual' ? 'more' : TABS.includes(h) ? h : null;
+  show(tabOf(location.hash.slice(1)) || 'more');
+  addEventListener('hashchange', () => { const t = tabOf(location.hash.slice(1)); if (t) show(t); });
 })();
 
 // ---- Install help: hide once installed, show this device's steps first, one-tap install where Chrome offers it ----
