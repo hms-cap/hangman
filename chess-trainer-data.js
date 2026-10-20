@@ -114,7 +114,18 @@ pin: [
 ["8/6k1/8/4n3/2N5/8/2P2B2/K7 w - - 0 1","f2d4 g7f7 c4e5","c4e5|d4e5","pin","Pin: Bd4 pins the knight on e5 to the king on g7: it can't move. After Kf7, Nxe5+ wins the knight.",3],
 ["4b3/1k6/8/7p/1n2p3/8/2N5/3K4 b - - 0 1","e8a4 d1d2 b4c2","|","pin","Pin: Ba4 pins the knight on c2 to the king on d1: it can't move. After Kd2, Nxc2 wins the knight.",3],
 ["8/5k2/8/8/1K4N1/2N4P/1b3b2/8 b - - 0 1","f2e1 b4c4 e1c3","|b2c3","pin","Pin: Be1 pins the knight on c3 to the king on b4: it can't move. After Kc4, Bexc3 wins the knight.",3],
-["8/8/p7/6P1/2k5/2n5/1P6/1R3K2 w - - 0 1","b1c1 c4b3 c1c3","b2c3|","pin","Pin: Rc1 pins the knight on c3 to the king on c4: it can't move. After Kb3, Rxc3+ wins the knight.",3]
+["8/8/p7/6P1/2k5/2n5/1P6/1R3K2 w - - 0 1","b1c1 c4b3 c1c3","b2c3|","pin","Pin: Rc1 pins the knight on c3 to the king on c4: it can't move. After Kb3, Rxc3+ wins the knight.",3],
+["6k1/8/4r3/1p6/5P2/8/7P/K2B4 w - - 0 1","d1b3 g8g7 b3e6","|","pin","Pin: Bb3 pins the rook on e6 to the king on g8: it can't move. After Kg7, Bxe6 wins the rook.",5],
+["7k/1r6/8/8/4N1K1/8/3n4/8 b - - 0 1","b7b4 g4f4 b4e4","d2e4|d2e4","pin","Pin: Rb4 pins the knight on e4 to the king on g4: it can't move. After Kf4, Rxe4+ wins the knight.",3],
+["8/8/qb5k/P3PR2/P7/8/1K6/8 w - - 0 1","f5f6 h6g5 a5b6","a5b6|","pin","Pin: Rf6+ pins the bishop on b6 to the queen on a6: if it moves, the queen is lost. After Kg5, axb6 wins the bishop.",3],
+["8/8/2B5/5k2/4n3/6P1/B2P3K/8 w - - 0 1","a2b1 f5e6 b1e4","|c6e4","pin","Pin: Bb1 pins the knight on e4 to the king on f5: it can't move. After Ke6, Bbxe4 wins the knight.",3],
+["8/5p1k/8/4p2K/7B/5R2/8/5b2 b - - 0 1","f1e2 h5g5 e2f3","|","pin","Pin: Be2 pins the rook on f3 to the king on h5: it can't move. After Kg5, Bxf3 wins the rook.",5],
+["2k5/8/5b2/2K5/3N4/8/P6b/8 b - - 0 1","h2g1 c5d5 g1d4","|f6d4","pin","Pin: Bg1 pins the knight on d4 to the king on c5: it can't move. After Kd5, Bgxd4 wins the knight.",3],
+["8/2p1k3/8/8/1p2K3/P7/b1N5/8 b - - 0 1","a2b1 e4e5 b1c2","|","pin","Pin: Bb1 pins the knight on c2 to the king on e4: it can't move. After Ke5, Bxc2 wins the knight.",3],
+["3k4/1p2n3/3B4/8/8/7P/4K3/B7 w - - 0 1","a1f6 d8d7 f6e7","|d6e7","pin","Pin: Bf6 pins the knight on e7 to the king on d8: it can't move. After Kd7, Bfxe7 wins the knight.",3],
+["8/k7/8/4nr2/K1N5/8/8/8 b - - 0 1","f5f4 a4a3 f4c4","e5c4|e5c4","pin","Pin: Rf4 pins the knight on c4 to the king on a4: it can't move. After Ka3, Rxc4 wins the knight.",3],
+["8/4k3/8/6p1/7P/1b3N2/8/7K b - - 0 1","b3d5 h4g5 d5f3","|","pin","Pin: Bd5 pins the knight on f3 to the king on h1: it can't move. After hxg5, Bxf3+ wins the knight.",2],
+["8/8/7p/8/1k6/6B1/1K1n4/8 w - - 0 1","g3e1 b4c4 e1d2","|","pin","Pin: Be1 pins the knight on d2 to the king on b4: it can't move. After Kc4, Bxd2 wins the knight.",3]
 ],
 skewer: [
 ["6N1/6k1/4K3/8/8/8/8/3b4 b - - 0 1","d1b3 e6f5 g7g8","d1g4 g7g8|b3g8","skewer","Skewer: Bb3+ attacks the king on e6, and when it moves the knight on g8 behind it falls. After Kf5, Kxg8 wins the knight.",3],
@@ -203,6 +214,18 @@ mixed: [
 combo: [
 ["q1N5/8/8/2k1p3/P5R1/6P1/8/3K4 w - - 0 1","g4c4 c5c4 c8b6 c4b4 b6a8","||","fork","Rc4+ forces Kxc4. Now Nb6+ forks the king on c4 and the queen on a8. After Kb4, Nxa8 wins the queen.",4],
 ["8/3k4/8/8/2p3Pp/K1n1Q3/8/bB6 b - - 0 1","a1b2 a3b2 c3d1 b2c2 d1e3","||","fork","Bb2+ forces Kxb2. Now Nd1+ forks the king on b2 and the queen on e3. After Kc2, Nxe3+ wins the queen.",6],
-["k2q4/7R/4p3/4N1p1/8/8/8/2K5 w - - 0 1","h7a7 a8a7 e5c6 a7b6 c6d8","||","fork","Ra7+ forces Kxa7. Now Nc6+ forks the king on a7 and the queen on d8. After Kb6, Nxd8 wins the queen.",4]
+["k2q4/7R/4p3/4N1p1/8/8/8/2K5 w - - 0 1","h7a7 a8a7 e5c6 a7b6 c6d8","||","fork","Ra7+ forces Kxa7. Now Nc6+ forks the king on a7 and the queen on d8. After Kb6, Nxd8 wins the queen.",4],
+["8/8/3p4/1R6/k2q3P/5P2/8/NK6 w - - 0 1","b5a5 a4a5 a1b3 a5b6 b3d4","||","fork","Ra5+ forces Kxa5. Now Nb3+ forks the king on a5 and the queen on d4. After Kb6, Nxd4 wins the queen.",4],
+["8/8/k2N4/1R6/8/q7/8/1K6 w - - 0 1","b5b6 a6b6 d6c4 b6c6 c4a3","||","fork","Rb6+ forces Kxb6. Now Nc4+ forks the king on b6 and the queen on a3. After Kc6, Nxa3 wins the queen.",4],
+["8/k3n2p/8/8/6p1/1P1Q3q/K7/8 w - - 0 1","d3d4 a7b7 d4d7 b7b6 d7e7","d3d7||","fork","Qd4+ forces Kb7. Now Qd7+ forks the king on b7 and the knight on e7. After Kb6, Qxe7 wins the knight.",3],
+["1qk5/6R1/8/2N5/3P4/8/6K1/8 w - - 0 1","g7g8 c8c7 c5a6 c7d6 g8b8","||a6b8","fork","Rg8+ forces Kc7. Now Na6+ forks the king on c7 and the queen on b8. After Kd6, Rxb8 wins the queen.",9],
+["8/1k2p3/8/Q7/1p6/1K2n3/5r2/8 b - - 0 1","f2b2 b3b2 e3c4 b2b3 c4a5","||","fork","Rb2+ forces Kxb2. Now Nc4+ forks the king on b2 and the queen on a5. After Kb3, Nxa5+ wins the queen.",4],
+["6b1/n7/R2p1p2/1kq1p2P/1pp5/PPP5/P3N1N1/7K w - - 0 1","a6a5 b5a5 a3b4 c5b4 c3b4","|c3b4|","fork","Ra5+ forces Kxa5. Now axb4+ forks the king on a5 and the queen on c5. After Qxb4, cxb4+ wins the queen.",4],
+["2k5/8/8/3r4/4n3/8/8/B3K2Q b - - 0 1","d5d1 e1d1 e4f2 d1e2 f2h1","||","fork","Rd1+ forces Kxd1. Now Nf2+ forks the king on d1 and the queen on h1. After Ke2, Nxh1 wins the queen.",4],
+["8/5N2/2R5/8/3k2q1/8/4PK2/8 w - - 0 1","c6c4 d4c4 f7e5 c4d5 e5g4","||","fork","Rc4+ forces Kxc4. Now Ne5+ forks the king on c4 and the queen on g4. After Kd5, Nxg4 wins the queen.",4],
+["2k5/1r5p/p7/8/4n3/3P1Q2/2P5/2K5 b - - 0 1","b7b1 c1b1 e4d2 b1b2 d2f3","||","fork","Rb1+ forces Kxb1. Now Nd2+ forks the king on b1 and the queen on f3. After Kb2, Nxf3 wins the queen.",4],
+["k7/8/3Q4/8/2r5/4n2K/8/8 b - - 0 1","c4h4 h3h4 e3f5 h4g4 f5d6","||","fork","Rh4+ forces Kxh4. Now Nf5+ forks the king on h4 and the queen on d6. After Kg4, Nxd6 wins the queen.",4],
+["3N2k1/8/8/2p3q1/2P4R/8/8/4K3 w - - 0 1","h4h8 g8h8 d8f7 h8g7 f7g5","||","fork","Rh8+ forces Kxh8. Now Nf7+ forks the king on h8 and the queen on g5. After Kg7, Nxg5 wins the queen.",4],
+["3k2q1/8/8/2RN4/p7/8/8/K7 w - - 0 1","c5c8 d8c8 d5e7 c8d7 e7g8","||","fork","Rc8+ forces Kxc8. Now Ne7+ forks the king on c8 and the queen on g8. After Kd7, Nxg8 wins the queen.",4]
 ]
 };

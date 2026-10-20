@@ -3,7 +3,8 @@
 // pieces, then checked by the engine: exactly one move must win at least two pawns' worth, the line must really use the
 // motif, and the win must not be taken straight back. Half the positions are mirrored so Black is to move.
 // Usage: node tools/generate-chess-trainer.js [perSet=40] [out=chess-trainer-data.js] [maxMinutes=120]
-// The file is rewritten every 30 seconds, so a long run can be stopped at any point.
+// The file is rewritten every 30 seconds, so a long run can be stopped at any point; running again resumes from it.
+// ONLY=pin,combo limits a run to some sets (the others are kept). MERGE=other.js folds in positions from another file.
 'use strict';
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const os = require('os'), fs = require('fs'), path = require('path');
@@ -15,8 +16,21 @@ if (isMainThread) {
   const per = +(process.argv[2] || 40), out = process.argv[3] || path.join(__dirname, '..', 'chess-trainer-data.js'), maxMin = +(process.argv[4] || 120);
   const want = Object.fromEntries(SETS.map(s => [s, s === 'combo' ? Math.round(per * 0.75) : per]));
   const got = Object.fromEntries(SETS.map(s => [s, []])), seen = new Set(), t0 = Date.now();
+  // Resume: keep what an earlier (stopped) run already wrote, including sets this run doesn't generate.
+  // Extra files given with MERGE=a.js,b.js are folded in too.
+  const kept = {};
+  for (const f of [out].concat(process.env.MERGE ? process.env.MERGE.split(',') : [])) {
+    if (!fs.existsSync(f)) continue;
+    const c = { window: {} }; require('vm').runInNewContext(fs.readFileSync(f, 'utf8'), c);
+    for (const [k, list] of Object.entries(c.window.CHESS_TRAINER_DATA || {})) for (const item of list) {
+      const key = item[0].split(' ').slice(0, 2).join(' '); if (seen.has(key)) continue; seen.add(key);
+      (got[k] || (kept[k] ||= [])).push(item);
+    }
+  }
+  for (const k of SETS) got[k] = got[k].slice(0, want[k]);
   const done = () => SETS.every(s => got[s].length >= want[s]);
   const report = () => console.log(`[${((Date.now() - t0) / 60000).toFixed(1)} min] ` + SETS.map(s => `${s} ${got[s].length}/${want[s]}`).join('  '));
+  if (done()) { write(); console.log('already complete'); process.exit(0); }
   const timer = setInterval(() => { report(); write(); if ((Date.now() - t0) / 60000 > maxMin) finish(); }, 30000);
   const workers = [];
   for (let t = 0; t < Math.max(1, os.cpus().length); t++) {
@@ -30,7 +44,8 @@ if (isMainThread) {
     });
   }
   function write() {
-    const body = SETS.map(s => `${s}: [\n${got[s].map(x => JSON.stringify(x)).join(',\n')}\n]`).join(',\n');
+    const all = Object.assign({}, kept, got), order = ['knightFork', 'fork', 'pin', 'skewer', 'mixed', 'combo'].filter(k => all[k]).concat(Object.keys(all).filter(k => !['knightFork', 'fork', 'pin', 'skewer', 'mixed', 'combo'].includes(k)));
+    const body = order.map(s => `${s}: [\n${all[s].map(x => JSON.stringify(x)).join(',\n')}\n]`).join(',\n');
     fs.writeFileSync(out, `// Chess Trainer tactic drills, built and engine-checked by tools/generate-chess-trainer.js.\n// Each: [FEN, solution in UCI (solver, reply, solver, ...), other accepted moves for each solver move ('|' between moves),\n//        theme, explanation, material won in pawns]\nwindow.CHESS_TRAINER_DATA = {\n${body}\n};\n`);
   }
   function finish() {
