@@ -125,7 +125,8 @@ pin: [
 ["3k4/1p2n3/3B4/8/8/7P/4K3/B7 w - - 0 1","a1f6 d8d7 f6e7","|d6e7","pin","Pin: Bf6 pins the knight on e7 to the king on d8: it can't move. After Kd7, Bfxe7 wins the knight.",3],
 ["8/k7/8/4nr2/K1N5/8/8/8 b - - 0 1","f5f4 a4a3 f4c4","e5c4|e5c4","pin","Pin: Rf4 pins the knight on c4 to the king on a4: it can't move. After Ka3, Rxc4 wins the knight.",3],
 ["8/4k3/8/6p1/7P/1b3N2/8/7K b - - 0 1","b3d5 h4g5 d5f3","|","pin","Pin: Bd5 pins the knight on f3 to the king on h1: it can't move. After hxg5, Bxf3+ wins the knight.",2],
-["8/8/7p/8/1k6/6B1/1K1n4/8 w - - 0 1","g3e1 b4c4 e1d2","|","pin","Pin: Be1 pins the knight on d2 to the king on b4: it can't move. After Kc4, Bxd2 wins the knight.",3]
+["8/8/7p/8/1k6/6B1/1K1n4/8 w - - 0 1","g3e1 b4c4 e1d2","|","pin","Pin: Be1 pins the knight on d2 to the king on b4: it can't move. After Kc4, Bxd2 wins the knight.",3],
+["8/7k/8/4BK2/2r4P/5n2/8/8 b - - 0 1","c4c5 f5e4 f3e5","|","pin","Pin: Rc5 pins the bishop on e5 to the king on f5: it can't move. After Ke4, Nxe5 wins the bishop.",3]
 ],
 skewer: [
 ["6N1/6k1/4K3/8/8/8/8/3b4 b - - 0 1","d1b3 e6f5 g7g8","d1g4 g7g8|b3g8","skewer","Skewer: Bb3+ attacks the king on e6, and when it moves the knight on g8 behind it falls. After Kf5, Kxg8 wins the knight.",3],
@@ -226,6 +227,21 @@ combo: [
 ["2k5/1r5p/p7/8/4n3/3P1Q2/2P5/2K5 b - - 0 1","b7b1 c1b1 e4d2 b1b2 d2f3","||","fork","Rb1+ forces Kxb1. Now Nd2+ forks the king on b1 and the queen on f3. After Kb2, Nxf3 wins the queen.",4],
 ["k7/8/3Q4/8/2r5/4n2K/8/8 b - - 0 1","c4h4 h3h4 e3f5 h4g4 f5d6","||","fork","Rh4+ forces Kxh4. Now Nf5+ forks the king on h4 and the queen on d6. After Kg4, Nxd6 wins the queen.",4],
 ["3N2k1/8/8/2p3q1/2P4R/8/8/4K3 w - - 0 1","h4h8 g8h8 d8f7 h8g7 f7g5","||","fork","Rh8+ forces Kxh8. Now Nf7+ forks the king on h8 and the queen on g5. After Kg7, Nxg5 wins the queen.",4],
-["3k2q1/8/8/2RN4/p7/8/8/K7 w - - 0 1","c5c8 d8c8 d5e7 c8d7 e7g8","||","fork","Rc8+ forces Kxc8. Now Ne7+ forks the king on c8 and the queen on g8. After Kd7, Nxg8 wins the queen.",4]
+["3k2q1/8/8/2RN4/p7/8/8/K7 w - - 0 1","c5c8 d8c8 d5e7 c8d7 e7g8","||","fork","Rc8+ forces Kxc8. Now Ne7+ forks the king on c8 and the queen on g8. After Kd7, Nxg8 wins the queen.",4],
+["8/1N1qp3/8/n7/3k4/4R3/1K6/8 w - - 0 1","e3d3 d4d3 b7c5 d3d4 c5d7","||","fork","Rd3+ forces Kxd3. Now Nc5+ forks the king on d3 and the queen on d7. After Kd4, Nxd7 wins the queen.",4],
+["5kq1/2R5/8/5N2/8/5PP1/8/2K5 w - - 0 1","c7c8 f8f7 f5h6 f7e7 c8g8","||h6g8","fork","Rc8+ forces Kf7. Now Nh6+ forks the king on f7 and the queen on g8. After Ke7, Rxg8 wins the queen.",9],
+["1k2q3/R7/8/1N4P1/p7/5P2/6K1/8 w - - 0 1","a7a8 b8a8 b5c7 a8b7 c7e8","a7b7||","fork","Ra8+ forces Kxa8. Now Nc7+ forks the king on a8 and the queen on e8. After Kb7, Nxe8 wins the queen.",4],
+["4k3/1p1n4/pp2p3/1rb1p3/PpR1Q1pK/PN4PP/1BB5/8 b - - 0 1","c5e7 h4g4 d7f6 g4f3 f6e4","||","fork","Be7+ forces Kxg4. Now Nf6+ forks the king on g4 and the queen on e4. After Kf3, Nxe4 wins the queen.",8],
+["4q3/8/1R3p2/k2N4/2pP4/8/8/5K2 w - - 0 1","b6a6 a5a6 d5c7 a6b7 c7e8","||","fork","Ra6+ forces Kxa6. Now Nc7+ forks the king on a6 and the queen on e8. After Kb7, Nxe8 wins the queen.",4],
+["8/k7/8/8/4P3/n3r3/P7/Q2K4 b - - 0 1","e3e1 d1e1 a3c2 e1e2 c2a1","||","fork","Re1+ forces Kxe1. Now Nc2+ forks the king on e1 and the queen on a1. After Ke2, Nxa1 wins the queen.",4],
+["7N/3p4/6R1/4q2k/8/7P/8/3K4 w - - 0 1","g6h6 h5h6 h8f7 h6g7 f7e5","||","fork","Rh6+ forces Kxh6. Now Nf7+ forks the king on h6 and the queen on e5. After Kg7, Nxe5 wins the queen.",4],
+["8/2R5/3pkN2/2P4p/8/4q3/8/3K4 w - - 0 1","c7e7 e6e7 f6d5 e7e6 d5e3","||","fork","Re7+ forces Kxe7. Now Nd5+ forks the king on e7 and the queen on e3. After Ke6, Nxe3 wins the queen.",4],
+["3R4/k7/8/1P4P1/q1N3p1/8/7K/8 w - - 0 1","d8a8 a7a8 c4b6 a8b8 b6a4","||","fork","Ra8+ forces Kxa8. Now Nb6+ forks the king on a8 and the queen on a4. After Kb8, Nxa4 wins the queen.",4],
+["k7/3p2p1/8/2r5/3n4/8/8/3K2Q1 b - - 0 1","c5c1 d1c1 d4e2 c1c2 e2g1","||","fork","Rc1+ forces Kxc1. Now Ne2+ forks the king on c1 and the queen on g1. After Kc2, Nxg1 wins the queen.",4],
+["k7/1p2r3/8/3Q2p1/P7/8/n2K4/8 b - - 0 1","e7e2 d2e2 a2c3 e2f3 c3d5","||","fork","Re2+ forces Kxe2. Now Nc3+ forks the king on e2 and the queen on d5 and the pawn on a4. After Kf3, Nxd5 wins the queen.",4],
+["7R/k7/8/8/q1N5/8/3K4/8 w - - 0 1","h8a8 a7a8 c4b6 a8b7 b6a4","||","fork","Ra8+ forces Kxa8. Now Nb6+ forks the king on a8 and the queen on a4. After Kb7, Nxa4 wins the queen.",4],
+["2B1k3/1b4np/qpNpp1p1/2r2P2/P1p1PRp1/1P3P2/2K5/5B2 w - - 0 1","c8d7 e8d7 c6b8 d7c7 b8a6","||","fork","Bd7+ forces Kxd7. Now Nb8+ forks the king on d7 and the queen on a6. After Kc7, Nxa6+ wins the queen.",6],
+["8/3k4/8/7Q/8/8/4n2K/4r3 b - - 0 1","e1h1 h2h1 e2g3 h1g2 g3h5","||","fork","Rh1+ forces Kxh1. Now Ng3+ forks the king on h1 and the queen on h5. After Kg2, Nxh5 wins the queen.",4],
+["3k2N1/7q/4R3/4pp2/8/8/8/6K1 w - - 0 1","e6e8 d8c7 e8e7 h7e7 g8e7","||","fork","Re8+ forces Kc7. Now Re7+ forks the king on c7 and the pawn on e5 and the queen on h7. After Qxe7, Nxe7 wins the queen.",4]
 ]
 };

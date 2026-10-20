@@ -69,7 +69,7 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
           const top = ms.filter(x => x.value === ms[0].value); pos.make(top[0].move);
         }
       }
-      const good = L.p.piece === 'P' ? (L.p.win ? out === 'promoted' : ['held', 'stalemate', 'insufficient material'].includes(out)) : out === 'checkmate';
+      const good = L.p.piece === 'P' ? (L.p.win ? out === 'promoted' : ['held', 'stalemate', 'insufficient material', 'threefold repetition', 'the fifty-move rule'].includes(out)) : out === 'checkmate';
       if (!good) bad.push(`eg ${it.fen}: ${out}`);
     }
   }
