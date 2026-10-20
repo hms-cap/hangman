@@ -408,7 +408,16 @@ let groupsDone = false;
   // required levels only (the two opening-naming levels are optional); keep in step with chess-trainer-core.js
   const OPTIONAL = { openings: ['0', '6'] }, total = 41;
   const passed = Object.entries(prog).reduce((n, [tk, t]) => n + Object.entries(t || {}).filter(([i, l]) => l && l.stars > 0 && !(OPTIONAL[tk] || []).includes(i)).length, 0);
-  if (passed){
+  // on a course path: show where you are in it
+  // each path's steps as track:levelIndex (kept in step with chess-trainer-core.js by tools/test-chess-trainer.js)
+  const pth = get('trainer-path', null), PATHS = { beginner: ['Beginner', 'pieces:0 pieces:1 pieces:2 pieces:3 pieces:4 pieces:5 pieces:6 rules:0 rules:1 rules:2 rules:3 rules:4 vision:0 mates:0 endgames:0 endgames:1'], improver: ['Improver', 'vision:1 vision:4 mates:1 tactics:0 tactics:1 endgames:2 openings:1 openings:2 openings:5 mates:2'], club: ['Club player', 'tactics:2 tactics:3 vision:2 vision:3 vision:5 tactics:4 endgames:3 endgames:4 openings:3 openings:4 mates:3 mates:4'], advanced: ['Advanced', 'tactics:5 endgames:5 mates:5 openings:0 openings:6'] };
+  if (pth && pth.key && PATHS[pth.key]){
+    const [nm, list] = PATHS[pth.key], steps = list.split(' '), n = steps.length;
+    const done = steps.filter(st => { const [tk, i] = st.split(':'); return ((prog[tk] || {})[i] || {}).stars > 0; }).length, fin = pth.checkpoints && pth.checkpoints[pth.key] && pth.checkpoints[pth.key].passed;
+    $('sTrainer').innerHTML = fin ? `<b>${nm}</b> path complete` : done >= n ? `<b>${nm}</b> path: checkpoint next` : `<b>${nm}</b> path: step <b>${done + 1}</b> of ${n}`;
+    $('bTrainer').hidden = false; $('bTrainer').firstChild.style.width = Math.round(100 * (done + (fin ? 1 : 0)) / (n + 1)) + '%';
+    $('cTrainer').textContent = 'Continue';
+  } else if (passed){
     $('sTrainer').innerHTML = `<b>${passed}</b> of ${total} levels passed`;
     $('bTrainer').hidden = false; $('bTrainer').firstChild.style.width = Math.round(100 * passed / total) + '%';
     $('cTrainer').textContent = passed === total ? 'Practise' : 'Continue';

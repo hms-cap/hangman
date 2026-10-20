@@ -117,6 +117,35 @@
 .sq.nope{box-shadow:inset 0 0 0 .7cqw var(--miss)}
 .why{color:var(--miss)}
 .track .pill{font-family:var(--ui);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--hit);color:var(--paper);align-self:center}
+.path{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;background:var(--key);border:1.5px solid var(--ink)}
+.path h2{margin:0;font-family:var(--hand);font-weight:400;font-size:1.55rem;line-height:1.05;display:flex;align-items:baseline;gap:8px}
+.path h2 small{margin-left:auto;font-family:var(--mono);font-size:.8rem;color:var(--muted);font-weight:600;white-space:nowrap}
+.path p{margin:0;color:var(--muted);font-size:.88rem;line-height:1.4}
+.path .pbar{height:7px;border-radius:999px;background:var(--peer);overflow:hidden;border:1px solid var(--line)}
+.path .pbar i{display:block;height:100%;background:var(--hit)}
+.path .next{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--peer)}
+.path .next .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.path .next .txt span{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.path .next .txt b{font-weight:600}
+.path .row{display:flex;gap:8px;flex-wrap:wrap}
+.path .row .btn{font-family:var(--ui);font-size:.9rem;font-weight:600;padding:8px 14px}
+.path .linkbtn{border:0;background:transparent;padding:0;color:var(--hit);font-size:.84rem;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.steps li{display:flex;align-items:center;gap:8px;font-size:.86rem;padding:4px 2px}
+.steps li i{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.7rem;font-weight:700}
+.steps li.done i{background:var(--good);border-color:var(--good);color:#fff}
+.steps li.cur{font-weight:600} .steps li.cur i{border-color:var(--hit)}
+.steps li small{color:var(--muted);margin-left:auto;font-size:.74rem;white-space:nowrap}
+.pathlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
+.pathlist button{display:flex;flex-direction:column;gap:2px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:11px 12px;cursor:pointer;color:var(--ink)}
+.pathlist button:last-child{border-bottom:0}
+.pathlist button b{font-weight:600} .pathlist button small{color:var(--muted);font-size:.8rem;line-height:1.35}
+.pathlist button[aria-current="true"]{background:var(--peer)}
+.result > .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.tiers div{display:flex;flex-direction:column;gap:2px;padding:6px 2px;border-radius:10px;background:var(--peer)}
+.tiers b{font-family:var(--mono);font-size:1.1rem;font-weight:500} .tiers span{font-size:.7rem;color:var(--muted)}
+.tiers .ok b{color:var(--good)}
+.lv .pstep{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--hit);color:var(--paper);vertical-align:2px;margin-left:4px}
 .lv .opt{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);vertical-align:2px;margin-left:4px}
 .track.beginner{border-left:3px solid var(--hit);padding-left:10px}
 .sq .rk,.sq .fl{position:absolute;font-family:var(--mono);font-weight:600;font-size:2.1cqw;line-height:1;pointer-events:none}
@@ -184,6 +213,7 @@
   </header>
 
   <div id="mapView">
+    <section class="path" id="pathPanel"></section>
     <p class="intro" id="intro"></p>
     <div id="tracks"></div>
   </div>
@@ -211,6 +241,17 @@
     <p class="tip" id="lvTip"></p>
     <button class="btn primary" id="lvGo" type="button">Start</button>
     <button class="btn" id="lvCancel" type="button">Back</button>
+  </div>
+</div>
+
+<!-- Choose a path -->
+<div class="sheet" id="pathSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="pathTitle">
+    <h2 id="pathTitle">Choose your path</h2>
+    <p>Each path is an ordered list of drills from every part of the trainer, ending with a checkpoint test. A path opens its own steps, and anything you've already passed counts.</p>
+    <div class="pathlist" id="pathList"></div>
+    <button class="btn primary" id="placeGo" type="button">Take the placement test</button>
+    <button class="btn" id="pathClose" type="button">Back</button>
   </div>
 </div>
 
@@ -269,12 +310,74 @@ const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', 
 const lvState = (tk, i) => (progress[tk] || {})[i] || null;
 // Optional levels are always open and never block the next one; a required level needs the previous required level passed
 const levelsOf = tk => T.TRACKS.find(t => t.key === tk).levels;
+// ---- curriculum path: { key, checkpoints: { pathKey: { best, passed } }, placement: { path, tiers } }
+let path = store.get('trainer-path', null);
+const savePath = () => store.set('trainer-path', path);
+const onPath = () => !!(path && path.key && T.PATHS.some(p => p.key === path.key)); // a placement result alone doesn't start a path
+const stepDone = ([tk, i]) => !!((lvState(tk, i) || {}).stars > 0);
+function pathInfo(key){
+  const P = T.PATHS.find(p => p.key === key), steps = T.pathSteps(key), done = steps.filter(stepDone).length;
+  const cur = steps.findIndex(st => !stepDone(st)), cp = ((path && path.checkpoints) || {})[key] || null;
+  return { P, steps, done, cur, checkpoint: cp, complete: cur < 0 && !!(cp && cp.passed), ready: cur < 0 };
+}
+// the active path opens its steps up to the current one, whatever the group locks say
+const pathOpens = (tk, i) => { if (!onPath()) return false; const pi = pathInfo(path.key), upto = pi.cur < 0 ? pi.steps.length - 1 : pi.cur; return pi.steps.some(([a, b], k) => k <= upto && a === tk && b === i); };
+const pathStepNo = (tk, i) => { if (!onPath()) return 0; const k = pathInfo(path.key).steps.findIndex(([a, b]) => a === tk && b === i); return k + 1; };
 const prevRequired = (tk, i) => { const ls = levelsOf(tk); for (let j = i - 1; j >= 0; j--) if (!ls[j].optional) return j; return -1; };
-const unlocked = (tk, i) => { if (levelsOf(tk)[i].optional) return true; const j = prevRequired(tk, i); return j < 0 || !!(lvState(tk, j) && lvState(tk, j).stars > 0); };
+const unlocked = (tk, i) => { if (levelsOf(tk)[i].optional || pathOpens(tk, i)) return true; const j = prevRequired(tk, i); return j < 0 || !!(lvState(tk, j) && lvState(tk, j).stars > 0); };
 const required = t => t.levels.map((L, i) => [L, i]).filter(([L]) => !L.optional);
 const starSVG = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : 'off'}"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
 const starRow = (n, big) => `<span class="stars${big ? ' big' : ''}" aria-label="${n} of 3 stars">${[1, 2, 3].map(k => starSVG(k <= n)).join('')}</span>`;
+function drawPath(){
+  const el = $('pathPanel');
+  if (!onPath()){
+    el.innerHTML = `<h2>Chess course</h2><p>Four paths, from first moves to advanced, each an ordered list of drills from every part of the trainer. Not sure where to start? The placement test takes about ten minutes.</p>
+      <div class="row"><button class="btn primary" type="button" data-a="place">Take the placement test</button><button class="btn" type="button" data-a="choose">Choose a path</button></div>`;
+    return;
+  }
+  const pi = pathInfo(path.key), n = pi.steps.length, pct = Math.round(100 * (pi.done + (pi.complete ? 1 : 0)) / (n + 1));
+  const nm = ([tk, i]) => levelsOf(tk)[i].name, grp = ([tk]) => T.TRACKS.find(t => t.key === tk).name;
+  let next;
+  if (pi.complete){
+    const nextP = T.PATHS[T.PATHS.findIndex(p => p.key === path.key) + 1];
+    next = `<div class="next"><div class="txt"><span>Path complete</span><b>${nextP ? `Next: the ${nextP.name} path` : 'You\'ve finished the course'}</b></div>${nextP ? `<button class="btn primary small" type="button" data-a="start" data-p="${nextP.key}">Start</button>` : ''}</div>`;
+  } else if (pi.ready){
+    const cp = pi.checkpoint;
+    next = `<div class="next"><div class="txt"><span>Last step</span><b>Checkpoint: ${T.checkpointSpec(path.key).length} mixed drills</b>${cp ? `<small>Best ${cp.best}/${T.checkpointSpec(path.key).length}</small>` : ''}</div><button class="btn primary small" type="button" data-a="checkpoint">Go</button></div>`;
+  } else {
+    const st = pi.steps[pi.cur];
+    next = `<div class="next"><div class="txt"><span>Step ${pi.cur + 1} of ${n} · ${esc(grp(st))}</span><b>${esc(nm(st))}</b></div><button class="btn primary small" type="button" data-a="step" data-t="${st[0]}" data-i="${st[1]}">Go</button></div>`;
+  }
+  const list = pi.steps.map((st, k) => `<li class="${stepDone(st) ? 'done' : k === pi.cur ? 'cur' : ''}"><i>${stepDone(st) ? '✓' : k + 1}</i>${esc(nm(st))}<small>${esc(grp(st))}</small></li>`).join('')
+    + `<li class="${pi.complete ? 'done' : pi.ready ? 'cur' : ''}"><i>${pi.complete ? '✓' : n + 1}</i>Checkpoint<small>Mixed</small></li>`;
+  el.innerHTML = `<h2>${esc(pi.P.name)} path<small>${pi.done}/${n}${pi.complete ? ' ✓' : ''}</small></h2><div class="pbar"><i style="width:${pct}%"></i></div>${next}
+    <details${pathOpenList ? ' open' : ''} id="pathDetails"><summary class="linkbtn">All steps</summary><ul class="steps">${list}</ul></details>
+    <div class="row"><button class="linkbtn" type="button" data-a="choose">Change path</button><button class="linkbtn" type="button" data-a="place">Placement test</button></div>`;
+}
+let pathOpenList = false;
+$('pathPanel').addEventListener('toggle', e => { if (e.target.id === 'pathDetails') pathOpenList = e.target.open; }, true);
+$('pathPanel').addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const a = b.dataset.a;
+  if (a === 'place') startPlacement();
+  else if (a === 'choose') openPaths();
+  else if (a === 'start') setPath(b.dataset.p);
+  else if (a === 'checkpoint') startCheckpoint(path.key);
+  else if (a === 'step') openLevel(b.dataset.t, +b.dataset.i);
+});
+function setPath(key){ path = Object.assign({ checkpoints: {} }, path || {}, { key }); savePath(); close(); drawMap(); $('mapView').scrollTop = 0; }
+function openPaths(){
+  const sug = path && path.placement && path.placement.path;
+  $('pathList').innerHTML = T.PATHS.map(P => { const pi = pathInfo(P.key);
+    return `<button type="button" data-p="${P.key}"${onPath() && path.key === P.key ? ' aria-current="true"' : ''}><b>${esc(P.name)}${pi.complete ? ' ✓' : ''}${sug === P.key ? ' <span class="opt">Suggested</span>' : ''}</b><small>${esc(P.blurb)} ${pi.steps.length} steps${pi.done ? `, ${pi.done} done` : ''}.</small></button>`; }).join('');
+  open('pathSheet');
+}
+$('pathList').addEventListener('click', e => { const b = e.target.closest('button[data-p]'); if (b) setPath(b.dataset.p); });
+$('pathClose').addEventListener('click', close);
+$('placeGo').addEventListener('click', () => { close(); startPlacement(); });
+
 function drawMap(){
+  drawPath();
   const total = T.TRACKS.reduce((n, t) => n + required(t).length, 0);
   const passed = T.TRACKS.reduce((n, t) => n + required(t).filter(([, i]) => (lvState(t.key, i) || {}).stars > 0).length, 0);
   $('intro').innerHTML = passed
@@ -287,7 +390,7 @@ function drawMap(){
         const st = lvState(t.key, i), open = unlocked(t.key, i), pass = st && st.stars > 0;
         return `<button class="lv${pass ? ' passed' : ''}${open ? '' : ' locked'}" type="button" data-t="${t.key}" data-i="${i}"${open ? '' : ' aria-disabled="true"'}>
           <span class="num">${i + 1}</span>
-          <span class="txt"><b>${L.name}${L.optional ? ' <span class="opt">Optional</span>' : ''}</b><small>${open ? L.about : `Pass level ${prevRequired(t.key, i) + 1} to unlock`}</small></span>
+          <span class="txt"><b>${L.name}${L.optional ? ' <span class="opt">Optional</span>' : ''}${pathStepNo(t.key, i) ? ` <span class="pstep">Step ${pathStepNo(t.key, i)}</span>` : ''}</b><small>${open ? L.about : pathStepNo(t.key, i) ? 'A later step in your path' : `Pass level ${prevRequired(t.key, i) + 1} to unlock`}</small></span>
           ${open ? (st ? starRow(st.stars) : '') : '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'}
         </button>`;
       }).join('') + '</div></section>';
@@ -311,7 +414,10 @@ const tipFor = L => L.tip ? L.tip : L.kind === 'eg' ? TIPS[L.p.piece === 'Q' ? '
 let chosen = null;
 $('tracks').addEventListener('click', e => {
   const b = e.target.closest('.lv'); if (!b || b.classList.contains('locked')) return;
-  const tk = b.dataset.t, i = +b.dataset.i, t = T.TRACKS.find(x => x.key === tk), L = t.levels[i], st = lvState(tk, i);
+  openLevel(b.dataset.t, +b.dataset.i);
+});
+function openLevel(tk, i){
+  const t = T.TRACKS.find(x => x.key === tk), L = t.levels[i], st = lvState(tk, i);
   chosen = { tk, i };
   $('lvTrack').textContent = `${t.name} · level ${i + 1}`;
   $('lvTitle').textContent = L.name; $('lvAbout').textContent = L.about;
@@ -319,7 +425,7 @@ $('tracks').addEventListener('click', e => {
   $('lvInfo').innerHTML = `<span><b>${L.count}</b> drills · pass with <b>${L.pass}</b>${clock}</span>` + (st ? `<span>Best <b>${st.best}/${L.count}</b> ${starRow(st.stars)}</span>` : '');
   $('lvTip').textContent = tipFor(L);
   open('lvSheet');
-});
+}
 $('lvGo').addEventListener('click', () => { close(); startLevel(chosen.tk, chosen.i); });
 $('lvCancel').addEventListener('click', close);
 
@@ -373,6 +479,48 @@ async function startLevel(tk, li){
   if (L.kind === 'mate' || L.kind === 'tactic'){ seen = seen.concat(D.items.map(x => x.fen)).slice(-400); store.set('trainer-seen', seen); }
   startItem(0);
 }
+// A mixed run (placement test or path checkpoint): items come from several levels
+async function startMixed(meta){
+  D = { custom: meta, L: { name: meta.name, count: 0, pass: 0 }, items: [], k: 0, results: [], ctl: null, done: false, helped: false, t0: Date.now() };
+  $('mapView').hidden = true; $('drillView').hidden = false;
+  $('dName').textContent = meta.name; $('fb').hidden = true; $('act').innerHTML = '';
+  showBusy('Setting up…'); $('pTitle').textContent = 'One moment'; $('pSub').textContent = ''; $('pSide').className = 'side none'; clearBoard();
+  await needTables('P'); // endgame and square drills may be in the mix
+  D.items = meta.make(); D.L.count = D.items.length; D.L.pass = meta.pass(D.items.length);
+  showBusy(null); startItem(0);
+}
+function startPlacement(){ close(); startMixed({ kind: 'placement', name: 'Placement test', make: () => T.placementSet((Date.now() ^ (Math.random() * 1e9)) >>> 0), pass: () => 0 }); }
+function startCheckpoint(key){ close(); const P = T.PATHS.find(p => p.key === key);
+  startMixed({ kind: 'checkpoint', path: key, name: `${P.name} checkpoint`, make: () => T.mixedSet(T.checkpointSpec(key), (Date.now() ^ (Math.random() * 1e9)) >>> 0), pass: n => Math.ceil(n * 0.75) }); }
+function finishMixed(){
+  const m = D.custom, score = D.results.filter(r => r === 'ok').length, n = D.items.length;
+  const secs = Math.round((Date.now() - D.t0) / 1000), time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  const btns = [];
+  if (m.kind === 'placement'){
+    const res = T.placementResult(D.items.map((it, k) => ({ tier: it.tier, ok: D.results[k] === 'ok' })));
+    const P = T.PATHS.find(p => p.key === res.path);
+    path = Object.assign({ checkpoints: {} }, path || {}, { placement: res }); savePath();
+    $('resTitle').textContent = `Suggested: ${P.name} path`;
+    $('resSub').textContent = res.tiers.every(t => t.cleared) ? 'You cleared every part. The Advanced path will still find things to sharpen.' : `${P.blurb}`;
+    $('resStars').innerHTML = '';
+    $('resGrid').innerHTML = `<div class="tiers" style="grid-column:1/-1">${res.tiers.map(t => `<div class="${t.cleared ? 'ok' : ''}"><b>${t.got}/${t.of}</b><span>${esc(T.PATHS.find(p => p.key === t.tier).name)}</span></div>`).join('')}</div>`;
+    btns.push(`<button class="btn primary" type="button" data-a="path" data-p="${P.key}">Start the ${esc(P.name)} path</button>`, `<button class="btn" type="button" data-a="choose">Choose another</button>`);
+  } else {
+    const cps = (path.checkpoints ||= {}), prev = cps[m.path] || { best: 0, passed: false }, passed = score >= D.L.pass;
+    cps[m.path] = { best: Math.max(prev.best, score), passed: prev.passed || passed }; savePath();
+    const idx = T.PATHS.findIndex(p => p.key === m.path), nextP = T.PATHS[idx + 1];
+    $('resTitle').textContent = passed ? `${T.PATHS[idx].name} path complete!` : 'Not this time';
+    $('resSub').textContent = passed ? (nextP ? `Ready for the ${nextP.name} path.` : 'That\'s the whole course. Keep any level sharp by replaying it.') : `You need ${D.L.pass} of ${n}. The drills that went wrong point to the steps worth replaying.`;
+    $('resStars').innerHTML = '';
+    $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${n}</b></div><div><span class="label">Best</span><b>${cps[m.path].best}/${n}</b></div><div><span class="label">Time</span><b>${time}</b></div>`;
+    if (passed && nextP) btns.push(`<button class="btn primary" type="button" data-a="path" data-p="${nextP.key}">Start the ${esc(nextP.name)} path</button>`);
+    btns.push(`<button class="btn${passed && nextP ? '' : ' primary'}" type="button" data-a="again">Try again</button>`);
+  }
+  btns.push(`<button class="btn" type="button" data-a="map">All drills</button>`);
+  $('resRow').innerHTML = btns.join('');
+  $('resNav').innerHTML = '';
+  open('resSheet');
+}
 function showBusy(text){ $('busy').hidden = !text; if (text) $('busyText').textContent = text; }
 function backToMap(){
   stopClock(); D = null; close();
@@ -382,6 +530,7 @@ function backToMap(){
 function startItem(k){
   D.k = k; D.helped = false; D.done = false; $('fb').hidden = true;
   const item = D.items[k];
+  if (D.custom && item.src) $('dName').textContent = `${D.custom.name} · ${item.src.name}`;
   D.ctl = CTL[item.kind](item);
   render(); drawDots(); startClock();
 }
@@ -405,6 +554,7 @@ function resolve(ok, title, body){
   render();
 }
 function finishLevel(){
+  if (D.custom) return finishMixed();
   const L = D.L, score = D.results.filter(r => r === 'ok').length, stars = T.stars(L, score);
   const p = (progress[D.tk] ||= {}), prev = p[D.li] || { stars: 0, best: 0, plays: 0 };
   const firstPass = stars > 0 && !(prev.stars > 0);
@@ -421,8 +571,14 @@ function finishLevel(){
   const secs = Math.round((Date.now() - D.t0) / 1000);
   $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${L.count}</b></div><div><span class="label">Best</span><b>${p[D.li].best}/${L.count}</b></div><div><span class="label">Time</span><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></div>`;
   const btns = [];
-  if (stars && nextL) btns.push(`<button class="btn primary" type="button" data-a="next">Next level</button>`);
-  btns.push(`<button class="btn${stars && nextL ? '' : ' primary'}" type="button" data-a="again">Try again</button>`);
+  // on the active path: the next step comes first
+  const stepNo = pathStepNo(D.tk, D.li), pi = stepNo && onPath() ? pathInfo(path.key) : null;
+  if (stars && pi){
+    if (pi.cur >= 0){ const [ntk, ni] = pi.steps[pi.cur]; btns.push(`<button class="btn primary" type="button" data-a="step" data-t="${ntk}" data-i="${ni}">Next step: ${esc(levelsOf(ntk)[ni].name)}</button>`); }
+    else if (!pi.complete) btns.push(`<button class="btn primary" type="button" data-a="checkpoint">Path checkpoint</button>`);
+    $('resSub').textContent = (firstPass ? `Step ${stepNo} of your ${pi.P.name} path done. ` : '') + (pi.cur >= 0 ? '' : 'Every step is done: the checkpoint is next.');
+  } else if (stars && nextL) btns.push(`<button class="btn primary" type="button" data-a="next">Next level</button>`);
+  btns.push(`<button class="btn${(stars && (nextL || pi)) ? '' : ' primary'}" type="button" data-a="again">Try again</button>`);
   btns.push(`<button class="btn" type="button" data-a="map">All drills</button>`);
   $('resRow').innerHTML = btns.join('');
   if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'trainer');
@@ -430,9 +586,13 @@ function finishLevel(){
 }
 $('resRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  const { tk, li } = D;
-  if (b.dataset.a === 'next'){ close(); startLevel(tk, li + 1); }
-  else if (b.dataset.a === 'again'){ close(); startLevel(tk, li); }
+  const a = b.dataset.a, { tk, li, custom } = D;
+  if (a === 'next'){ close(); startLevel(tk, li + 1); }
+  else if (a === 'again'){ close(); custom ? (custom.kind === 'placement' ? startPlacement() : startCheckpoint(custom.path)) : startLevel(tk, li); }
+  else if (a === 'step'){ close(); startLevel(b.dataset.t, +b.dataset.i); }
+  else if (a === 'checkpoint'){ startCheckpoint(path.key); }
+  else if (a === 'path'){ backToMap(); setPath(b.dataset.p); }
+  else if (a === 'choose'){ backToMap(); openPaths(); }
   else backToMap();
 });
 
@@ -440,9 +600,9 @@ $('resRow').addEventListener('click', e => {
 let clockT = null;
 function startClock(){
   stopClock();
-  const lim = settings.clock && D.L.clock;
+  const src = D.items[D.k] && D.items[D.k].src, lim = settings.clock && (src ? levelsOf(src.tk)[src.li].clock : D.L.clock);
   $('clock').hidden = !lim; if (!lim) return;
-  D.left = D.L.clock; drawClock();
+  D.left = lim; drawClock();
   clockT = setInterval(() => {
     if (document.hidden || D.busy || D.done) return;
     D.left--; drawClock();
@@ -1052,7 +1212,7 @@ function lineCtl(it, isMate){
 drawMap();
 GameNav.init({ id: 'trainer', note: () => D ? 'Leaving now ends this level.' : '',
   actions: () => [
-    D && { icon: 'restart', label: 'Restart this level', note: 'New positions, score back to zero.', run: () => { const { tk, li } = D; startLevel(tk, li); } },
+    D && { icon: 'restart', label: D.custom ? `Restart the ${D.custom.kind === 'placement' ? 'placement test' : 'checkpoint'}` : 'Restart this level', note: 'New positions, score back to zero.', run: () => { const { tk, li, custom } = D; custom ? (custom.kind === 'placement' ? startPlacement() : startCheckpoint(custom.path)) : startLevel(tk, li); } },
     D && { icon: 'mode', label: 'All drills', note: 'Back to the list of levels.', run: backToMap },
   ] });
 

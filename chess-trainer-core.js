@@ -725,10 +725,78 @@ function makeSet(trackKey, levelIdx, seed, seen) {
   return L.kind === 'count' || L.kind === 'square' || L.kind === 'escape' ? shuffle(out, r) : out;
 }
 
+// ---------- curriculum paths ----------
+// Four paths through the levels above, from first moves to advanced. A path opens its own steps (whatever the group locks
+// say), steps count as done when the level has been passed anywhere, and each path ends with a mixed checkpoint test.
+const PATHS = [
+  { key: 'beginner', name: 'Beginner', blurb: 'How the pieces move, the rules that decide a game, and your first mates.', steps: [
+    ['pieces', 'The rook'], ['pieces', 'The bishop'], ['pieces', 'The queen'], ['pieces', 'The king'], ['pieces', 'The knight'], ['pieces', 'The pawn'], ['pieces', 'Capture them all'],
+    ['rules', 'Give check'], ['rules', 'Out of check'], ['rules', 'Checkmate in one'], ['rules', 'Castling'], ['rules', 'Promotion & en passant'],
+    ['vision', 'Knight hops'], ['mates', 'Mate in 1'], ['endgames', 'Rule of the square'], ['endgames', 'Mate with a queen']],
+    checkpoint: [['pieces', 'The knight'], ['pieces', 'Capture them all'], ['rules', 'Give check'], ['rules', 'Out of check'], ['rules', 'Checkmate in one'], ['rules', 'Castling'], ['mates', 'Mate in 1'], ['endgames', 'Rule of the square']] },
+  { key: 'improver', name: 'Improver', blurb: 'Stop losing pieces, win other people\'s, and play your first openings properly.', steps: [
+    ['vision', 'Long routes'], ['vision', 'Loose pieces'], ['mates', 'Count the exchange'], ['tactics', 'Knight forks'], ['tactics', 'Forks by any piece'],
+    ['endgames', 'Mate with a rook'], ['openings', '1.e4 as White'], ['openings', 'Facing 1.e4 as Black'], ['openings', 'Opening traps'], ['mates', 'Mate in 2']],
+    checkpoint: [['vision', 'Loose pieces'], ['mates', 'Count the exchange'], ['tactics', 'Knight forks'], ['tactics', 'Forks by any piece'], ['openings', '1.e4 as White'], ['openings', 'Opening traps'], ['mates', 'Mate in 2'], ['endgames', 'Mate with a rook']] },
+  { key: 'club', name: 'Club player', blurb: 'Pins and skewers in busy positions, pawn endings, the queen\'s pawn openings and deeper counting.', steps: [
+    ['tactics', 'Pins'], ['tactics', 'Skewers'], ['vision', 'Guarded squares'], ['vision', 'Pawn grab'], ['vision', 'Loose pieces: busy board'], ['tactics', 'Mixed: busy positions'],
+    ['endgames', 'Pawn ending: opposition'], ['endgames', 'Pawn ending: key squares'], ['openings', '1.d4 and flank openings'], ['openings', 'Facing 1.d4 as Black'],
+    ['mates', 'Counting with batteries'], ['mates', 'Mate in 2: harder']],
+    checkpoint: [['tactics', 'Pins'], ['tactics', 'Skewers'], ['tactics', 'Mixed: busy positions'], ['vision', 'Loose pieces: busy board'], ['endgames', 'Pawn ending: opposition'], ['openings', 'Facing 1.d4 as Black'], ['mates', 'Counting with batteries'], ['mates', 'Mate in 2: harder']] },
+  { key: 'advanced', name: 'Advanced', blurb: 'Two-move combinations, holding difficult endings, mate in three and knowing your openings by name.', steps: [
+    ['tactics', 'Two-move combinations'], ['endgames', 'Pawn ending: hold the draw'], ['mates', 'Mate in 3'], ['openings', 'Name the opening'], ['openings', 'Name the variation']],
+    checkpoint: [['tactics', 'Two-move combinations'], ['tactics', 'Two-move combinations'], ['tactics', 'Mixed: busy positions'], ['mates', 'Mate in 3'], ['mates', 'Mate in 3'], ['mates', 'Counting with batteries'], ['endgames', 'Pawn ending: hold the draw'], ['openings', 'Name the variation']] },
+];
+// [trackKey, levelIndex] for each step (checked by the tests)
+function pathSteps(key) {
+  const P = PATHS.find(p => p.key === key);
+  return P.steps.map(([tk, name]) => { const t = TRACKS.find(x => x.key === tk), i = t.levels.findIndex(L => L.name === name); if (i < 0) throw new Error('No level ' + tk + ': ' + name); return [tk, i]; });
+}
+// A mixed test: one drill from each of several levels. `spec`: list of [trackKey, levelName or index]
+function mixedSet(spec, seed) {
+  const r = rng(seed), out = [], used = new Set();
+  spec.forEach(([tk, lv], k) => {
+    const t = TRACKS.find(x => x.key === tk), i = typeof lv === 'number' ? lv : t.levels.findIndex(L => L.name === lv);
+    const set = makeSet(tk, i, (seed + k * 7919) >>> 0).filter(x => !used.has(JSON.stringify([x.fen, x.from, x.to, x.name, x.answer]))); if (!set.length) return;
+    const it = pickOne(set, r); used.add(JSON.stringify([it.fen, it.from, it.to, it.name, it.answer]));
+    out.push(Object.assign(it, { src: { tk, li: i, name: t.levels[i].name, group: t.name } })); // not `from`: route drills use that for their start square
+  });
+  return out;
+}
+// Checkpoint at the end of a path: eight drills chosen to cover the path (at most one played-out endgame, which is long)
+function checkpointSpec(key) {
+  const P = PATHS.find(p => p.key === key);
+  if (P.checkpoint) return P.checkpoint.map(([tk, name]) => [tk, TRACKS.find(t => t.key === tk).levels.findIndex(L => L.name === name)]);
+  const steps = pathSteps(key), out = []; let eg = 0;
+  const n = Math.min(8, steps.length), stride = steps.length / n;
+  for (let k = 0; k < steps.length && out.length < n; k++) {
+    const [tk, i] = steps[Math.min(steps.length - 1, Math.floor(k * stride))], L = TRACKS.find(t => t.key === tk).levels[i];
+    if (L.kind === 'eg' && eg++) continue;
+    if (!out.some(([a, b]) => a === tk && b === i)) out.push([tk, i]);
+  }
+  for (const [tk, i] of steps) if (out.length < n && !out.some(([a, b]) => a === tk && b === i) && TRACKS.find(t => t.key === tk).levels[i].kind !== 'eg') out.push([tk, i]);
+  return out;
+}
+// Placement test: ten drills in four tiers, easiest first. The suggestion is the first tier you don't clear.
+const PLACEMENT = [
+  { tier: 'beginner', need: 2, spec: [['rules', 'Give check'], ['rules', 'Checkmate in one']] },
+  { tier: 'improver', need: 2, spec: [['tactics', 'Knight forks'], ['mates', 'Count the exchange'], ['mates', 'Mate in 2']] },
+  { tier: 'club', need: 2, spec: [['tactics', 'Pins'], ['endgames', 'Rule of the square'], ['tactics', 'Skewers']] },
+  { tier: 'advanced', need: 1, spec: [['tactics', 'Two-move combinations'], ['mates', 'Mate in 3']] },
+];
+function placementSet(seed) { return mixedSet([].concat(...PLACEMENT.map(t => t.spec)), seed).map((x, k) => Object.assign(x, { tier: PLACEMENT.find(t => t.spec.some(([tk, n]) => tk === x.src.tk && n === x.src.name)).tier })); }
+// results: list of { tier, ok }. Returns { path, tiers: [{ tier, got, of, need, cleared }] }
+function placementResult(results) {
+  const tiers = PLACEMENT.map(t => { const rs = results.filter(r => r.tier === t.tier), got = rs.filter(r => r.ok).length; return { tier: t.tier, got, of: rs.length, need: t.need, cleared: got >= t.need }; });
+  // a path for each tier you haven't cleared; clearing everything suggests the last path
+  const idx = tiers.findIndex(t => !t.cleared);
+  return { path: PATHS[idx < 0 ? PATHS.length - 1 : idx].key, tiers };
+}
+
 // Stars for a finished set: 1 = passed, 2 = at most one miss, 3 = perfect
 function stars(L, score) { return score < L.pass ? 0 : score === L.count ? 3 : score >= L.count - 1 ? 2 : 1; }
 
-const api = { openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
+const api = { PATHS, pathSteps, mixedSet, checkpointSpec, placementSet, placementResult, PLACEMENT, openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
   squareFacts, egKey, egValue, egMoves, routeMoves, routeWhy, routeSolve, genRoute, genPawnRoute, checkers, attacks, escapeWay, isCheckMove, isMateMove,
   genCheck, genEscape, genMate1, genCastle, genSpecial, to88, to64, nm64, KNIGHT, PTS, NAME, plural, genCount, genSquare, genEg, genLoose, genKpath, genGrab };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ChessTrainer = api;

@@ -189,5 +189,26 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
   const m = /OPTIONAL = (\{[^}]*\})/.exec(html), optHtml = m ? JSON.parse(m[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":')) : {};
   check('home tile counts the required levels', tot === req && JSON.stringify(optHtml) === JSON.stringify(opt), `tile ${tot}, map ${req}`);
 }
+// ---- curriculum paths ----
+{
+  const steps = T.PATHS.map(P => { try { return T.pathSteps(P.key); } catch (e) { return e.message; } });
+  check('every path step is a real level', steps.every(Array.isArray), steps.filter(x => !Array.isArray(x)).join(', '));
+  const all = [].concat(...steps.filter(Array.isArray)).map(x => x.join(':')), req = [];
+  T.TRACKS.forEach(t => t.levels.forEach((L, i) => req.push(t.key + ':' + i)));
+  check('the paths together cover every level once', new Set(all).size === all.length && req.every(k => all.includes(k)), `${new Set(all).size}/${req.length}; missing: ${req.filter(k => !all.includes(k)).join(' ')}`);
+  for (const P of T.PATHS) {
+    const spec = T.checkpointSpec(P.key), set = T.mixedSet(spec, 5), egs = set.filter(x => x.kind === 'eg').length;
+    const upTo = [].concat(...T.PATHS.slice(0, T.PATHS.indexOf(P) + 1).map(Q => T.pathSteps(Q.key))); // its own steps, or reviews of earlier paths
+    check(`${P.name} checkpoint: ${set.length} different drills from this path or earlier ones`, set.length === 8 && spec.every(([tk, i]) => upTo.some(([a, b]) => a === tk && b === i)) && egs <= 1 && new Set(set.map(x => JSON.stringify(x))).size === 8);
+  }
+  const pl = T.placementSet(11);
+  check('placement test: ten drills in four tiers', pl.length === 10 && T.PLACEMENT.every(t => pl.filter(x => x.tier === t.tier).length === t.spec.length));
+  const res = (ok) => T.placementResult(pl.map((x, k) => ({ tier: x.tier, ok: ok(x, k) }))).path;
+  check('placement suggestions', res(() => false) === 'beginner' && res(x => x.tier === 'beginner') === 'improver' && res(x => x.tier !== 'advanced' && x.tier !== 'club') === 'club' && res(() => true) === 'advanced' && res(x => x.tier !== 'advanced') === 'advanced');
+  // the home tile's copy of the steps
+  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  const ok = T.PATHS.every(P => html.includes(`${P.key}: ['${P.name}', '${T.pathSteps(P.key).map(([a, b]) => a + ':' + b).join(' ')}']`));
+  check('home tile knows each path\'s steps', ok);
+}
 console.log(fails ? `${fails} failed` : 'all passed');
 process.exit(fails ? 1 : 0);
