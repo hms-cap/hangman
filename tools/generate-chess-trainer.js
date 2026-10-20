@@ -17,6 +17,12 @@ if (isMainThread) {
   const per = +(process.argv[2] || 40), out = process.argv[3] || path.join(__dirname, '..', 'chess-trainer-data.js'), maxMin = +(process.argv[4] || 120);
   const want = Object.fromEntries(SETS.map(s => [s, s === 'combo' ? +(process.env.COMBO_N || Math.round(per * 0.75)) : per]));
   const got = Object.fromEntries(SETS.map(s => [s, []])), seen = new Set(), t0 = Date.now();
+  // A combination's underlying tactic (the sentence after the set-up, in White-to-move squares): each one may appear at most
+  // twice, and then only with two different set-ups, so the same fork or pin doesn't come back with a cosmetic change.
+  const flip = t => t.replace(/([a-h])([1-8])(?![0-9])/g, (_, f, r) => f + (9 - +r));
+  const core = x => { const m = /(?:after|After) [^,]+, (.*)$|Now (.*)$/.exec(x[4]); const t = m ? (m[1] || m[2]) : x[4]; return x[0].split(' ')[1] === 'b' ? flip(t) : t; };
+  const cores = new Map();
+  const fresh = (set, x) => { if (set !== 'combo') return true; const k = core(x), had = cores.get(k) || []; if (had.length >= 2 || had.includes(x[6])) return false; cores.set(k, had.concat(x[6])); return true; };
   // Resume: keep what an earlier (stopped) run already wrote, including sets this run doesn't generate.
   // Extra files given with MERGE=a.js,b.js are folded in too.
   const kept = {};
@@ -24,7 +30,7 @@ if (isMainThread) {
     if (!fs.existsSync(f)) continue;
     const c = { window: {} }; require('vm').runInNewContext(fs.readFileSync(f, 'utf8'), c);
     for (const [k, list] of Object.entries(c.window.CHESS_TRAINER_DATA || {})) for (const item of list) {
-      const key = item[0].split(' ').slice(0, 2).join(' '); if (seen.has(key)) continue; seen.add(key);
+      const key = item[0].split(' ').slice(0, 2).join(' '); if (seen.has(key) || !fresh(k, item)) continue; seen.add(key);
       (got[k] || (kept[k] ||= [])).push(item);
     }
   }
@@ -35,11 +41,12 @@ if (isMainThread) {
   const timer = setInterval(() => { report(); write(); if ((Date.now() - t0) / 60000 > maxMin) finish(); }, 30000);
   const workers = [];
   for (let t = 0; t < Math.max(1, os.cpus().length); t++) {
-    const w = new Worker(__filename, { workerData: { seed: 1000 + t * 7919 } }); workers.push(w);
+    const seeds = [].concat(...['pin', 'skewer', 'mixed', 'fork', 'knightFork'].map(k => (got[k] || kept[k] || []).map(x => [x[0], x[1], x[3], x[5]])));
+    const w = new Worker(__filename, { workerData: { seed: 1000 + t * 7919 + (Date.now() % 9973), seeds } }); workers.push(w);
     w.on('message', m => {
       if (m.need) { w.postMessage({ need: SETS.filter(s => got[s].length < want[s]) }); return; }
       const key = m.item[0].split(' ').slice(0, 2).join(' ');
-      if (seen.has(key) || got[m.set].length >= want[m.set]) return;
+      if (seen.has(key) || got[m.set].length >= want[m.set] || !fresh(m.set, m.item)) return;
       seen.add(key); got[m.set].push(m.item);
       if (done()) finish();
     });
@@ -292,11 +299,20 @@ if (isMainThread) {
     const P = {}; for (let s = 0; s < 64; s++) { const p = pos1.b[to88(s)]; if (p) P[s] = (C.colorOf(p) ? 'pnbrqk' : 'PNBRQK')[C.typeOf(p) - 1]; }
     const k1 = to64(pos1.king[1]);
     const k0s = ORTH.concat(DIAG).map(([a, b]) => at(R(k1) + a, F(k1) + b)).filter(s => s >= 0 && !P[s]);
-    for (let tries = 0; tries < 80 && out.length < 3; tries++) {
+    for (let tries = 0; tries < 160 && out.length < 5; tries++) {
       const k0 = pick(k0s); if (k0 == null) return out;
       const Q = Object.assign({}, P); delete Q[k1]; Q[k0] = 'k';
-      let w0, w1, decoy = false;
-      if (rnd() < 0.55) {
+      let w0, w1, decoy = false, extra = false;
+      const r0 = rnd();
+      if (r0 < 0.4) {
+        // drive with a fresh piece: it checks the king on k0 from a distance, leaving k1 as the way out
+        const t = pick(['R', 'B', 'Q']), dirs = t === 'R' ? ORTH : t === 'B' ? DIAG : ORTH.concat(DIAG), d = pick(dirs), line = ray(k0, d);
+        let ci = -1; for (let i = 1; i < line.length; i++) { if (Q[line[i]]) break; if (rnd() < 0.5) { ci = i; break; } }
+        if (ci < 0) continue;
+        w1 = line[ci]; if (w1 === k1) continue;
+        const Q2 = Object.assign({}, Q); w0 = originFor(Q2, t, w1, [d]); if (w0 < 0) continue;
+        Q[w0] = t; extra = true;
+      } else if (r0 < 0.7) {
         // decoy: a rook or bishop (worth less than what the tactic wins) steps onto k1 with check
         const orth = R(k0) === R(k1) || F(k0) === F(k1), t = orth ? (gain >= 7 ? pick(['R', 'Q']) : 'R') : 'B';
         if (PTS[{ R: 4, B: 3, Q: 5 }[t]] > gain - 2) continue;
@@ -312,7 +328,7 @@ if (isMainThread) {
       pos0.make(m);
       const check = pos0.inCheck(), replies = pos0.legal(), toK1 = replies.some(x => C.mFrom(x) === pos0.king[1] && to64(C.mTo(x)) === k1);
       pos0.unmake();
-      if (!check || !toK1 || replies.length > (decoy ? 3 : 2)) continue;
+      if (!check || !toK1 || replies.length > (decoy ? 3 : 4)) continue;
       const key = pos0.fen(); if (seen.has(key)) continue; seen.add(key);
       out.push({ pos: pos0, how: decoy ? 'decoy' : 'drive', first: [w0, w1] });
     }
@@ -323,7 +339,7 @@ if (isMainThread) {
     const out = [], seen = new Set();
     const P = {}; for (let s = 0; s < 64; s++) { const p = pos1.b[to88(s)]; if (p) P[s] = (C.colorOf(p) ? 'pnbrqk' : 'PNBRQK')[C.typeOf(p) - 1]; }
     const m1 = pos1.fromUci(line1[0]), Fq = to64(C.mTo(m1)), from1 = to64(C.mFrom(m1));
-    for (let tries = 0; tries < 120 && out.length < 3; tries++) {
+    for (let tries = 0; tries < 160 && out.length < 4; tries++) {
       const Q = Object.assign({}, P), dt = pick(['n', 'b', 'r', 'n', 'b']), d = freeSq(Q, s => s !== Fq && R(s) >= 2); if (d < 0) continue;
       Q[d] = dt;
       // the defender must cover the tactic's square
@@ -350,6 +366,10 @@ if (isMainThread) {
     const rows = board.split('/').reverse().map(r => r.replace(/[a-z]/gi, c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()));
     return { fen: rows.join('/') + ' b - - 0 1', line: line.map(flipUci), alts: alts.map(a => a.map(flipUci)) };
   }
+  function unmirror(fen, line) {
+    const rows = fen.split(' ')[0].split('/').reverse().map(r => r.replace(/[a-z]/gi, c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()));
+    return { fen: rows.join('/') + ' w - - 0 1', line: line.map(flipUci) };
+  }
   const flipText = t => t.replace(/([a-h])([1-8])(?![0-9])/g, (_, f, r) => f + (9 - +r));
 
   function attempt(set) {
@@ -360,12 +380,22 @@ if (isMainThread) {
     const depth = busy ? 5 : 4;
     let pos = pos1, k = 0, res = null, mo = null, how = null, info = null;
     if (set === 'combo') {
-      const r1 = lineFrom(pos1, depth, 2); if (!r1) return null;
-      const mo1 = motifAt(pos1, r1.line, 0); if (!mo1) return null;
+      let r1, mo1, p1 = pos1;
+      const SEEDS = workerData.seeds || [];
+      if (SEEDS.length && rnd() < 0.85) {
+        // start from a tactic already verified for another level (pins and skewers first: they are rarer)
+        const pool = rnd() < 0.7 ? SEEDS.filter(x => x[2] !== 'fork') : SEEDS, sd = pick(pool);
+        let fen = sd[0], line = sd[1].split(' ');
+        if (fen.split(' ')[1] === 'b') { const m = unmirror(fen, line); fen = m.fen; line = m.line; }
+        p1 = new Position(fen); r1 = { line, gain: sd[3] };
+      } else r1 = lineFrom(pos1, depth, 2);
+      if (!r1) return null;
+      mo1 = motifAt(p1, r1.line, 0); if (!mo1) return null;
+      const pos1b = p1;
       // try forcing set-ups (decoy, drive, remove the defender) until one checks out
-      const cands = addPrelude(pos1, r1.gain).concat(addGuard(pos1, r1.line));
+      const cands = addPrelude(pos1b, r1.gain).concat(addGuard(pos1b, r1.line));
       for (let a = cands.length - 1; a > 0; a--) { const b = (rnd() * (a + 1)) | 0; [cands[a], cands[b]] = [cands[b], cands[a]]; }
-      for (const c of cands.slice(0, 4)) {
+      for (const c of cands.slice(0, 6)) {
         const r = lineFrom(c.pos, 5, 3); if (!r || r.line.length < 5) continue;
         const f = c.pos.fromUci(r.line[0]); if (to64(C.mFrom(f)) !== c.first[0] || to64(C.mTo(f)) !== c.first[1]) continue; // the set-up move must come first
         const m = motifAt(c.pos, r.line, 1); if (!m) continue;
