@@ -53,6 +53,39 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
     } else if (it.kind === 'square') {
       const v = EG.probe('P', it.turn, it.wk, it.bk, it.pawn), f = T.squareFacts(it.pawn, it.bk, it.turn);
       if ((v === 0) !== it.catches || f.catches !== it.catches) bad.push('square ' + it.fen);
+    } else if (it.kind === 'route') {
+      // independent check: replay the stored shortest path with the move rules, and confirm nothing shorter exists
+      const items = it.stars.concat(it.targets), blockers = new Set(it.blockers);
+      let cur = it.from, got = 0, okPath = true;
+      for (const t of it.path.slice(1)) {
+        const left = new Set(it.targets.filter((x, j) => !(got & (1 << (it.stars.length + j)))));
+        if (!T.routeMoves(it.piece, cur, blockers, left).includes(t)) { okPath = false; break; }
+        cur = t; const j = items.indexOf(t); if (j >= 0) got |= 1 << j;
+      }
+      const sol = T.routeSolve(it, it.from, 0);
+      if (!okPath || got !== (1 << items.length) - 1 || it.path.length - 1 !== it.min || !sol || sol.min !== it.min) bad.push('route ' + JSON.stringify(it).slice(0, 160));
+      if (blockers.has(it.from) || items.some(x => blockers.has(x)) || new Set(items).size !== items.length) bad.push('route overlap');
+      if (L.p.piece && it.piece !== L.p.piece) bad.push('route piece');
+      // the piece rules themselves, on an empty board: rook 14 squares, bishop 7-13, queen 21-27, king 3-8, knight 2-8
+      const n = T.routeMoves(it.piece, it.from, new Set(), new Set()).length, rng = { R: [14, 14], B: [7, 13], Q: [21, 27], K: [3, 8], N: [2, 8], P: [1, 2] }[it.piece];
+      if (n < rng[0] || n > rng[1]) bad.push(`route ${it.piece} on ${T.nm64(it.from)} has ${n} moves on an empty board`);
+    } else if (it.kind === 'goal') {
+      const pos = new Position(it.fen), legal = pos.legal().map(m => C.Position.uci(m));
+      if (!it.answers.length || it.answers.some(u => !legal.includes(u))) { bad.push('goal answers not legal ' + it.fen); continue; }
+      for (const m of pos.legal()) {
+        const u = C.Position.uci(m), want = it.answers.includes(u);
+        let is;
+        if (it.goal === 'check') is = T.isCheckMove(pos, m);
+        else if (it.goal === 'mate') is = T.isMateMove(pos, m);
+        else if (it.goal === 'escape') is = T.escapeWay(pos, m, [it.checker]) === it.way;
+        else if (it.goal === 'castle') is = !!(mFlags(m) & C.F_CASTLE) && (T.to64(mTo(m)) === 6 ? 'k' : 'q') === it.side;
+        else if (it.goal === 'promote') is = !!(mFlags(m) & F_PROMO) && u.endsWith('q');
+        else if (it.goal === 'ep') is = !!(mFlags(m) & C.F_EP);
+        if (is !== want) bad.push(`goal ${it.goal} ${it.fen} ${u}: expected ${want}`);
+      }
+      if (it.goal === 'escape' && (!pos.inCheck() || T.checkers(pos).length !== 1 || T.to88(it.checker) == null)) bad.push('escape without a single check ' + it.fen);
+      if (it.goal === 'check' && it.answers.some(u => T.isMateMove(pos, pos.fromUci(u)))) bad.push('check drill that is mate ' + it.fen);
+      if (it.goal === 'castle' && it.ask === 'any' && pos.legal().filter(m => mFlags(m) & C.F_CASTLE).some(m => (T.to64(mTo(m)) === 6 ? 'k' : 'q') !== it.side)) bad.push('castle: both sides allowed ' + it.fen);
     } else if (it.kind === 'eg') {
       // play it out: the solver plays the table's best move, the defender (or attacker) answers as the page does
       const pos = new Position(it.fen), me = pos.turn, lim = it.limit || it.moves; let moves = 0, out = 'running';

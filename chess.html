@@ -164,6 +164,8 @@
 .toast[hidden]{display:none}
 @media (max-height:640px){.tool .lbl{display:none}}
 @media (max-height:720px){.graph{height:42px}.anaNav button{height:34px}.coach{padding:6px 9px;gap:3px}.coach p{font-size:.8rem;line-height:1.3}.coachHead .badge{font-size:.7rem}}
+.learnlink{color:var(--hit);text-decoration:none;font-size:.9rem;text-align:center}
+.learnlink b{font-weight:600}
 </style>
 </head>
 <body>
@@ -228,6 +230,7 @@
       <label class="switch" style="margin-top:8px"><span>Tutor mode<small>Comments on each of your moves, suggests better ones and warns about threats. Tutor games don't count toward your record.</small></span><input type="checkbox" id="tutorSwitch"></label>
     </div>
     <p id="twoNote" hidden>Pass the phone between turns. Turn on "Turn the board each move" in More to flip the board for each player automatically.</p>
+    <a class="learnlink" href="chess-trainer.html">New to chess? <b>Learn how the pieces move</b> →</a>
     <button class="btn primary" id="startBtn" type="button">Start game</button>
     <button class="btn" id="newCancel" type="button">Back to current game</button>
   </div>
@@ -892,6 +895,7 @@ GameNav.init({ id: 'chess', note: () => G && !G.over && G.moves.length ? 'Your g
     G && !G.over && G.moves.length && { icon: 'flag', label: 'Resign', note: G.mode === 'ai' ? 'Counts as a loss against this level.' : `${pos.turn === WHITE ? 'White' : 'Black'} (to move) resigns.`, danger: true, confirm: 'Tap again to resign', run: resignNow },
     G && { icon: 'restart', label: G.over ? 'Play again' : 'Restart', note: `Same setup: ${setupName()}.`, confirm: G.over || !G.moves.length ? false : 'Tap again to restart', run: () => { cancelEngine(); newGame(sameSetup()); } },
     { icon: 'new', label: 'New game…', note: 'Choose the computer’s level, your side, or two players.', run: openNew },
+    { icon: 'mode', label: 'Learn the moves', note: 'Beginner lessons in the Chess Trainer: how each piece moves, check, mate and castling.', run: () => { location.href = 'chess-trainer.html'; } },
   ] });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){

@@ -111,6 +111,13 @@
 .sq .flag path{fill:var(--miss);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
 .sq .flag line{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
 .sq .tag{position:absolute;top:3%;right:6%;font-family:var(--mono);font-weight:700;font-size:2.4cqw;line-height:1;color:var(--hit);pointer-events:none}
+.sq .star{position:absolute;inset:16%;width:68%;height:68%;pointer-events:none;animation:twinkle 2.4s ease-in-out infinite}
+.sq .star path{fill:#f3c867;stroke:var(--ink);stroke-width:1.3;stroke-linejoin:round}
+@keyframes twinkle{50%{transform:scale(.9) rotate(8deg)}}
+.sq.nope{box-shadow:inset 0 0 0 .7cqw var(--miss)}
+.why{color:var(--miss)}
+.track .pill{font-family:var(--ui);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px;background:var(--hit);color:var(--paper);align-self:center}
+.track.beginner{border-left:3px solid var(--hit);padding-left:10px}
 .sq .rk,.sq .fl{position:absolute;font-family:var(--mono);font-weight:600;font-size:2.1cqw;line-height:1;pointer-events:none}
 .sq .rk{top:3%;left:4%} .sq .fl{bottom:3%;right:5%}
 .sq.l .rk,.sq.l .fl{color:var(--coord-l)} .sq.d .rk,.sq.d .fl{color:var(--coord-d)}
@@ -261,10 +268,10 @@ function drawMap(){
   const passed = T.TRACKS.reduce((n, t) => n + t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length, 0);
   $('intro').innerHTML = passed
     ? `<b>${passed} of ${total}</b> levels passed. Pass a level to unlock the next one in its group.`
-    : 'Short drills that build the skills you use to calculate in real games: seeing where pieces go, spotting double attacks, knowing the endgames and counting exchanges. Pass a level to unlock the next.';
+    : 'New to chess? Start with <b>Learn the moves</b>: how each piece moves, then check, checkmate and the special moves. The other groups are short drills for the skills you use in real games. Pass a level to unlock the next.';
   $('tracks').innerHTML = T.TRACKS.map(t => {
     const done = t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length;
-    return `<section class="track"><h2>${t.name}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
+    return `<section class="track${t.beginner ? ' beginner' : ''}"><h2>${t.name}${t.beginner ? '<span class="pill">Beginners</span>' : ''}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
       t.levels.map((L, i) => {
         const st = lvState(t.key, i), open = unlocked(t.key, i), pass = st && st.stars > 0;
         return `<button class="lv${pass ? ' passed' : ''}${open ? '' : ' locked'}" type="button" data-t="${t.key}" data-i="${i}"${open ? '' : ' aria-disabled="true"'}>
@@ -288,7 +295,7 @@ const TIPS = {
   egPW: 'Get your king in front of the pawn. Kings facing each other with one square between: whoever is not to move has the opposition. A rook pawn is usually a draw.',
   egPD: 'Stay in front of the pawn. When the white king comes forward, step into the opposition. When the pawn reaches your second-to-last rank in front of your king, step straight back.',
 };
-const tipFor = L => L.kind === 'eg' ? TIPS[L.p.piece === 'Q' ? 'egQ' : L.p.piece === 'R' ? 'egR' : L.p.win ? 'egPW' : 'egPD'] : TIPS[L.kind];
+const tipFor = L => L.tip ? L.tip : L.kind === 'eg' ? TIPS[L.p.piece === 'Q' ? 'egQ' : L.p.piece === 'R' ? 'egR' : L.p.win ? 'egPW' : 'egPD'] : TIPS[L.kind];
 
 let chosen = null;
 $('tracks').addEventListener('click', e => {
@@ -438,6 +445,7 @@ const squares = [];
   for (let i = 0; i < 64; i++){ const d = document.createElement('div'); d.className = 'sq'; $('board').appendChild(d); squares.push(d); }
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'overlay'); svg.setAttribute('viewBox', '0 0 80 80'); svg.id = 'ov'; $('board').appendChild(svg);
 })();
+const STAR = '<svg class="star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>';
 const FLAG = '<svg class="flag" viewBox="0 0 24 24"><line x1="7" y1="3" x2="7" y2="21"/><path d="M7 4h11l-3 4 3 4H7z"/></svg>';
 let V = null; // the current view: { pieces: {s64: 'N'}, flip, cls: {s64: 'a b'}, arrows: [[a, b, kind]], rects: [[f0, r0, f1, r1, cls]], tags: {s64: '1'}, dots: Set, caps: Set, flag }
 const sqAt = i => { const r = i >> 3, c = i & 7; return V && V.flip ? r * 8 + (7 - c) : (7 - r) * 8 + c; }; // grid index → s64
@@ -452,6 +460,7 @@ function drawBoard(anim){
     el.className = cls;
     let html = p ? pieceSVG(p.toLowerCase(), p === p.toUpperCase() ? 'w' : 'b') : '';
     if (V.flag === s) html += FLAG;
+    if (V.stars && V.stars.has(s)) html += STAR;
     if (V.dots && V.dots.has(s)) html += `<span class="mv${p ? ' cap' : ''}"></span>`;
     if (V.tags && V.tags[s] != null) html += `<span class="tag">${V.tags[s]}</span>`;
     if (settings.coords){ if ((i & 7) === 0) html += `<span class="rk">${(s >> 3) + 1}</span>`; if ((i >> 3) === 7) html += `<span class="fl">${'abcdefgh'[s & 7]}</span>`; }
@@ -568,7 +577,113 @@ function play(c, m, mark){
 const sideName = s => s === WHITE ? 'White' : 'Black';
 
 // ---------- controllers ----------
+const PIECE_NAME = { R: 'rook', B: 'bishop', Q: 'queen', K: 'king', N: 'knight', P: 'pawn' };
 const CTL = {
+  // Beginners: one piece collects stars (and captures black pieces that stand still); the board shows where it can go
+  route(it){
+    const items = it.stars.concat(it.targets), full = (1 << items.length) - 1, blockers = new Set(it.blockers), pname = PIECE_NAME[it.piece];
+    const c = { cur: it.from, n: 0, got: 0, trail: [it.from], hint: null, note: '', nope: null, reveal: false };
+    const leftTargets = () => new Set(it.targets.filter((_, j) => !(c.got & (1 << (it.stars.length + j)))));
+    const leftStars = () => it.stars.filter((_, j) => !(c.got & (1 << j)));
+    const best = () => `The fewest is ${T.plural(it.min, 'move')}: <span class="mono">${it.path.map(nm64).join(' → ')}</span>.`;
+    const fail = (title, why) => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>${best()}</p>`); };
+    const what = it.capture ? 'every black piece' : it.stars.length === 1 && !it.targets.length ? 'the star' : 'all the stars';
+    return Object.assign(c, {
+      prompt(){
+        const title = it.capture ? `Capture every black piece with the ${pname}` : `Collect ${what} with the ${pname}` + (it.targets.length ? ' (capture to get there)' : '');
+        const sub = c.note ? `<span class="why">${c.note}</span>` : `Tap a dotted square to move. Moves: <b>${c.n}</b> · allowed: <b>${it.limit}</b> (the fewest is ${it.min})`;
+        return { title, sub, side: null };
+      },
+      view(){
+        const v = { pieces: {}, cls: {}, tags: {}, arrows: [], dots: new Set(), stars: new Set(leftStars()) };
+        blockers.forEach(s => v.pieces[s] = it.piece === 'P' ? 'N' : 'P'); // obstacles: your own pieces (knights in the pawn lesson, so your pawn stands out)
+        v.cls[it.from === c.cur && !c.n ? c.cur : c.cur] = 'sel';
+        it.targets.forEach((s, j) => { if (leftTargets().has(s)) v.pieces[s] = it.targetKinds[j]; });
+        v.pieces[c.cur] = it.piece;
+        c.trail.forEach((s, k) => { if (k && s !== c.cur) { v.cls[s] = 'trail'; v.tags[s] = k; } });
+        if (!D.done) T.routeMoves(it.piece, c.cur, blockers, leftTargets()).forEach(s => v.dots.add(s));
+        if (c.hint != null) v.cls[c.hint] = (v.cls[c.hint] || '') + ' hint';
+        if (c.nope != null) v.cls[c.nope] = (v.cls[c.nope] || '') + ' nope';
+        if (c.reveal) for (let k = 1; k < it.path.length; k++) v.arrows.push([it.path[k - 1], it.path[k], 'path']);
+        return v;
+      },
+      tap(s){
+        if (s === c.cur) return;
+        const ok = T.routeMoves(it.piece, c.cur, blockers, leftTargets());
+        if (!ok.includes(s)){ c.note = T.routeWhy(it.piece, c.cur, s, blockers, leftTargets()); c.nope = s; render(); return; }
+        const from = c.cur; c.note = ''; c.nope = null; c.hint = null; c.n++; c.cur = s; c.trail.push(s);
+        const j = items.indexOf(s), took = j >= it.stars.length;
+        if (j >= 0) c.got |= 1 << j;
+        render([from, s]);
+        if (took) try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
+        if (c.got === full){
+          const perfect = c.n === it.min;
+          return resolve(true, perfect ? 'Perfect!' : 'Well done', `<p>${it.capture ? 'All captured' : 'All the stars'} in ${T.plural(c.n, 'move')}${perfect ? ': the fewest possible.' : `. ${best()}`}</p>`);
+        }
+        if (c.n >= it.limit) return fail('Out of moves', `That's ${T.plural(c.n, 'move')}, and there ${items.length - [...Array(items.length).keys()].filter(k => c.got & (1 << k)).length === 1 ? 'is still one' : 'are still some'} to go.`);
+        if (!T.routeMoves(it.piece, c.cur, blockers, leftTargets()).length) return fail('Stuck', `The ${pname} has no moves left from ${nm64(c.cur)}${it.piece === 'P' ? ': pawns can\'t go back' : ''}.`);
+      },
+      hint(){ const sol = T.routeSolve(it, c.cur, c.got); c.hint = sol && sol.path[1]; c.note = ''; },
+    });
+  },
+
+  // Beginners: give check, get out of check, mate in one, castling, promotion and en passant on a real position
+  goal(it){
+    const pos = new Position(it.fen), c = { pos, me: WHITE, flip: false, moves: true, sel: -1, targets: new Map(), hintSq: null, arrows: null };
+    if (it.last) c.last = [it.last.slice(0, 2), it.last.slice(2, 4)].map(x => to64(C.sqFrom(x)));
+    const ans = new Set(it.answers), sansOf = list => list.map(u => pos.san(pos.fromUci(u)));
+    const goodSans = sansOf(it.answers), list = a => a.map(x => `<span class="mono">${esc(x)}</span>`).join(', ');
+    const WAY = { king: 'moving the king', capture: 'capturing the piece giving check', block: 'blocking: putting a piece in between' };
+    const arrowsFor = us => us.slice(0, 3).map(u => [to64(C.sqFrom(u.slice(0, 2))), to64(C.sqFrom(u.slice(2, 4))), 'good']);
+    c.move = m => {
+      const u = Position.uci(m), before = new Position(pos.fen()), san = before.san(m), ok = ans.has(u);
+      const way = it.goal === 'escape' ? T.escapeWay(before, m, [it.checker]) : null;
+      play(c, m, ok ? 'good' : 'bad');
+      let title = ok ? 'Correct' : 'Not quite', text = '';
+      const S = `<span class="mono">${esc(san)}</span>`;
+      if (it.goal === 'check'){
+        text = ok ? `<p>${S} attacks the black king: that's <b>check</b>. Black has to get out of it on the very next move. In chess notation a check gets a +.</p>`
+                  : `<p>${S} doesn't attack the black king.</p><p>Check${goodSans.length > 1 ? 's' : ''} here: ${list(goodSans)}</p>`;
+      } else if (it.goal === 'escape'){
+        const others = Object.keys(it.ways).filter(w => w !== it.way);
+        text = ok ? `<p>${S} gets out of check by ${WAY[way]}.${others.length ? ` Here you could also get out by ${others.map(w => WAY[w]).join(' or ')}.` : ''}</p>`
+                  : `<p>${S} does get out of check, by ${WAY[way]}. This time the task was ${WAY[it.way]}: ${list(goodSans)}.</p>`;
+      } else if (it.goal === 'mate'){
+        if (ok){ title = 'Checkmate!'; text = `<p>${S} is <b>checkmate</b>: the king is attacked, it has no safe square, and nothing can capture or block. That wins the game. It's written with a #.</p>`; }
+        else { const esc1 = pos.inCheck() ? pos.legal()[0] : null;
+          text = `<p>${esc1 ? `${S} is check, but Black gets out with <span class="mono">${esc(pos.san(esc1))}</span>.` : `${S} isn't check.`}</p><p>Mate: ${list(goodSans)}</p>`; }
+      } else if (it.goal === 'castle'){
+        const side = it.side === 'k' ? 'kingside' : 'queenside';
+        text = ok ? `<p>${S}: the king moves two squares toward the rook, and the rook jumps over it to the square next to it. ${it.side === 'k' ? 'Kingside castling is written O-O.' : 'Queenside castling is written O-O-O.'}${it.why ? ` The other side wasn't allowed: ${it.why}` : ''}</p>`
+                  : `<p>That wasn't castling ${side}. Tap the king, then ${it.side === 'k' ? 'g1' : 'c1'}, two squares toward the rook.${it.why ? ` (The other side wasn't allowed: ${it.why})` : ''}</p>`;
+      } else if (it.goal === 'promote'){
+        text = ok ? `<p>${S}: the pawn reaches the last row and becomes a <b>queen</b>.</p>`
+                  : (mFlags(m) & F_PROMO) ? `<p>${S} promotes, but to a smaller piece. A queen is the strongest choice: ${list(goodSans)}.</p>` : `<p>Move the pawn on the 7th row to the last row and choose the queen: ${list(goodSans)}.</p>`;
+      } else if (it.goal === 'ep'){
+        text = ok ? `<p>${S}: <b>en passant</b>. Your pawn captures the black pawn that has just stepped past it, as if it had moved only one square. It's only allowed on the very next move.</p>`
+                  : `<p>The black pawn has just moved two squares and landed beside your pawn. Capture it en passant: ${list(goodSans)}, moving diagonally behind it.</p>`;
+      }
+      if (!ok) c.arrows = arrowsFor(it.answers);
+      resolve(ok, title, text);
+    };
+    return Object.assign(c, {
+      prompt(){
+        if (c.sel >= 0 && !c.targets.size && !D.done) return { title: 'That piece can\'t move', sub: `<span class="why">${it.goal === 'escape' ? 'None of its moves ends the check. Try another piece, or the king.' : 'It has no legal move here. Try another piece.'}</span>`, side: WHITE };
+        const P = {
+          check: ['Give check', 'Find a move that attacks the black king.'],
+          escape: [`You're in check! Get out by ${{ king: 'moving the king', capture: 'capturing the attacker', block: 'blocking the check' }[it.way]}`, it.way === 'block' ? 'Put a piece on a square between the attacker and your king.' : it.way === 'capture' ? 'The piece giving check is circled in red.' : 'Step the king to a square nothing attacks.'],
+          mate: ['Checkmate in one', 'Find the check that leaves the king no way out.'],
+          castle: [it.ask === 'any' ? 'Castle on the side where it\'s allowed' : `Castle ${it.side === 'k' ? 'kingside (the short side)' : 'queenside (the long side)'}`, 'Tap the king, then the square two steps toward the rook.'],
+          promote: ['Promote the pawn to a queen', 'Move it to the last row, then choose the queen.'],
+          ep: ['Capture en passant', 'Black\'s pawn has just moved two squares (the marked move).'],
+        }[it.goal];
+        return { title: P[0], sub: P[1], side: WHITE };
+      },
+      view(){ const v = moveView(c); if (it.goal === 'escape' && !D.done) v.cls[it.checker] = (v.cls[it.checker] || '') + ' ring r-bad'; return v; },
+      hint(){ c.hintSq = to64(C.sqFrom(it.answers[0].slice(0, 2))); },
+    });
+  },
+
   // Knight to the flag in the fewest moves
   kpath(it){
     const base = it.fen ? posPieces(new Position(it.fen)) : Object.assign({}, it.pieces);

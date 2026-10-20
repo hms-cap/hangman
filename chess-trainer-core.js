@@ -121,11 +121,288 @@ function egMoves(pos) {
   return out;
 }
 
+// ---------- beginner lessons: how the pieces move ----------
+// A "route" drill: one white piece collects stars (and captures black pieces, which stand still) in as few moves as it can.
+// White pawns are obstacles: nothing may land on them and only the knight jumps over them.
+const DIRS = { R: [[1, 0], [-1, 0], [0, 1], [0, -1]], B: [[1, 1], [1, -1], [-1, 1], [-1, -1]] };
+DIRS.Q = DIRS.R.concat(DIRS.B); DIRS.K = DIRS.Q;
+// Squares the piece can move to from `from`; blockers: Set of own pawns, targets: Set of black pieces still on the board
+function routeMoves(piece, from, blockers, targets) {
+  const r0 = from >> 3, f0 = from & 7, out = [], on = (r, f) => r >= 0 && r < 8 && f >= 0 && f < 8;
+  if (piece === 'N') return KNIGHT[from].filter(t => !blockers.has(t));
+  if (piece === 'P') {
+    const one = from + 8;
+    if (r0 < 7 && !blockers.has(one) && !targets.has(one)) { out.push(one); const two = from + 16; if (r0 === 1 && !blockers.has(two) && !targets.has(two)) out.push(two); }
+    for (const df of [-1, 1]) { const f = f0 + df, t = from + 8 + df; if (r0 < 7 && f >= 0 && f < 8 && targets.has(t)) out.push(t); }
+    return out;
+  }
+  for (const [dr, df] of DIRS[piece]) {
+    let r = r0 + dr, f = f0 + df;
+    while (on(r, f)) { const t = r * 8 + f; if (blockers.has(t)) break; out.push(t); if (targets.has(t) || piece === 'K') break; r += dr; f += df; }
+  }
+  return out;
+}
+// Why a piece can't go to `to` (for a friendly message), or '' if it can
+function routeWhy(piece, from, to, blockers, targets) {
+  if (routeMoves(piece, from, blockers, targets).includes(to)) return '';
+  const dr = (to >> 3) - (from >> 3), df = (to & 7) - (from & 7), name = NAME[LET.indexOf(piece)];
+  if (blockers.has(to)) return `You can't land on your own piece.`;
+  if (piece === 'N') return 'A knight moves in an L: two squares one way and one to the side.';
+  if (piece === 'K') return 'The king moves just one square at a time.';
+  if (piece === 'P') return dr < 0 ? 'Pawns never move backwards.' : df ? (dr === 1 && Math.abs(df) === 1 ? 'A pawn only moves diagonally when it captures.' : 'Pawns move straight forward.') : dr === 2 ? 'Only a pawn on its starting row can move two squares.' : targets.has(to) ? 'A pawn can\'t capture straight ahead.' : 'A pawn moves one square forward.';
+  const straight = !dr || !df, diag = Math.abs(dr) === Math.abs(df);
+  if (piece === 'R' && !straight) return 'A rook moves in straight lines: up, down or sideways.';
+  if (piece === 'B' && !diag) return (((from >> 3) + (from & 7)) & 1) !== (((to >> 3) + (to & 7)) & 1) ? 'A bishop stays on its own colour: it can never reach that square.' : 'A bishop moves diagonally.';
+  if (piece === 'Q' && !straight && !diag) return 'The queen moves in straight lines or diagonals, not in an L.';
+  return `Something is in the way. The ${name} can't jump over pieces.`;
+}
+// Fewest moves to collect every item (stars and black pieces) from a state, and one shortest path (list of squares)
+function routeSolve(it, from, gotMask) {
+  const items = it.stars.concat(it.targets), full = (1 << items.length) - 1, blockers = new Set(it.blockers);
+  const key = (s, m) => m * 64 + s, prev = new Map(), start = key(from, gotMask);
+  prev.set(start, -1); let q = [start], d = 0;
+  while (q.length) {
+    const next = [];
+    for (const k of q) {
+      const s = k % 64, m = (k - s) / 64;
+      if (m === full) { const path = []; let x = k; while (x !== -1) { path.unshift(x % 64); x = prev.get(x); } return { min: d, path }; }
+      const left = new Set(it.targets.filter((t, j) => !(m & (1 << (it.stars.length + j)))));
+      for (const t of routeMoves(it.piece, s, blockers, left)) {
+        let m2 = m; const j = items.indexOf(t); if (j >= 0) m2 |= 1 << j;
+        const k2 = key(t, m2); if (!prev.has(k2)) { prev.set(k2, k); next.push(k2); }
+      }
+    }
+    q = next; d++;
+    if (d > 40) break;
+  }
+  return null;
+}
+// k is the drill's number in the set (0-based): the first few are gentle, later ones add more stars and obstacles
+function genRoute(p, r, k) {
+  const late = k >= 2, piece = p.piece || pickOne(['R', 'B', 'Q', 'N', 'K'], r);
+  if (piece === 'P') return genPawnRoute(p, r, k);
+  for (let tries = 0; tries < 5000; tries++) {
+    const used = new Set();
+    const free = rankOk => { for (let n = 0; n < 200; n++) { const s = (r() * 64) | 0; if (!used.has(s) && (!rankOk || rankOk(s >> 3))) { used.add(s); return s; } } return -1; };
+    const from = piece === 'P' ? free(rk => k < 2 ? rk === 1 : rk >= 1 && rk <= 3) : free();
+    const nStars = p.capture ? 0 : (late ? 2 + ((r() * 2) | 0) : 1 + ((r() * 2) | 0)) + (piece === 'P' ? 0 : 0);
+    const nTargets = p.capture ? 2 + ((r() * (late ? 3 : 2)) | 0) : piece === 'P' && late ? 1 : 0;
+    const nBlock = piece === 'N' && late ? 3 + ((r() * 3) | 0) : late ? (r() * 4) | 0 : 0;
+    const stars = [], targets = [], blockers = [];
+    const near = piece === 'P' || piece === 'K';
+    const okItem = rk => piece === 'P' ? rk > (from >> 3) && rk <= 6 : true;
+    for (let j = 0; j < nStars; j++) { const s = free(okItem); if (s >= 0) stars.push(s); }
+    for (let j = 0; j < nTargets; j++) { const s = free(rk => okItem(rk) && rk >= 1 && rk <= 6); if (s >= 0) targets.push(s); }
+    if (piece === 'N' && late) { // crowd the knight with pawns so it has to jump
+      for (const t of [from + 8, from - 8, from + 1, from - 1, from + 9, from - 9, from + 7, from - 7]) if (t >= 0 && t < 64 && Math.abs((t & 7) - (from & 7)) <= 1 && !used.has(t) && blockers.length < nBlock) { used.add(t); blockers.push(t); }
+    } else for (let j = 0; j < nBlock; j++) { const s = free(); if (s >= 0) blockers.push(s); }
+    if (near && stars.some(s => Math.max(Math.abs((s >> 3) - (from >> 3)), Math.abs((s & 7) - (from & 7))) > 4)) continue;
+    const it = { kind: 'route', piece, from, stars, targets, blockers, capture: !!p.capture };
+    const sol = routeSolve(it, from, 0); if (!sol) continue;
+    const lo = (p.min || [1, 9])[0] + (late ? 1 : 0), hi = (p.min || [1, 9])[1] + (late ? 1 : 0);
+    if (sol.min < Math.max(lo, stars.length + targets.length) || sol.min > hi) continue;
+    // the pieces and shapes the lesson is about: a straight line for the rook, a diagonal for the bishop, a double step for the pawn
+    it.min = sol.min; it.limit = sol.min + (p.slack != null ? p.slack : 2); it.path = sol.path;
+    it.targetKinds = targets.map(() => pickOne(p.capture ? ['p', 'n', 'b', 'r', 'q'] : ['p'], r));
+    return it;
+  }
+}
+
+// Pawn drills are built by walking the pawn forward (single steps, a double step from its first row, and diagonal
+// captures of black pawns placed on the way), then dropping stars on squares it passes, so every drill can be solved.
+function genPawnRoute(p, r, k) {
+  const late = k >= 2;
+  for (let tries = 0; tries < 5000; tries++) {
+    const from = 8 * (k < 2 ? 1 : 1 + ((r() * 3) | 0)) + ((r() * 8) | 0);
+    let s = from; const visited = [], targets = [];
+    const steps = (late ? 3 : 2) + ((r() * 2) | 0);
+    for (let n = 0; n < steps && (s >> 3) < 6; n++) {
+      const f = s & 7, wantCap = late && targets.length < 2 && r() < .45;
+      const dfs = [-1, 1].filter(d => f + d >= 0 && f + d < 8);
+      if (wantCap && dfs.length) { s = s + 8 + pickOne(dfs, r); targets.push(s); }
+      else if ((s >> 3) === 1 && (k === 0 && n === 0 || r() < .4)) s += 16;
+      else s += 8;
+      visited.push(s);
+    }
+    if (late && !targets.length) continue;
+    const plain = visited.filter(x => !targets.includes(x));
+    if (!plain.length) continue;
+    const stars = [plain[plain.length - 1]];
+    for (const x of plain.slice(0, -1)) if (stars.length < (late ? 2 : 1) + 1 && r() < .5) stars.push(x);
+    const blockers = [];
+    if (late) for (let n = 0; n < 1 + ((r() * 2) | 0); n++) { const b = 8 + ((r() * 48) | 0); if (b !== from && !visited.includes(b) && !blockers.includes(b) && !targets.includes(b)) blockers.push(b); }
+    const it = { kind: 'route', piece: 'P', from, stars, targets, blockers, capture: false };
+    const sol = routeSolve(it, from, 0); if (!sol) continue;
+    if (k === 0 && sol.path[1] - sol.path[0] !== 16) continue; // the first drill shows the double step
+    it.min = sol.min; it.limit = sol.min + (p.slack != null ? p.slack : 2); it.path = sol.path;
+    it.targetKinds = targets.map(() => 'p');
+    return it;
+  }
+}
+
+// ---------- beginner lessons: check, mate and the special moves ----------
+// Black pieces giving check to the white king (s64 list)
+function checkers(pos) {
+  const k = to64(pos.king[WHITE]), out = [];
+  for (let s = 0; s < 64; s++) { const p = pos.b[to88(s)]; if (!p || colorOf(p) !== BLACK || typeOf(p) === K) continue;
+    if (attacks(pos, s, k)) out.push(s); }
+  return out;
+}
+// Does the piece on s attack square t (geometry plus empty squares in between)?
+function attacks(pos, s, t) {
+  const p = pos.b[to88(s)], ty = typeOf(p), c = colorOf(p), dr = (t >> 3) - (s >> 3), df = (t & 7) - (s & 7);
+  if (ty === P) return dr === (c === WHITE ? 1 : -1) && Math.abs(df) === 1;
+  if (ty === N) return KNIGHT[s].includes(t);
+  if (ty === K) return Math.max(Math.abs(dr), Math.abs(df)) === 1;
+  const line = !dr || !df, diag = Math.abs(dr) === Math.abs(df);
+  if (!(ty === R && line || ty === B && diag || ty === Q && (line || diag)) || (!dr && !df)) return false;
+  const sr = Math.sign(dr), sf = Math.sign(df); let r = (s >> 3) + sr, f = (s & 7) + sf;
+  while (r * 8 + f !== t) { if (pos.b[to88(r * 8 + f)]) return false; r += sr; f += sf; }
+  return true;
+}
+// How a legal move gets out of check: 'king' (king steps away), 'capture' (takes the checking piece) or 'block'
+function escapeWay(pos, m, chk) {
+  const from = to64(mFrom(m)), to = to64(mTo(m));
+  if (chk.includes(to)) return 'capture';
+  return from === to64(pos.king[WHITE]) ? 'king' : 'block';
+}
+const isCheckMove = (pos, m) => { pos.make(m); const v = pos.inCheck(); pos.unmake(); return v; };
+const isMateMove = (pos, m) => { pos.make(m); const v = pos.inCheck() && !pos.legal().length; pos.unmake(); return v; };
+
+function genCheck(p, r, k) {
+  const sets = [['R'], ['B'], ['N'], ['Q'], ['P', 'R'], ['N', 'B'], ['R', 'B'], ['Q', 'P']];
+  for (let tries = 0; tries < 4000; tries++) {
+    const { pos } = randomPosition(r, sets[k % sets.length], bag(r, ['p', 'p', 'n', 'b'], (r() * 3) | 0));
+    const ms = pos.legal(), good = ms.filter(m => isCheckMove(pos, m));
+    if (!good.length || good.length > 3 || ms.length < good.length + 6) continue;
+    if (good.some(m => isMateMove(pos, m))) continue; // keep checkmate for its own lesson
+    return { kind: 'goal', goal: 'check', fen: pos.fen(), answers: good.map(m => C.Position.uci(m)) };
+  }
+}
+function genEscape(p, r, k) {
+  const want = ['king', 'capture', 'block'][k % 3];
+  for (let tries = 0; tries < 20000; tries++) {
+    const pieces = {}, used = new Set(), put = (t, ok) => { for (let n = 0; n < 60; n++) { const s = (r() * 64) | 0; if (used.has(s) || (ok && !ok(s >> 3))) continue; used.add(s); pieces[s] = t; return s; } return -1; };
+    put('K', rk => rk <= 3); put('k', rk => rk >= 5);
+    put(pickOne(want === 'block' ? ['r', 'b', 'q'] : ['r', 'b', 'q', 'n', 'r'], r));
+    for (const t of bag(r, ['R', 'B', 'N', 'P', 'Q'], 1 + ((r() * 2) | 0))) put(t, t === 'P' ? rk => rk >= 1 && rk <= 5 : null);
+    if (r() < .5) put('p', rk => rk >= 2 && rk <= 6);
+    let pos; try { pos = new Position(fenOf(pieces, WHITE)); } catch (e) { continue; }
+    if (!sane(pos) || !pos.inCheck(WHITE)) continue;
+    const chk = checkers(pos); if (chk.length !== 1) continue;
+    const ms = pos.legal(); if (ms.length < 3) continue;
+    const ways = {}; for (const m of ms) (ways[escapeWay(pos, m, chk)] ||= []).push(C.Position.uci(m));
+    if (!ways[want] || Object.keys(ways).length < 2) continue;
+    if (want === 'capture' && ways.capture.every(u => sqFromName(u.slice(0, 2)) === to64(pos.king[WHITE]))) continue; // a piece should do the capturing
+    return { kind: 'goal', goal: 'escape', way: want, fen: pos.fen(), checker: chk[0], ways, answers: ways[want] };
+  }
+}
+const sqFromName = n => (n.charCodeAt(1) - 49) * 8 + n.charCodeAt(0) - 97;
+function genMate1(p, r, k) {
+  const sets = [['R'], ['Q'], ['Q'], ['R', 'R'], ['Q', 'N'], ['R', 'B'], ['Q'], ['R']];
+  for (let tries = 0; tries < 30000; tries++) {
+    const pieces = {}, used = new Set(), put = (t, s) => { if (s < 0 || s > 63 || used.has(s)) return false; used.add(s); pieces[s] = t; return true; };
+    // the black king on its back row or an edge, sometimes behind its own pawns
+    const edge = r() < .7, bk = edge ? 56 + ((r() * 8) | 0) : [0, 7][(r() * 2) | 0] * 1 + 8 * (2 + ((r() * 4) | 0));
+    put('k', bk);
+    if (edge && r() < .7) for (const df of [-1, 0, 1]) { const f = (bk & 7) + df; if (f >= 0 && f < 8 && r() < .8) put('p', 48 + f); }
+    const wk = r() < .5 ? (r() * 24) | 0 : bk - 16 + ((r() * 3) | 0) - 1; if (!put('K', wk)) continue;
+    for (const t of sets[k % sets.length]) for (let n = 0; n < 40 && !put(t, (r() * 64) | 0); n++);
+    let pos; try { pos = new Position(fenOf(pieces, WHITE)); } catch (e) { continue; }
+    if (!sane(pos) || pos.inCheck(WHITE) || pos.inCheck(BLACK)) continue;
+    const ms = pos.legal(), good = ms.filter(m => isMateMove(pos, m));
+    if (!good.length || good.length > 2) continue;
+    return { kind: 'goal', goal: 'mate', fen: pos.fen(), answers: good.map(m => C.Position.uci(m)) };
+  }
+}
+function genCastle(p, r, k) {
+  // k 0-1: castle on the side asked; 2-3: the side asked; 4-5: only one side is allowed, find which
+  const which = k < 4 ? ['k', 'q'][k % 2] : 'any';
+  for (let tries = 0; tries < 20000; tries++) {
+    const pieces = { 4: 'K', 7: 'R', 0: 'R' }, used = new Set([4, 7, 0]);
+    const put = (t, s) => { if (used.has(s)) return; used.add(s); pieces[s] = t; };
+    for (const f of [0, 1, 2, 5, 6, 7]) if (r() < .75) put('P', 8 + f);
+    put('k', 56 + ((r() * 8) | 0));
+    // black pieces that may watch the squares the king crosses (or blockers in the back row)
+    const nb = which === 'any' ? 1 + ((r() * 2) | 0) : (r() * 2) | 0;
+    for (let n = 0; n < nb; n++) put(pickOne(['b', 'r', 'n', 'q'], r), 16 + ((r() * 40) | 0));
+    if (which === 'any' && r() < .4) put(pickOne(['N', 'B'], r), pickOne([1, 2, 3, 5, 6], r));
+    let pos; try { pos = new Position(fenOf(pieces, WHITE).replace(' w - -', ' w KQ -')); } catch (e) { continue; }
+    if (!sane(pos) || pos.inCheck(WHITE)) continue;
+    const cs = pos.legal().filter(m => mFlags(m) & C.F_CASTLE), side = m => to64(mTo(m)) === 6 ? 'k' : 'q';
+    const have = new Set(cs.map(side));
+    if (which === 'any' ? have.size !== 1 : !have.has(which)) continue;
+    const goalSide = which === 'any' ? [...have][0] : which, other = goalSide === 'k' ? 'q' : 'k';
+    let why = '';
+    if (which === 'any') {
+      const between = other === 'k' ? [5, 6] : [1, 2, 3], crossing = other === 'k' ? [5, 6] : [2, 3];
+      const blocked = between.find(s => pos.b[to88(s)]);
+      if (blocked != null) why = `There's a piece on ${nm64(blocked)}, between the king and the rook.`;
+      else { const hit = crossing.find(s => pos.attacked(to88(s), BLACK)); if (hit == null) continue; why = `${nm64(hit)} is attacked by a black piece, and the king may not pass through or land on an attacked square.`; }
+    }
+    return { kind: 'goal', goal: 'castle', side: goalSide, ask: which, why, fen: pos.fen(), answers: cs.filter(m => side(m) === goalSide).map(m => C.Position.uci(m)) };
+  }
+}
+function genSpecial(p, r, k) {
+  const ep = k % 2 === 1;
+  for (let tries = 0; tries < 20000; tries++) {
+    const pieces = {}, used = new Set(), put = (t, s) => { if (s < 0 || s > 63 || used.has(s)) return false; used.add(s); pieces[s] = t; return true; };
+    let fenTail = ' w - -', last = null;
+    if (!ep) { // promotion: a white pawn on the 7th row
+      const f = (r() * 8) | 0; put('P', 48 + f);
+      if (r() < .4) { const g = f + (r() < .5 ? -1 : 1); if (g >= 0 && g < 8) put(pickOne(['r', 'n', 'b'], r), 56 + g); }
+      if (r() < .5) put('n', 56 + f); // sometimes the square in front is blocked, so the pawn must capture to promote
+    } else { // en passant: Black's pawn has just stepped two squares past White's pawn on the 5th row
+      const f = 1 + ((r() * 6) | 0), side = r() < .5 ? -1 : 1;
+      put('P', 32 + f + side); put('p', 32 + f);
+      if (used.has(48 + f) || used.has(40 + f)) continue;
+      fenTail = ` w - ${'abcdefgh'[f]}6`; last = 'abcdefgh'[f] + '7' + 'abcdefgh'[f] + '5';
+      if (r() < .5) put('P', 8 + ((r() * 8) | 0));
+    }
+    if (!put('K', (r() * 24) | 0)) continue;
+    let bk; for (let n = 0; n < 60; n++) { bk = 32 + ((r() * 32) | 0); if (!used.has(bk)) break; } if (!put('k', bk)) continue;
+    let pos; try { pos = new Position(fenOf(pieces, WHITE).replace(' w - -', fenTail)); } catch (e) { continue; }
+    if (!sane(pos) || pos.inCheck(WHITE)) continue;
+    const ms = pos.legal(), good = ms.filter(m => ep ? mFlags(m) & C.F_EP : (mFlags(m) & F_PROMO) && C.Position.uci(m).endsWith('q'));
+    if (!good.length) continue;
+    if (!ep && pos.legal().some(m => (mFlags(m) & F_PROMO) && isMateMove(pos, m))) continue;
+    return { kind: 'goal', goal: ep ? 'ep' : 'promote', fen: pos.fen(), last, answers: good.map(m => C.Position.uci(m)) };
+  }
+}
+
 // ---------- the training map ----------
 // kinds: kpath (knight route), grab (knight takes every pawn), loose (spot pieces you can win), count (exchange outcome),
 // square (rule of the square), tactic (fork/pin/skewer from the data), mate (mate in n from the puzzle set),
 // eg (play an endgame against the exact table)
 const TRACKS = [
+  { key: 'pieces', name: 'Learn the moves', beginner: true, blurb: 'New to chess? Start here: how each piece moves and captures. The board shows every square your piece can reach.', levels: [
+    { name: 'The rook', kind: 'route', count: 6, pass: 5, p: { piece: 'R', min: [1, 4] }, about: 'The rook moves in straight lines, up, down or sideways, as far as it likes. Collect the stars.',
+      tip: 'A rook can cross the whole board in one move, but it can\'t jump: anything in its way stops it. From any square it reaches any other in two moves at most.' },
+    { name: 'The bishop', kind: 'route', count: 6, pass: 5, p: { piece: 'B', min: [1, 4] }, about: 'The bishop moves diagonally, as far as it likes. It always stays on squares of its own colour.',
+      tip: 'Each side has a light-squared and a dark-squared bishop. A bishop can only ever reach half the board.' },
+    { name: 'The queen', kind: 'route', count: 6, pass: 5, p: { piece: 'Q', min: [1, 3] }, about: 'The queen moves like a rook and a bishop together: straight or diagonal, any distance. The strongest piece.',
+      tip: 'The queen is worth about nine pawns. Keep her safe: early in the game, don\'t bring her out where smaller pieces can chase her.' },
+    { name: 'The king', kind: 'route', count: 6, pass: 5, p: { piece: 'K', min: [2, 5] }, about: 'The king moves one square in any direction. Slow, but the most important piece: lose it and you lose the game.',
+      tip: 'Moving diagonally is as quick as moving straight, so the king reaches a square as many moves away as its longest distance across or up.' },
+    { name: 'The knight', kind: 'route', count: 6, pass: 5, p: { piece: 'N', min: [1, 4] }, about: 'The knight moves in an L: two squares one way, then one to the side. It is the only piece that jumps over others.',
+      tip: 'A knight always lands on the other colour. Squares two steps away diagonally take it two moves; the square right next to it takes three.' },
+    { name: 'The pawn', kind: 'route', count: 6, pass: 5, p: { piece: 'P', min: [1, 4], slack: 1 }, about: 'Pawns move one square forward, or two from their starting row. They capture one square diagonally forward, and never move back.',
+      tip: 'A pawn that reaches the far end becomes a queen (or any other piece): that is called promotion. You will practise it later.' },
+    { name: 'Capture them all', kind: 'route', count: 6, pass: 5, p: { capture: true, min: [2, 6] }, about: 'Capture by moving onto a black piece: it is removed from the board. Black\'s pieces stand still here. Take every one.',
+      tip: 'Plan the order before you move. Taking the nearest piece first is not always the fastest way round.' },
+  ] },
+  { key: 'rules', name: 'Check, mate & special moves', beginner: true, blurb: 'The rules that decide the game: attacking the king, checkmate, castling, promotion and en passant.', levels: [
+    { name: 'Give check', kind: 'check', count: 8, pass: 6, p: {}, about: 'Attacking the enemy king is called check. Find a move that gives check.',
+      tip: 'Look at every one of your pieces and ask: which square would let it attack the king? Don\'t forget pawns and knights.' },
+    { name: 'Out of check', kind: 'escape', count: 9, pass: 7, p: {}, about: 'When your king is in check you must deal with it straight away. There are three ways: move the king, capture the piece giving check, or block the line.',
+      tip: 'A knight\'s check can\'t be blocked, and neither can a check from right next to the king. Every move the board offers is one that ends the check.' },
+    { name: 'Checkmate in one', kind: 'mate1', count: 8, pass: 6, p: {}, about: 'Checkmate is a check the king can\'t escape: it can\'t move away, and nothing can capture or block. That wins the game.',
+      tip: 'Kings stuck on the edge behind their own pawns are in danger: a rook or queen on that back row is often mate. Check that every escape square is covered.' },
+    { name: 'Castling', kind: 'castle', count: 6, pass: 5, p: {}, about: 'Castling tucks your king away and brings a rook into play in one move. Tap the king, then the square two steps toward the rook.',
+      tip: 'You may castle only if the king and that rook have not moved, nothing stands between them, the king is not in check, and it does not pass through or land on an attacked square.' },
+    { name: 'Promotion & en passant', kind: 'special', count: 6, pass: 5, p: {}, about: 'A pawn reaching the far row becomes a queen. And when a pawn steps two squares past an enemy pawn, that pawn may capture it as if it had moved one: en passant.',
+      tip: 'En passant is only allowed straight away, on the very next move. In promotion you may choose any piece, but a queen is almost always best.' },
+  ] },
   { key: 'vision', name: 'Knight & board vision', blurb: 'See where pieces go and what they guard, without moving them.', levels: [
     { name: 'Knight hops', kind: 'kpath', count: 10, pass: 8, clock: 20, p: { min: 2, max: 3 }, about: 'Take the knight to the flag in the fewest moves.' },
     { name: 'Long routes', kind: 'kpath', count: 10, pass: 8, clock: 25, p: { min: 4, max: 6 }, about: 'Longer trips, including corner to corner. Count the moves before you start.' },
@@ -361,20 +638,27 @@ function makeSet(trackKey, levelIdx, seed, seen) {
     return use.slice(0, L.count);
   }
   for (let k = 0; k < L.count; k++) {
-    if (L.kind === 'kpath') out.push(genKpath(L.p, r));
+    if (L.kind === 'route') out.push(genRoute(L.p, r, k));
+    else if (L.kind === 'check') out.push(genCheck(L.p, r, k));
+    else if (L.kind === 'escape') out.push(genEscape(L.p, r, k));
+    else if (L.kind === 'mate1') out.push(genMate1(L.p, r, k));
+    else if (L.kind === 'castle') out.push(genCastle(L.p, r, k));
+    else if (L.kind === 'special') out.push(genSpecial(L.p, r, k));
+    else if (L.kind === 'kpath') out.push(genKpath(L.p, r));
     else if (L.kind === 'grab') out.push(genGrab(L.p, r));
     else if (L.kind === 'loose') out.push(genLoose(L.p, r));
     else if (L.kind === 'count') out.push(genCount(L.p, r, ['win', 'even', 'lose', null][k % 4]));
     else if (L.kind === 'square') out.push(genSquare(L.p, r, k % 2 === 0));
     else if (L.kind === 'eg') out.push(genEg(L.p, r));
   }
-  return L.kind === 'count' || L.kind === 'square' ? shuffle(out, r) : out;
+  return L.kind === 'count' || L.kind === 'square' || L.kind === 'escape' ? shuffle(out, r) : out;
 }
 
 // Stars for a finished set: 1 = passed, 2 = at most one miss, 3 = perfect
 function stars(L, score) { return score < L.pass ? 0 : score === L.count ? 3 : score >= L.count - 1 ? 2 : 1; }
 
 const api = { TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
-  squareFacts, egKey, egValue, egMoves, to88, to64, nm64, KNIGHT, PTS, NAME, plural, genCount, genSquare, genEg, genLoose, genKpath, genGrab };
+  squareFacts, egKey, egValue, egMoves, routeMoves, routeWhy, routeSolve, genRoute, genPawnRoute, checkers, attacks, escapeWay, isCheckMove, isMateMove,
+  genCheck, genEscape, genMate1, genCastle, genSpecial, to88, to64, nm64, KNIGHT, PTS, NAME, plural, genCount, genSquare, genEg, genLoose, genKpath, genGrab };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ChessTrainer = api;
 })(typeof self !== 'undefined' ? self : globalThis);
