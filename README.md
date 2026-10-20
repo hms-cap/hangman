@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -94,6 +94,16 @@ A five-letter word-guessing game in the style of Wordle.
   - **Practice** mode is the rated, filterable set described above
 - Regenerate with `node tools/generate-chess-puzzles.js 500` and check with `node tools/verify-chess-puzzles.js`
 
+### Chess Trainer
+Short drills that build the skills you use to calculate in real games. Its own tile on the home screen. Four groups of six levels; passing a level (for example 8 of 10) unlocks the next, with up to three stars and your best score kept per level. Every try brings new positions.
+- **Knight & board vision:** knight to a flag in the fewest moves (short hops, long routes, then avoiding every square a black piece or pawn guards); knight tours that take every pawn in the fewest moves, where the nearest-first order usually isn't best; spotting which black pieces can be won (take it and stay ahead after the recaptures), on a light and then a busy board
+- **Forks, pins & skewers:** knight forks, forks by any piece, pins, skewers, all three mixed in busy positions, and two-move combinations where a forcing move (often a sacrifice the king must take) sets up the tactic. Each position is built around the motif and checked by the engine: one move (or two or three equivalent ones, such as pinning from either of two squares) wins material and nothing else does. After the answer, a plain explanation names the pieces involved: "Ng7+ forks the king on f5 and the rook on h5. After Kg6, Nxh5 wins the rook."
+- **Endgame technique:** the rule of the square; mate with king and queen, and with king and rook, within a move limit; king and pawn against king, winning with the opposition and key squares, and holding the draw as the defender. The other side plays perfectly from exact endgame tables, and the moment a move throws a win away (or loses a draw) the trainer says so and shows the move that kept it
+- **Checkmates & counting:** mate in 1, 2 and 3 from the Chess Puzzles set; counting exchanges (who comes out ahead after all the sensible recaptures), first simple, then with batteries, x-rays and pinned defenders. The answer plays the exchange out with a running score
+- Hint on every drill (a drill solved with a hint doesn't count toward passing); misses show the solution on the board
+- Optional speed clock in Settings: each drill gets a time limit, and running out counts as a miss
+- Tips for each level, such as how to draw the square or how the rook boxes in the king
+
 ### Word Trail
 A letter-grid word search in the style of Squares.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
@@ -165,6 +175,7 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
+| `chess-trainer.html`, `chess-trainer-core.js`, `chess-trainer-data.js`, `chess-endgames.js`, `chess-endgames-worker.js` | Chess Trainer page; drill generators and level map; engine-checked fork, pin, skewer and combination positions (`tools/generate-chess-trainer.js`); exact K+Q, K+R and K+P vs K tables built on first use (about a second) in a worker |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |
 | `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) and the computer player |
@@ -184,6 +195,13 @@ This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js`. Th
 node tools/test-sudoku-coach.js 100   # puzzles per level
 ```
 Solves puzzles at every level with the coach alone and checks that every number it writes in and every candidate it crosses off agrees with the solution, that every lesson has its text, that wrong numbers are taught first, and that the technique guide finds an example of each technique.
+
+## Chess Trainer data and tests
+```sh
+node tools/generate-chess-trainer.js 40 chess-trainer-data.js 80   # positions per set, output, minutes
+node tools/test-chess-trainer.js 20                                # seeds per level
+```
+The generator rewrites the file every 30 seconds, so a long run can be stopped at any point. The tests check the endgame tables against known theory (longest K+Q mate 10 moves, K+R 16, opposition positions), generate drills for every level and check each answer independently (shortest knight routes, exchange counts, the rule of the square against the tables), play every endgame drill out with perfect play to make sure it can be won or held in the move limit, and check every stored tactic and mate line.
 
 ## Testing the chess engine
 ```sh

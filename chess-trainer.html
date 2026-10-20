@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Chess Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+/* Board colours match Chess and Chess Puzzles */
+:root{
+  --sq-l:#f4f6f1; --sq-d:#b6c6d3; --sq-last:rgba(214,150,26,.40); --sq-sel:rgba(46,94,166,.42);
+  --dot:rgba(29,38,45,.30); --check:rgba(196,53,61,.85); --coord-l:#7d8f9e; --coord-d:#f4f6f1;
+  --pw-fill:#fbfbf6; --pw-line:#1d262d; --pb-fill:#27323b; --pb-line:#10171c; --pb-detail:#e9eef2; --pb-cross:#27323b;
+  --good:#2f8a5b; --good-sq:rgba(47,138,91,.45); --bad-sq:rgba(196,53,61,.45); --warn-sq:rgba(214,150,26,.5);
+  --star:#d9a03a;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --sq-l:#4d6b86; --sq-d:#2c4966; --sq-last:rgba(217,160,58,.45); --sq-sel:rgba(140,194,255,.45);
+  --dot:rgba(8,16,24,.45); --check:rgba(255,110,110,.9); --coord-l:#c6d4e1; --coord-d:#93a9bd;
+  --pw-fill:#f3f6f8; --pw-line:#0e1a26; --pb-fill:#0e1a26; --pb-line:#8ea5ba; --pb-detail:#a9bccd; --pb-cross:#d6e1ea;
+  --good:#5cc08a; --good-sq:rgba(92,192,138,.45); --bad-sq:rgba(255,110,110,.45); --warn-sq:rgba(217,160,58,.5); --star:#e6b04c}}
+:root[data-theme="dark"]{
+  --sq-l:#4d6b86; --sq-d:#2c4966; --sq-last:rgba(217,160,58,.45); --sq-sel:rgba(140,194,255,.45);
+  --dot:rgba(8,16,24,.45); --check:rgba(255,110,110,.9); --coord-l:#c6d4e1; --coord-d:#93a9bd;
+  --pw-fill:#f3f6f8; --pw-line:#0e1a26; --pb-fill:#0e1a26; --pb-line:#8ea5ba; --pb-detail:#a9bccd; --pb-cross:#d6e1ea;
+  --good:#5cc08a; --good-sq:rgba(92,192,138,.45); --bad-sq:rgba(255,110,110,.45); --warn-sq:rgba(217,160,58,.5); --star:#e6b04c}
+
+.app{gap:9px}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.8rem}
+@media (max-width:440px){.back .txt{display:none}}
+.iconbtn{justify-self:end;border:1px solid var(--key-edge);background:var(--key);border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- map of tracks and levels ---- */
+#mapView{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -16px;padding:0 16px 20px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch}
+.intro{margin:0;color:var(--muted);line-height:1.45}
+.intro b{color:var(--ink)}
+.track h2{font-family:var(--hand);font-weight:400;font-size:1.6rem;margin:0;line-height:1.05;display:flex;align-items:baseline;gap:8px}
+.track h2 small{font-family:var(--ui);font-size:.75rem;color:var(--muted);font-weight:600;margin-left:auto;white-space:nowrap}
+.track > p{margin:2px 0 8px;color:var(--muted);font-size:.86rem}
+.lvls{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
+.lv{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:10px 12px;cursor:pointer;color:var(--ink)}
+.lv:last-child{border-bottom:0}
+.lv .num{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:.9rem;border:2px solid var(--ink)}
+.lv.passed .num{background:var(--ink);color:var(--paper)}
+.lv .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.lv .txt b{font-weight:600;font-size:.97rem}
+.lv .txt small{color:var(--muted);font-size:.78rem;line-height:1.3}
+.lv.locked{cursor:default;color:var(--muted)}
+.lv.locked .num{border-color:var(--line);color:var(--muted)}
+.lv .lock{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.stars{display:inline-flex;gap:1px;flex:none}
+.stars svg{width:16px;height:16px}
+.stars .on{fill:var(--star);stroke:var(--star)} .stars .off{fill:none;stroke:var(--line)}
+.stars svg path{stroke-width:1.6;stroke-linejoin:round}
+.stars.big svg{width:34px;height:34px}
+
+/* ---- drill ---- */
+#drillView{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+.dstatus{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted)}
+.dstatus .lname{font-family:var(--hand);font-size:1.25rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dots{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line)}
+.dots i.cur{border-color:var(--ink)}
+.dots i.ok{background:var(--good);border-color:var(--good)} .dots i.miss{background:var(--miss);border-color:var(--miss)} .dots i.help{background:var(--star);border-color:var(--star)}
+.clock{font-family:var(--mono);font-weight:600;font-size:.88rem;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--key);color:var(--ink);font-variant-numeric:tabular-nums}
+.clock.low{color:var(--miss);border-color:var(--miss)}
+.prompt{display:flex;align-items:center;gap:10px;min-height:42px}
+.prompt .side{width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.prompt .side.w{background:var(--pw-fill);border-color:var(--pw-line)} .prompt .side.b{background:var(--pb-fill);border-color:var(--pb-line)} .prompt .side.none{display:none}
+.prompt .ptxt{display:flex;flex-direction:column;min-width:0}
+.prompt .ptxt > b{font-family:var(--hand);font-weight:400;font-size:1.35rem;line-height:1.05}
+.prompt .ptxt small{color:var(--muted);font-size:.8rem;line-height:1.3}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.board{
+  width:min(100cqw,100cqh);height:min(100cqw,100cqh);position:relative;container-type:size;
+  display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));
+  border:2px solid var(--ink);border-radius:4px;overflow:hidden;touch-action:none;
+}
+.sq{position:relative;min-width:0;min-height:0;contain:strict}
+.sq.l{background:var(--sq-l)} .sq.d{background:var(--sq-d)}
+.sq::before{content:"";position:absolute;inset:0;pointer-events:none}
+.sq.last::before{background:var(--sq-last)}
+.sq.sel::before{background:var(--sq-sel)}
+.sq.good::before{background:var(--good-sq)}
+.sq.bad::before{background:var(--bad-sq)}
+.sq.warn::before{background:var(--warn-sq)}
+.sq.trail::before{background:var(--sq-sel);opacity:.45}
+.sq.guard::before{background:repeating-linear-gradient(135deg,transparent 0 5px,var(--bad-sq) 5px 7px)}
+.sq.hint{box-shadow:inset 0 0 0 .7cqw var(--present)}
+.sq.pick::after,.sq.ring::after{content:"";position:absolute;inset:6%;border-radius:50%;border:.75cqw solid var(--hit);pointer-events:none}
+.sq.ring.r-good::after{border-color:var(--good)} .sq.ring.r-bad::after{border-color:var(--miss)} .sq.ring.r-warn::after{border-color:var(--present);border-style:dashed}
+.sq.check::before{background:radial-gradient(circle,var(--check) 0,transparent 72%)}
+.sq .pc{position:absolute;inset:4%;width:92%;height:92%;pointer-events:none}
+.sq .pc.lift{opacity:.25}
+.sq .mv{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.sq .mv::after{content:"";width:28%;height:28%;border-radius:50%;background:var(--dot)}
+.sq .mv.cap::after{width:84%;height:84%;background:transparent;border:.9cqw solid var(--dot);box-sizing:border-box}
+.sq .flag{position:absolute;inset:14%;width:72%;height:72%;pointer-events:none}
+.sq .flag path{fill:var(--miss);stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round}
+.sq .flag line{stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.sq .tag{position:absolute;top:3%;right:6%;font-family:var(--mono);font-weight:700;font-size:2.4cqw;line-height:1;color:var(--hit);pointer-events:none}
+.sq .rk,.sq .fl{position:absolute;font-family:var(--mono);font-weight:600;font-size:2.1cqw;line-height:1;pointer-events:none}
+.sq .rk{top:3%;left:4%} .sq .fl{bottom:3%;right:5%}
+.sq.l .rk,.sq.l .fl{color:var(--coord-l)} .sq.d .rk,.sq.d .fl{color:var(--coord-d)}
+.overlay{position:absolute;inset:0;pointer-events:none;width:100%;height:100%}
+.overlay line{stroke-width:1.6;stroke-linecap:round;opacity:.9}
+.overlay .a-move{stroke:var(--present)} .overlay .a-good{stroke:var(--good)} .overlay .a-bad{stroke:var(--miss)} .overlay .a-path{stroke:var(--hit);stroke-dasharray:2.4 2}
+.overlay .h-move{fill:var(--present)} .overlay .h-good{fill:var(--good)} .overlay .h-bad{fill:var(--miss)} .overlay .h-path{fill:var(--hit)}
+.overlay rect.sqr{fill:rgba(46,94,166,.12);stroke:var(--hit);stroke-width:.9;stroke-dasharray:2 1.4}
+.overlay rect.sqr.bad{fill:rgba(196,53,61,.10);stroke:var(--miss)}
+.ghost{position:fixed;z-index:30;pointer-events:none;transform:translate(-50%,-58%) scale(1.12);filter:drop-shadow(0 6px 8px rgba(0,0,0,.25))}
+.pc .pb{stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.pc.w .pb{fill:var(--pw-fill);stroke:var(--pw-line)} .pc.b .pb{fill:var(--pb-fill);stroke:var(--pb-line)}
+.pc .pl{fill:none;stroke-width:1.3;stroke-linecap:round}
+.pc.w .pl{stroke:var(--pw-line)} .pc.b .pl{stroke:var(--pb-detail)}
+.pc .px{fill:none;stroke-width:2.3;stroke-linecap:round}
+.pc.w .px{stroke:var(--pw-line)} .pc.b .px{stroke:var(--pb-cross)}
+.promo{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:var(--scrim)}
+.promo[hidden]{display:none}
+.promo div{display:flex;gap:8px;background:var(--sheet);padding:10px;border-radius:14px}
+.promo button{width:64px;height:64px;border:1px solid var(--line);background:var(--sq-l);border-radius:10px;padding:4px;cursor:pointer}
+.promo .pc{width:100%;height:100%}
+.busy{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.busy span{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+
+.act{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:44px;align-items:center}
+.act .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
+.act .btn.ans{flex:1 1 0;min-width:0;white-space:normal;line-height:1.2;font-size:.9rem;padding:10px 8px}
+.act .tool{border:0;background:transparent;display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;cursor:pointer;color:var(--ink);font-weight:600;font-size:.88rem}
+.act .tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.act .tool:disabled{opacity:.35;cursor:default}
+.fb{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:var(--sheet);border:1.5px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.08);animation:rise .2s ease-out}
+.fb.ok{border-color:var(--good)} .fb.miss{border-color:var(--miss)} .fb.help{border-color:var(--star)}
+.fb h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.4rem;line-height:1.05}
+.fb.ok h3{color:var(--good)} .fb.miss h3{color:var(--miss)} .fb.help h3{color:var(--star)}
+.fb p{margin:0;line-height:1.42;font-size:.92rem}
+.fb ul{margin:0;padding-left:18px;line-height:1.45;font-size:.9rem}
+.fb .row{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.fb .row .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:8px 18px}
+.mono{font-family:var(--mono);font-weight:600}
+.tally{font-family:var(--mono);font-size:.86rem;line-height:1.5}
+.tally .p{color:var(--good)} .tally .m{color:var(--miss)}
+.tip{font-size:.84rem;color:var(--muted);border-left:3px solid var(--line);padding-left:9px}
+
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.result div{display:flex;flex-direction:column;gap:2px;align-items:center}
+.result b{font-family:var(--mono);font-weight:500;font-size:1.3rem}
+.lvinfo{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.lvinfo b{color:var(--ink)}
+@media (max-height:680px){.prompt .ptxt > b{font-size:1.15rem}.fb p{font-size:.86rem}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Chess Trainer</h1>
+    <button class="iconbtn" id="setBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+  </header>
+
+  <div id="mapView">
+    <p class="intro" id="intro"></p>
+    <div id="tracks"></div>
+  </div>
+
+  <div id="drillView" hidden>
+    <div class="dstatus"><span class="lname" id="dName"></span><span class="clock" id="clock" hidden></span><div class="dots" id="dDots"></div></div>
+    <div class="prompt"><span class="side" id="pSide"></span><div class="ptxt"><b id="pTitle"></b><small id="pSub"></small></div></div>
+    <div class="boardWrap">
+      <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+      <div class="promo" id="promo" hidden><div id="promoChoices"></div></div>
+      <div class="busy" id="busy" hidden><span id="busyText">Setting up…</span></div>
+    </div>
+    <div class="act" id="act"></div>
+    <div class="fb" id="fb" hidden></div>
+  </div>
+</div>
+
+<!-- Level start -->
+<div class="sheet" id="lvSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="lvTitle">
+    <span class="label" id="lvTrack"></span>
+    <h2 id="lvTitle"></h2>
+    <p id="lvAbout"></p>
+    <div class="lvinfo" id="lvInfo"></div>
+    <p class="tip" id="lvTip"></p>
+    <button class="btn primary" id="lvGo" type="button">Start</button>
+    <button class="btn" id="lvCancel" type="button">Back</button>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="sheet" id="resSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="resTitle">
+    <h2 id="resTitle"></h2>
+    <p id="resSub"></p>
+    <div class="stars big" id="resStars"></div>
+    <div class="result" id="resGrid"></div>
+    <div class="row" id="resRow"></div>
+    <div id="resNav"></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="sheet" id="setSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="setTitle">
+    <h2 id="setTitle">Settings</h2>
+    <label class="switch"><span>Speed clock<small>Each drill gets a time limit. Running out counts as a miss. Endgames are limited by moves instead.</small></span><input type="checkbox" id="setClock"></label>
+    <label class="switch"><span>Coordinates<small>Show a–h and 1–8 on the board</small></span><input type="checkbox" id="setCoords"></label>
+    <button class="btn" id="setReset" type="button">Reset all progress</button>
+    <button class="btn primary" id="setClose" type="button">Done</button>
+  </div>
+</div>
+
+<script src="chess-core.js"></script>
+<script src="chess-pieces.js"></script>
+<script src="chess-endgames.js"></script>
+<script src="chess-puzzles.js"></script>
+<script src="chess-trainer-data.js"></script>
+<script src="chess-trainer-core.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const T = window.ChessTrainer, C = window.Chess, EG = window.ChessEndgames;
+const { Position, WHITE, BLACK, mFrom, mTo, mFlags, mPromo, F_PROMO, F_CAP, colorOf, typeOf } = C;
+const { pieceSVG } = window.ChessPieces;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, reduced ? Math.min(ms, 60) : ms));
+let progress = store.get('trainer-progress', {});   // { track: { levelIndex: { stars, best, plays } } }
+let settings = Object.assign({ clock: false, coords: true }, store.get('trainer-settings', {}));
+let seen = store.get('trainer-seen', []);              // recently played fixed positions (tactics, mates)
+const TL = ' pnbrqk', LETTER = { 1: 'p', 2: 'n', 3: 'b', 4: 'r', 5: 'q', 6: 'k' };
+const NAME = T.NAME, PTS = T.PTS;
+const nm64 = T.nm64, to88 = T.to88, to64 = T.to64;
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// ---------- level map ----------
+const lvState = (tk, i) => (progress[tk] || {})[i] || null;
+const unlocked = (tk, i) => i === 0 || !!(lvState(tk, i - 1) && lvState(tk, i - 1).stars > 0);
+const starSVG = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : 'off'}"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const starRow = (n, big) => `<span class="stars${big ? ' big' : ''}" aria-label="${n} of 3 stars">${[1, 2, 3].map(k => starSVG(k <= n)).join('')}</span>`;
+function drawMap(){
+  const total = T.TRACKS.reduce((n, t) => n + t.levels.length, 0);
+  const passed = T.TRACKS.reduce((n, t) => n + t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length, 0);
+  $('intro').innerHTML = passed
+    ? `<b>${passed} of ${total}</b> levels passed. Pass a level to unlock the next one in its group.`
+    : 'Short drills that build the skills you use to calculate in real games: seeing where pieces go, spotting double attacks, knowing the endgames and counting exchanges. Pass a level to unlock the next.';
+  $('tracks').innerHTML = T.TRACKS.map(t => {
+    const done = t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length;
+    return `<section class="track"><h2>${t.name}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
+      t.levels.map((L, i) => {
+        const st = lvState(t.key, i), open = unlocked(t.key, i), pass = st && st.stars > 0;
+        return `<button class="lv${pass ? ' passed' : ''}${open ? '' : ' locked'}" type="button" data-t="${t.key}" data-i="${i}"${open ? '' : ' aria-disabled="true"'}>
+          <span class="num">${i + 1}</span>
+          <span class="txt"><b>${L.name}</b><small>${open ? L.about : `Pass level ${i} to unlock`}</small></span>
+          ${open ? (st ? starRow(st.stars) : '') : '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'}
+        </button>`;
+      }).join('') + '</div></section>';
+  }).join('');
+}
+const TIPS = {
+  kpath: 'A knight always changes square colour. Two squares that are diagonal neighbours take two moves; a corner square next to its neighbour on the diagonal takes four.',
+  grab: 'Plan the whole tour before the first move. Grabbing the nearest pawn first is often not the shortest way round.',
+  loose: 'For each black piece ask: who attacks it, who defends it, and is my cheapest attacker worth less than what it takes?',
+  count: 'List the attackers from cheapest to dearest on both sides. Each side can stop capturing whenever carrying on would lose.',
+  square: 'Draw a square from the pawn to the last rank. A pawn on its starting square counts its double step. If the king can get into the square, it catches the pawn.',
+  tactic: 'Look for checks, captures and threats. A move that attacks two things at once, or a line with something valuable behind, is a target.',
+  mate: 'Checks first, then captures, then quiet moves. For every move you try, look at all of the opponent\'s replies.',
+  egQ: 'Use the queen a knight\'s move away from the king to shrink its box, then bring your own king up. Always check the defender still has a move.',
+  egR: 'Rook cuts off the king along a rank or file; your king faces the enemy king (opposition) and then the rook checks it back a line. Waiting moves with the rook keep the box.',
+  egPW: 'Get your king in front of the pawn. Kings facing each other with one square between: whoever is not to move has the opposition. A rook pawn is usually a draw.',
+  egPD: 'Stay in front of the pawn. When the white king comes forward, step into the opposition. When the pawn reaches your second-to-last rank in front of your king, step straight back.',
+};
+const tipFor = L => L.kind === 'eg' ? TIPS[L.p.piece === 'Q' ? 'egQ' : L.p.piece === 'R' ? 'egR' : L.p.win ? 'egPW' : 'egPD'] : TIPS[L.kind];
+
+let chosen = null;
+$('tracks').addEventListener('click', e => {
+  const b = e.target.closest('.lv'); if (!b || b.classList.contains('locked')) return;
+  const tk = b.dataset.t, i = +b.dataset.i, t = T.TRACKS.find(x => x.key === tk), L = t.levels[i], st = lvState(tk, i);
+  chosen = { tk, i };
+  $('lvTrack').textContent = `${t.name} · level ${i + 1}`;
+  $('lvTitle').textContent = L.name; $('lvAbout').textContent = L.about;
+  const clock = settings.clock && L.clock ? ` · <b>${L.clock}s</b> each` : '';
+  $('lvInfo').innerHTML = `<span><b>${L.count}</b> drills · pass with <b>${L.pass}</b>${clock}</span>` + (st ? `<span>Best <b>${st.best}/${L.count}</b> ${starRow(st.stars)}</span>` : '');
+  $('lvTip').textContent = tipFor(L);
+  open('lvSheet');
+});
+$('lvGo').addEventListener('click', () => { close(); startLevel(chosen.tk, chosen.i); });
+$('lvCancel').addEventListener('click', close);
+
+// ---------- sheets ----------
+function open(id){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = s.id !== id); }
+function close(){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = true); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'resSheet') close(); }));
+$('setBtn').addEventListener('click', () => { $('setClock').checked = settings.clock; $('setCoords').checked = settings.coords; $('setReset').textContent = 'Reset all progress'; open('setSheet'); });
+$('setClose').addEventListener('click', close);
+$('setClock').addEventListener('change', e => { settings.clock = e.target.checked; store.set('trainer-settings', settings); });
+$('setCoords').addEventListener('change', e => { settings.coords = e.target.checked; store.set('trainer-settings', settings); if (D) render(); });
+let resetArmed = null;
+$('setReset').addEventListener('click', () => {
+  const b = $('setReset');
+  if (resetArmed){ clearTimeout(resetArmed); resetArmed = null; progress = {}; store.set('trainer-progress', progress); b.textContent = 'Progress reset'; drawMap(); return; }
+  b.textContent = 'Tap again to reset'; resetArmed = setTimeout(() => { resetArmed = null; b.textContent = 'Reset all progress'; }, 3000);
+});
+
+// ---------- endgame tables (built in a worker on first use) ----------
+const tablesReady = {};
+function needTables(kind){
+  if (tablesReady[kind]) return tablesReady[kind];
+  const kinds = kind === 'P' ? ['Q', 'R', 'P'] : [kind];
+  tablesReady[kind] = new Promise(resolve => {
+    const inMain = () => { kinds.forEach(k => EG.tables(k)); resolve(); };
+    let w; try { w = new Worker('chess-endgames-worker.js'); } catch (e) { return setTimeout(inMain, 30); }
+    w.onmessage = e => { e.data.tables.forEach(t => EG.install(t.kind, t.v, t.dead)); w.terminate(); resolve(); };
+    w.onerror = () => { w.terminate(); inMain(); };
+    w.postMessage({ kind });
+  });
+  if (kind === 'P'){ tablesReady.Q = tablesReady.R = tablesReady.P; }
+  return tablesReady[kind];
+}
+
+// ---------- a run through a level ----------
+let D = null;   // { tk, li, L, items, k, results[], ctl, done, helped, t0, left }
+async function startLevel(tk, li){
+  const t = T.TRACKS.find(x => x.key === tk), L = t.levels[li];
+  D = { tk, li, L, items: [], k: 0, results: [], ctl: null, done: false, helped: false, t0: Date.now() };
+  $('mapView').hidden = true; $('drillView').hidden = false;
+  $('dName').textContent = L.name; $('fb').hidden = true; $('act').innerHTML = '';
+  const egKind = L.kind === 'eg' ? L.p.piece : L.kind === 'square' ? 'P' : null;
+  if (egKind){
+    showBusy('Setting up the endgame coach…');
+    $('pTitle').textContent = 'One moment'; $('pSub').textContent = ''; $('pSide').className = 'side none';
+    clearBoard();
+    await needTables(egKind);
+    showBusy(null);
+  }
+  D.items = T.makeSet(tk, li, (Date.now() ^ (Math.random() * 1e9)) >>> 0, new Set(seen)).filter(Boolean);
+  if (L.kind === 'mate' || L.kind === 'tactic'){ seen = seen.concat(D.items.map(x => x.fen)).slice(-400); store.set('trainer-seen', seen); }
+  startItem(0);
+}
+function showBusy(text){ $('busy').hidden = !text; if (text) $('busyText').textContent = text; }
+function backToMap(){
+  stopClock(); D = null; close();
+  $('drillView').hidden = true; $('mapView').hidden = false; drawMap();
+}
+
+function startItem(k){
+  D.k = k; D.helped = false; D.done = false; $('fb').hidden = true;
+  const item = D.items[k];
+  D.ctl = CTL[item.kind](item);
+  render(); drawDots(); startClock();
+}
+function drawDots(){
+  $('dDots').innerHTML = D.items.map((_, k) => `<i class="${D.results[k] || (k === D.k ? 'cur' : '')}"></i>`).join('');
+}
+// Result of the current drill: 'ok' | 'miss'. A solved drill after a hint counts as 'help' (not a pass).
+function resolve(ok, title, body){
+  if (D.done) return;
+  D.done = true; stopClock();
+  const res = ok ? (D.helped ? 'help' : 'ok') : 'miss';
+  D.results[D.k] = res; drawDots();
+  const last = D.k === D.items.length - 1;
+  const fb = $('fb');
+  fb.className = 'fb ' + res;
+  fb.innerHTML = `<h3>${title || (res === 'ok' ? 'Correct' : res === 'help' ? 'Solved with a hint' : 'Not quite')}</h3>${body || ''}` +
+    `<div class="row"><button class="btn primary" id="fbNext" type="button">${last ? 'See results' : 'Next'}</button></div>`;
+  fb.hidden = false;
+  $('fbNext').onclick = () => last ? finishLevel() : startItem(D.k + 1);
+  try{ navigator.vibrate && navigator.vibrate(ok ? 20 : 60); }catch(_){}
+  render();
+}
+function finishLevel(){
+  const L = D.L, score = D.results.filter(r => r === 'ok').length, stars = T.stars(L, score);
+  const p = (progress[D.tk] ||= {}), prev = p[D.li] || { stars: 0, best: 0, plays: 0 };
+  const firstPass = stars > 0 && !(prev.stars > 0);
+  p[D.li] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, score), plays: prev.plays + 1 };
+  store.set('trainer-progress', progress);
+  const t = T.TRACKS.find(x => x.key === D.tk), nextL = t.levels[D.li + 1];
+  $('resTitle').textContent = stars ? (stars === 3 ? 'Perfect!' : 'Level passed') : 'Not this time';
+  $('resSub').textContent = stars
+    ? (firstPass && nextL ? `${nextL.name} is now open.` : nextL ? '' : `That's the last level of ${t.name}.`)
+    : `You need ${L.pass} of ${L.count} to pass. Each try brings new positions.`;
+  $('resStars').innerHTML = starRow(stars, true);
+  const secs = Math.round((Date.now() - D.t0) / 1000);
+  $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${L.count}</b></div><div><span class="label">Best</span><b>${p[D.li].best}/${L.count}</b></div><div><span class="label">Time</span><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></div>`;
+  const btns = [];
+  if (stars && nextL) btns.push(`<button class="btn primary" type="button" data-a="next">Next level</button>`);
+  btns.push(`<button class="btn${stars && nextL ? '' : ' primary'}" type="button" data-a="again">Try again</button>`);
+  btns.push(`<button class="btn" type="button" data-a="map">All drills</button>`);
+  $('resRow').innerHTML = btns.join('');
+  if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'trainer');
+  open('resSheet');
+}
+$('resRow').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const { tk, li } = D;
+  if (b.dataset.a === 'next'){ close(); startLevel(tk, li + 1); }
+  else if (b.dataset.a === 'again'){ close(); startLevel(tk, li); }
+  else backToMap();
+});
+
+// ---------- speed clock ----------
+let clockT = null;
+function startClock(){
+  stopClock();
+  const lim = settings.clock && D.L.clock;
+  $('clock').hidden = !lim; if (!lim) return;
+  D.left = D.L.clock; drawClock();
+  clockT = setInterval(() => {
+    if (document.hidden || D.busy || D.done) return;
+    D.left--; drawClock();
+    if (D.left <= 0){ stopClock(); D.ctl.timeout ? D.ctl.timeout() : resolve(false, 'Time is up', ''); }
+  }, 1000);
+}
+function stopClock(){ clearInterval(clockT); clockT = null; }
+function drawClock(){ const c = $('clock'), t = Math.max(0, D.left); c.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; c.classList.toggle('low', t <= 5); }
+
+// ---------- board ----------
+const squares = [];
+(function build(){
+  for (let i = 0; i < 64; i++){ const d = document.createElement('div'); d.className = 'sq'; $('board').appendChild(d); squares.push(d); }
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'overlay'); svg.setAttribute('viewBox', '0 0 80 80'); svg.id = 'ov'; $('board').appendChild(svg);
+})();
+const FLAG = '<svg class="flag" viewBox="0 0 24 24"><line x1="7" y1="3" x2="7" y2="21"/><path d="M7 4h11l-3 4 3 4H7z"/></svg>';
+let V = null; // the current view: { pieces: {s64: 'N'}, flip, cls: {s64: 'a b'}, arrows: [[a, b, kind]], rects: [[f0, r0, f1, r1, cls]], tags: {s64: '1'}, dots: Set, caps: Set, flag }
+const sqAt = i => { const r = i >> 3, c = i & 7; return V && V.flip ? r * 8 + (7 - c) : (7 - r) * 8 + c; }; // grid index → s64
+const idxOf = s => { const r = s >> 3, c = s & 7; return V && V.flip ? (r) * 8 + (7 - c) : (7 - r) * 8 + c; };
+function clearBoard(){ V = { pieces: {}, flip: false }; drawBoard(); }
+function drawBoard(anim){
+  for (let i = 0; i < 64; i++){
+    const s = sqAt(i), el = squares[i], p = V.pieces[s];
+    el.dataset.s = s;
+    let cls = 'sq ' + ((((s >> 3) + (s & 7)) & 1) ? 'l' : 'd');
+    if (V.cls && V.cls[s]) cls += ' ' + V.cls[s];
+    el.className = cls;
+    let html = p ? pieceSVG(p.toLowerCase(), p === p.toUpperCase() ? 'w' : 'b') : '';
+    if (V.flag === s) html += FLAG;
+    if (V.dots && V.dots.has(s)) html += `<span class="mv${p ? ' cap' : ''}"></span>`;
+    if (V.tags && V.tags[s] != null) html += `<span class="tag">${V.tags[s]}</span>`;
+    if (settings.coords){ if ((i & 7) === 0) html += `<span class="rk">${(s >> 3) + 1}</span>`; if ((i >> 3) === 7) html += `<span class="fl">${'abcdefgh'[s & 7]}</span>`; }
+    el.innerHTML = html;
+  }
+  const xy = s => { const i = idxOf(s); return [(i & 7) * 10 + 5, (i >> 3) * 10 + 5]; };
+  let svg = '<defs>' + ['move', 'good', 'bad', 'path'].map(k => `<marker id="h-${k}" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse"><path class="h-${k}" d="M0 0L10 5L0 10z"/></marker>`).join('') + '</defs>';
+  for (const [f0, r0, f1, r1, k] of V.rects || []){
+    const a = idxOf(r1 * 8 + f0), b = idxOf(r0 * 8 + f1), c = idxOf(r0 * 8 + f0), d = idxOf(r1 * 8 + f1);
+    const xs = [a, b, c, d].map(i => (i & 7) * 10), ys = [a, b, c, d].map(i => (i >> 3) * 10);
+    svg += `<rect class="sqr ${k || ''}" x="${Math.min(...xs) + .6}" y="${Math.min(...ys) + .6}" width="${Math.max(...xs) - Math.min(...xs) + 8.8}" height="${Math.max(...ys) - Math.min(...ys) + 8.8}" rx="1.5"/>`;
+  }
+  for (const [a, b, k] of V.arrows || []){
+    const [x1, y1] = xy(a), [x2, y2] = xy(b), len = Math.hypot(x2 - x1, y2 - y1), sh = 3.2 / len;
+    svg += `<line class="a-${k || 'move'}" x1="${x1}" y1="${y1}" x2="${x2 - (x2 - x1) * sh}" y2="${y2 - (y2 - y1) * sh}" marker-end="url(#h-${k || 'move'})"/>`;
+  }
+  $('ov').innerHTML = svg;
+  if (anim && !reduced){
+    const [from, to] = anim, fi = idxOf(from), ti = idxOf(to), pc = squares[ti].querySelector('.pc');
+    if (pc){ const A = squares[fi].getBoundingClientRect(), B = squares[ti].getBoundingClientRect(); pc.animate([{ transform: `translate(${A.left - B.left}px,${A.top - B.top}px)` }, { transform: 'none' }], { duration: 200, easing: 'ease-out' }); }
+  }
+}
+const posPieces = pos => T.piecesOf(pos);
+
+// The page asks the controller for its view, prompt and buttons
+function render(anim){
+  if (!D || !D.ctl) return;
+  const c = D.ctl;
+  V = c.view(); drawBoard(anim);
+  const pr = c.prompt();
+  $('pTitle').textContent = pr.title; $('pSub').innerHTML = pr.sub || '';
+  $('pSide').className = 'side ' + (pr.side == null ? 'none' : pr.side === WHITE ? 'w' : 'b');
+  const act = $('act');
+  if (D.done){ act.innerHTML = ''; return; }
+  const btns = c.buttons ? c.buttons() : [];
+  act.innerHTML = btns.map((b, k) => `<button class="btn ${b.cls || ''}" type="button" data-k="${k}"${b.disabled ? ' disabled' : ''}>${b.label}</button>`).join('') +
+    `<button class="tool" type="button" id="hintBtn"${c.hint && !c.noHint ? '' : ' disabled'}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>Hint</button>`;
+  act.onclick = e => {
+    const b = e.target.closest('button'); if (!b || D.done || D.busy) return;
+    if (b.id === 'hintBtn'){ D.helped = true; c.hint(); render(); return; }
+    btns[+b.dataset.k].run();
+  };
+}
+
+// ---------- tap / drag input ----------
+let drag = null;
+$('board').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.sq'); if (!el || !D || D.done || D.busy || !D.ctl) return;
+  const s = +el.dataset.s, c = D.ctl;
+  if (!c.moves){ c.tap && c.tap(s); return; }
+  // move-based drills (tactics, mates, endgames): select a piece, then a target
+  const pos = c.pos;
+  if (c.sel >= 0 && c.targets.has(s)){ tryMove(c, s); return; }
+  const p = pos.b[to88(s)];
+  if (p && colorOf(p) === pos.turn && pos.turn === c.me){
+    const was = c.sel === s; selectSq(c, s);
+    drag = { s, was, x: e.clientX, y: e.clientY, moved: false, ghost: null, id: e.pointerId };
+    try { $('board').setPointerCapture(e.pointerId); } catch(_){}
+  } else { c.sel = -1; c.targets = new Map(); render(); }
+});
+$('board').addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+  if (!drag.moved){
+    drag.moved = true;
+    const from = squares[idxOf(drag.s)], pc = from.querySelector('.pc'), size = from.getBoundingClientRect().width;
+    if (pc){ pc.classList.add('lift'); const g = document.createElement('div'); g.className = 'ghost'; g.style.width = g.style.height = size + 'px'; g.innerHTML = pc.outerHTML.replace('lift', ''); document.body.appendChild(g); drag.ghost = g; }
+  }
+  if (drag.ghost){ drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px'; }
+});
+$('board').addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null; if (d.ghost) d.ghost.remove();
+  const c = D && D.ctl; if (!c) return;
+  if (d.moved){ const under = document.elementFromPoint(e.clientX, e.clientY), el = under && under.closest('.sq'); if (el && c.targets.has(+el.dataset.s)) return tryMove(c, +el.dataset.s); render(); }
+  else if (d.was){ c.sel = -1; c.targets = new Map(); render(); }
+});
+$('board').addEventListener('pointercancel', () => { if (drag && drag.ghost) drag.ghost.remove(); drag = null; render(); });
+function selectSq(c, s){
+  c.sel = s; c.targets = new Map();
+  for (const m of c.pos.legal()) if (mFrom(m) === to88(s)){ const t = to64(mTo(m)); c.targets.set(t, (c.targets.get(t) || []).concat(m)); }
+  render();
+}
+function tryMove(c, s){
+  const ms = c.targets.get(s); if (!ms) return;
+  c.sel = -1; c.targets = new Map();
+  if (ms.length > 1 || (mFlags(ms[0]) & F_PROMO)){
+    const color = c.pos.turn ? 'b' : 'w';
+    $('promoChoices').innerHTML = ['q', 'r', 'b', 'n'].map(t => `<button type="button" data-t="${t}">${pieceSVG(t, color)}</button>`).join('');
+    $('promo').hidden = false;
+    $('promoChoices').onclick = e => { const b = e.target.closest('button'); if (!b) return; $('promo').hidden = true; c.move(ms.find(m => LETTER[mPromo(m)] === b.dataset.t)); };
+    $('promo').onclick = e => { if (e.target === $('promo')){ $('promo').hidden = true; render(); } };
+    return;
+  }
+  c.move(ms[0]);
+}
+// shared bits for move-based controllers
+function moveView(c, extra){
+  const v = { pieces: posPieces(c.pos), flip: c.flip, cls: {}, arrows: [], dots: new Set() };
+  if (c.last){ v.cls[c.last[0]] = 'last'; v.cls[c.last[1]] = 'last'; }
+  if (c.mark) v.cls[c.mark[0]] = (v.cls[c.mark[0]] || '') + ' ' + c.mark[1];
+  if (c.sel >= 0){ v.cls[c.sel] = 'sel'; for (const t of c.targets.keys()) v.dots.add(t); }
+  if (c.hintSq != null) v.cls[c.hintSq] = (v.cls[c.hintSq] || '') + ' hint';
+  if (c.pos.inCheck()) { const k = to64(c.pos.king[c.pos.turn]); v.cls[k] = (v.cls[k] || '') + ' check'; }
+  if (c.arrows) v.arrows = c.arrows.slice();
+  return Object.assign(v, extra || {});
+}
+function play(c, m, mark){
+  const from = to64(mFrom(m)), to = to64(mTo(m)), san = c.pos.san(m);
+  c.pos.make(m); c.last = [from, to]; c.mark = mark ? [to, mark] : null;
+  render([from, to]);
+  return san;
+}
+const sideName = s => s === WHITE ? 'White' : 'Black';
+
+// ---------- controllers ----------
+const CTL = {
+  // Knight to the flag in the fewest moves
+  kpath(it){
+    const base = it.fen ? posPieces(new Position(it.fen)) : Object.assign({}, it.pieces);
+    delete base[it.from];
+    const forb = new Set(it.forbidden), c = { cur: it.from, n: 0, trail: [it.from], hint: null, reveal: false };
+    const fail = (title, why) => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>Shortest: <span class="mono">${it.path.map(nm64).join(' → ')}</span>, ${T.plural(it.min, 'move')}.</p>`); };
+    return Object.assign(c, {
+      prompt: () => ({ title: `Knight to the flag in ${T.plural(it.min, 'move')}`, sub: it.forbidden.length ? 'Never land on a piece or on a square a black piece or pawn attacks.' : `Tap the squares the knight jumps to. Moves so far: <b>${c.n}</b>.`, side: null }),
+      view(){
+        const v = { pieces: Object.assign({}, base, { [c.cur]: 'N' }), cls: {}, tags: {}, arrows: [], dots: new Set(), flag: it.to };
+        c.trail.forEach((s, k) => { if (k && s !== c.cur) { v.cls[s] = 'trail'; v.tags[s] = k; } });
+        if (!D.done) T.KNIGHT[c.cur].forEach(s => v.dots.add(s));
+        if (c.hint != null) v.cls[c.hint] = (v.cls[c.hint] || '') + ' hint';
+        if (D.done) it.guards.forEach(s => v.cls[s] = (v.cls[s] || '') + ' guard');
+        if (c.reveal){ // after a miss: the shortest route
+          for (let k = 1; k < it.path.length; k++) v.arrows.push([it.path[k - 1], it.path[k], 'path']);
+          if (c.bad != null) v.cls[c.bad] = 'bad';
+        }
+        return v;
+      },
+      tap(s){
+        if (!T.KNIGHT[c.cur].includes(s)) return;
+        c.n++; c.hint = null;
+        if (forb.has(s)){ c.bad = s; c.cur = s; c.trail.push(s); return fail('Guarded square', `${nm64(s)} is ${base[s] ? 'occupied' : 'attacked by a black piece or pawn'}. The striped squares are all the ones to avoid.`); }
+        c.cur = s; c.trail.push(s);
+        if (s === it.to) return c.n === it.min ? resolve(true, 'Correct', `<p>${T.plural(it.min, 'move')}: <span class="mono">${c.trail.map(nm64).join(' → ')}</span></p>`) : fail('There in the end', `You took ${c.n}.`);
+        if (c.n >= it.min) return fail('Too many moves', `That's ${T.plural(c.n, 'move')} and the knight isn't there yet.`);
+        render();
+      },
+      hint(){ const p = T.knightPath(c.cur, it.to, forb.size ? forb : null); c.hint = p && p[1]; },
+      timeout(){ fail('Time is up', ''); },
+    });
+  },
+
+  // Knight takes every pawn in the fewest moves
+  grab(it){
+    const left = new Set(it.pawns), c = { cur: it.from, n: 0, trail: [it.from], hint: null, reveal: false };
+    const best = `Best order: <span class="mono">${it.order.map(nm64).join(', ')}</span>, ${T.plural(it.min, 'move')}.` + (it.greedy > it.min ? ` Taking the nearest pawn each time costs ${it.greedy}.` : '');
+    const fail = why => { c.reveal = true; resolve(false, 'Too many moves', `<p>${why}</p><p>${best}</p>`); };
+    return Object.assign(c, {
+      prompt: () => ({ title: `Take every pawn in ${T.plural(it.min, 'move')}`, sub: `Pawns left: <b>${left.size}</b> · moves used: <b>${c.n}</b>`, side: null }),
+      view(){
+        const v = { pieces: { [c.cur]: 'N' }, cls: {}, tags: {}, arrows: [], dots: new Set() };
+        left.forEach(s => v.pieces[s] = 'p');
+        c.trail.forEach((s, k) => { if (k && s !== c.cur) { v.cls[s] = 'trail'; v.tags[s] = k; } });
+        if (!D.done) T.KNIGHT[c.cur].forEach(s => v.dots.add(s));
+        if (c.hint != null) v.cls[c.hint] = (v.cls[c.hint] || '') + ' hint';
+        if (c.reveal){ let a = it.from; for (const t of it.order){ const p = T.knightPath(a, t); for (let k = 1; k < p.length; k++) v.arrows.push([p[k - 1], p[k], 'path']); a = t; } }
+        return v;
+      },
+      tap(s){
+        if (!T.KNIGHT[c.cur].includes(s)) return;
+        c.n++; c.hint = null; c.cur = s; c.trail.push(s); left.delete(s);
+        if (!left.size) return c.n === it.min ? resolve(true, 'Correct', `<p>All pawns in ${T.plural(c.n, 'move')}. ${it.greedy > it.min ? `Grabbing the nearest one first would have taken ${it.greedy}.` : ''}</p>`) : fail(`You took ${c.n}.`);
+        if (c.n >= it.min) return fail(`That's ${T.plural(c.n, 'move')} with ${T.plural(left.size, 'pawn')} still on the board.`);
+        render();
+      },
+      hint(){ const plan = T.grabPlan(c.cur, [...left]), p = T.knightPath(c.cur, plan.order[0]); c.hint = p[1]; },
+      timeout(){ fail('Time is up.'); },
+    });
+  },
+
+  // Tap every black piece White can win
+  loose(it){
+    const pos = new Position(it.fen), picks = new Set(), c = { reveal: false, hintN: false };
+    const check = () => {
+      c.reveal = true;
+      const ans = new Set(it.answers), ok = picks.size === ans.size && [...picks].every(s => ans.has(s));
+      const lines = [];
+      for (const s of it.answers){ const w = it.why[s]; lines.push(`<li><span class="mono">${esc(w.san)}</span> wins the ${NAME[typeOf(pos.b[to88(s)])]}` + (w.line.length > 1 ? ` (<span class="mono">${w.line.map(esc).join(' ')}</span>)` : '') + `: <b>+${w.gain}</b>${picks.has(s) ? '' : ' <i>missed</i>'}</li>`); }
+      for (const s of picks) if (!ans.has(s)){
+        const caps = T.capturesOn(pos, to88(s)), name = NAME[typeOf(pos.b[to88(s)])];
+        if (!caps.length) lines.push(`<li>The ${name} on ${nm64(s)} isn't attacked.</li>`);
+        else { let best = caps[0], bv = -99; for (const m of caps){ const v = T.seeMove(pos, m); if (v > bv){ bv = v; best = m; } }
+          const line = T.exchangeLine(pos, best).map(x => x.san);
+          lines.push(`<li>The ${name} on ${nm64(s)} is safe: <span class="mono">${line.map(esc).join(' ')}</span> ${bv === 0 ? 'is only a trade' : `loses ${-bv}`}.</li>`); }
+      }
+      resolve(ok, ok ? 'Correct' : 'Not quite', `<ul>${lines.join('')}</ul>`);
+    };
+    return Object.assign(c, {
+      prompt: () => ({ title: 'Which black pieces can White win?', side: WHITE,
+        sub: c.hintN ? `There ${it.answers.length === 1 ? 'is <b>one</b>' : `are <b>${it.answers.length}</b>`} to find.` : 'Tap each one, then Done. A piece counts if White can take it and stay ahead after the recaptures.' }),
+      view(){
+        const v = { pieces: posPieces(pos), cls: {}, arrows: [] };
+        picks.forEach(s => v.cls[s] = 'pick');
+        if (c.reveal){ for (const s of it.answers) v.cls[s] = 'ring ' + (picks.has(s) ? 'r-good' : 'r-warn'); for (const s of picks) if (!it.answers.includes(s)) v.cls[s] = 'ring r-bad';
+          for (const s of it.answers){ const u = it.why[s].san; const m = pos.legal().find(x => pos.san(x) === u); if (m) v.arrows.push([to64(mFrom(m)), to64(mTo(m)), 'good']); } }
+        return v;
+      },
+      tap(s){ const p = pos.b[to88(s)]; if (!p || colorOf(p) !== BLACK || typeOf(p) === 6) return; picks.has(s) ? picks.delete(s) : picks.add(s); render(); },
+      buttons: () => [{ label: 'Done', cls: 'primary', run: check }],
+      hint(){ c.hintN = true; },
+      timeout(){ check(); },
+    });
+  },
+
+  // White captures; after all sensible recaptures, who is ahead?
+  count(it){
+    const pos = new Position(it.fen), m0 = pos.fromUci(it.move), c = { shown: false, hl: null, step: -1 };
+    const answer = a => {
+      const ok = a === it.answer;
+      let tot = 0;
+      const rows = it.line.map(x => { const g = PTS[x.took] * (x.side === WHITE ? 1 : -1); tot += g; return `<span class="mono">${esc(x.san)}</span> <span class="${g > 0 ? 'p' : 'm'}">${g > 0 ? '+' : ''}${g}</span>`; });
+      const verdict = it.net > 0 ? `White comes out <b>${it.net} up</b>.` : it.net < 0 ? `White ends up <b>${-it.net} down</b>.` : 'It is an <b>even trade</b>.';
+      const stop = it.line.length % 2 === 1 && it.line.length > 1 ? ' Black stops recapturing because the next capture would lose more.' : it.line.length % 2 === 0 && it.line.length > 2 ? ' White stops there: taking again would lose material.' : '';
+      c.shown = true;
+      resolve(ok, ok ? 'Correct' : 'Not quite', `<p class="tally">${rows.join(' · ')}</p><p>${verdict}${stop}</p>`);
+      replay();
+    };
+    const replay = async () => { const p = new Position(it.fen); D.busy = true; for (const x of it.line){ await wait(650); if (!D || D.ctl !== c) return; const m = p.legal().find(y => p.san(y) === x.san); if (!m) break; p.make(m); c.p = p; c.lastMv = [to64(mFrom(m)), to64(mTo(m))]; render(c.lastMv); } D.busy = false; };
+    return Object.assign(c, {
+      prompt: () => ({ title: `White plays ${it.san}. Who ends up ahead?`, sub: 'Count the captures on that square, cheapest first. Either side may stop.', side: WHITE }),
+      view(){
+        const p = c.p || pos, v = { pieces: posPieces(p), cls: { [it.target]: 'ring r-warn' }, arrows: [] };
+        if (!c.p) v.arrows.push([to64(mFrom(m0)), to64(mTo(m0)), 'move']);
+        if (c.lastMv){ v.cls[c.lastMv[0]] = 'last'; }
+        if (c.hl) c.hl.forEach(s => v.cls[s] = (v.cls[s] || '') + ' hint');
+        return v;
+      },
+      buttons: () => [
+        { label: 'White wins material', cls: 'ans', run: () => answer('win') },
+        { label: 'Even trade', cls: 'ans', run: () => answer('even') },
+        { label: 'White loses material', cls: 'ans', run: () => answer('lose') }],
+      hint(){ const p = new Position(it.fen), out = []; for (const x of it.line){ const m = p.legal().find(y => p.san(y) === x.san); if (!m) break; out.push(to64(mFrom(m))); p.make(m); } c.hl = out; },
+      timeout(){ answer(null); },
+    });
+  },
+
+  // Rule of the square
+  square(it){
+    const pos = new Position(it.fen), c = { sq: false };
+    const pf = it.pawn & 7, n = it.n, r0 = 7 - n, rect = () => [Math.max(0, pf - n), r0, Math.min(7, pf + n), 7, D.done && !it.catches ? 'bad' : ''];
+    const answer = a => {
+      const ok = a === it.catches; c.sq = true;
+      const btm = it.turn === BLACK;
+      const lines = [`The pawn needs <b>${T.plural(n, 'move')}</b> to queen${it.double ? ' (its first move can be a double step)' : ''}. Black's king is <b>${T.plural(it.d, 'move')}</b> from ${nm64(56 + pf)}.`,
+        btm ? `Black is to move, so stepping into the square in one move is enough: ${it.d <= n + 1 ? 'it can' : 'it can\'t'}.` : `White is to move, so the king must already be inside the square: ${it.d <= n ? 'it is' : 'it isn\'t'}.`,
+        it.catches ? 'The king catches the pawn.' : 'The pawn queens.'];
+      resolve(ok, ok ? 'Correct' : 'Not quite', `<p>${lines.join(' ')}</p>`);
+    };
+    return Object.assign(c, {
+      prompt: () => ({ title: 'Can the black king catch the pawn?', sub: `${sideName(it.turn)} to move. White's king is too far away to help.`, side: it.turn }),
+      view(){ const v = { pieces: posPieces(pos), cls: {}, rects: [] }; if (c.sq) v.rects.push(rect()); return v; },
+      buttons: () => [{ label: 'Yes, it catches it', cls: 'ans', run: () => answer(true) }, { label: 'No, the pawn queens', cls: 'ans', run: () => answer(false) }],
+      hint(){ c.sq = true; },
+      timeout(){ answer(null); },
+    });
+  },
+
+  // Forks, pins, skewers, combinations: play the winning line
+  tactic(it){ return lineCtl(it, false); },
+  mate(it){ return lineCtl(it, true); },
+
+  // Endgames against the exact tables
+  eg(it){
+    const pos = new Position(it.fen), me = pos.turn, c = { pos, me, flip: me === BLACK, moves: true, sel: -1, targets: new Map(), n: 0, arrows: null, hintSq: null };
+    const limit = it.limit || it.moves;
+    const bestFor = p => { const ms = T.egMoves(p); return ms[0]; };
+    const tell = (ok, title, text) => { c.arrows = c.better ? [c.better] : null; resolve(ok, title, `<p>${text}</p>`); };
+    const reply = async () => {
+      D.busy = true; await wait(380); if (!D || D.ctl !== c) return;
+      const ms = T.egMoves(pos);
+      let m;
+      if (me === WHITE){ const top = ms[0].value === 0 ? ms.filter(x => x.value === 0) : ms.filter(x => x.value === ms[0].value); m = top[(Math.random() * top.length) | 0].move; }
+      else {
+        // White tries the move that leaves Black the fewest ways to hold
+        let best = null, bestN = 99;
+        for (const x of ms){ pos.make(x.move); const n = T.egMoves(pos).filter(y => y.value === 0).length; pos.unmake(); const n2 = n + Math.random() * .5; if (n2 < bestN){ bestN = n2; best = x.move; } }
+        m = best;
+      }
+      play(c, m, null); D.busy = false;
+      const st = pos.status();
+      if (st && it.piece === 'P' && !it.win) return tell(true, 'Draw held', st.reason === 'stalemate' ? 'Stalemate: a draw.' : 'A draw.');
+      render();
+    };
+    c.move = m => {
+      const before = new Position(pos.fen()), san = pos.san(m);
+      const alt = bestFor(before);
+      c.hintSq = null; c.arrows = null; c.n++;
+      play(c, m, null);
+      const st = pos.status(), v = T.egValue(pos);
+      if (it.piece !== 'P'){
+        if (st && st.reason === 'checkmate') return tell(true, 'Checkmate', `Mate in ${T.plural(c.n, 'move')}. The fastest possible from the start was ${it.best}.`);
+        if (!v){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good'];
+          return tell(false, st && st.reason === 'stalemate' ? 'Stalemate' : 'The win is gone', (st && st.reason === 'stalemate' ? `After ${esc(san)} Black has no legal move but isn't in check: that's a draw.` : `After ${esc(san)} Black can take your ${it.piece === 'Q' ? 'queen' : 'rook'}.`) + ` ${esc(before.san(alt.move))} was safe.`); }
+        if (c.n >= limit) return tell(false, 'Out of moves', `${T.plural(limit, 'move')} are up and Black's king is still on the board. Mate was ${T.plural(Math.ceil((v - 1) / 2), 'move')} away.`);
+        return reply();
+      }
+      if (it.win){
+        if (mFlags(m) & F_PROMO){ return v > 0 ? tell(true, 'Promoted', `${esc(san)}: the pawn is through and ${san.includes('=Q') ? 'king and queen' : 'this'} against king is a win.`) : tell(false, 'Stalemate trap', `${esc(san)} throws the win away.`); }
+        if (!v){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good']; return tell(false, 'That lets Black draw', `After ${esc(san)} Black can hold. ${esc(before.san(alt.move))} kept the win. ${typeOf(before.b[mFrom(alt.move)]) === 6 ? 'The king leads the way.' : 'Here the pawn move was right.'}`); }
+        if (c.n >= limit) return tell(false, 'Out of moves', 'The win is still there, but it is taking too long. Head for the queening square with your king in front.');
+        return reply();
+      }
+      // holding the draw as Black
+      if (v > 0){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good']; return tell(false, 'That loses', `After ${esc(san)} White can force the pawn through. ${esc(before.san(alt.move))} held.`); }
+      if (!T.egKey(pos) || T.egKey(pos).kind === 'draw') return tell(true, 'Pawn won', 'Only the kings are left: a draw.');
+      if (st) return tell(true, 'Draw held', 'A draw.');
+      if (c.n >= limit) return tell(true, 'Draw held', `${T.plural(limit, 'move')} and White has made no progress.`);
+      return reply();
+    };
+    return Object.assign(c, {
+      prompt(){
+        const left = limit - c.n;
+        if (it.piece !== 'P') return { title: `Mate with the ${it.piece === 'Q' ? 'queen' : 'rook'}`, sub: `Moves left: <b>${left}</b>. Black defends perfectly.`, side: WHITE };
+        if (it.win) return { title: 'Promote the pawn', sub: `Black defends perfectly. Moves left: <b>${left}</b>.`, side: WHITE };
+        return { title: 'Hold the draw', sub: `You are Black. Survive <b>${left}</b> more move${left === 1 ? '' : 's'}, or win the pawn.`, side: BLACK };
+      },
+      view: () => moveView(c),
+      hint(){ const b = bestFor(pos); c.arrows = [[to64(mFrom(b.move)), to64(mTo(b.move)), 'move']]; },
+    });
+  },
+};
+
+// Tactics and mates: the solver plays the line; any move that keeps the forced mate is also right
+function lineCtl(it, isMate){
+  const pos = new Position(it.fen), me = pos.turn;
+  const c = { pos, me, flip: me === BLACK, moves: true, sel: -1, targets: new Map(), step: 0, dyn: false, hintSq: null, arrows: null };
+  if (it.last){ c.last = [C.sqFrom(it.last.slice(0, 2)), C.sqFrom(it.last.slice(2, 4))].map(to64); }
+  const mateLeft = () => it.n - Math.floor(c.step / 2);
+  const sans = (() => { const p = new Position(it.fen); return it.line.map(u => { const m = p.fromUci(u); const s = p.san(m); p.make(m); return s; }); })();
+  const explain = () => isMate ? `<p>Mate in ${it.n}: <span class="mono">${sans.map(esc).join(' ')}</span></p>` : `<p>${esc(it.text)}</p><p class="tip">Line: <span class="mono">${sans.map(esc).join(' ')}</span> · wins ${it.gain} point${it.gain === 1 ? '' : 's'} of material</p>`;
+  const showSolution = async (title, pre) => {
+    D.done = false; D.busy = true; c.sel = -1; c.targets = new Map();
+    // replay from the start
+    const p0 = new Position(it.fen); c.pos = p0; c.last = null; c.mark = null; c.arrows = null; render();
+    for (let k = 0; k < it.line.length; k++){ await wait(700); if (!D || D.ctl !== c) return; const m = c.pos.fromUci(it.line[k]); play(c, m, k % 2 ? null : 'good'); }
+    D.busy = false;
+    resolve(false, title, (pre || '') + explain());
+  };
+  c.move = m => {
+    const uci = Position.uci(m);
+    let ok = !c.dyn && (uci === it.line[c.step] || (!isMate && (it.alts[c.step / 2] || []).includes(uci)));
+    if (!ok && isMate){
+      pos.make(m); const left = mateLeft() - 1, mated = !pos.legal().length && pos.inCheck();
+      const still = mated || (left >= 1 && C.isMated(pos, left, { nodes: 400000 }) === true); pos.unmake();
+      if (still){ ok = true; if (uci !== it.line[c.step]) c.dyn = true; }
+    }
+    if (!ok){
+      const san = pos.san(m);
+      play(c, m, 'bad'); D.busy = true;
+      setTimeout(() => { if (!D || D.ctl !== c) return; showSolution('Not quite', `<p><span class="mono">${esc(san)}</span> isn't it. Here is the winning line.</p>`); }, reduced ? 50 : 700);
+      return;
+    }
+    if (uci !== it.line[c.step] && !isMate) c.dyn = true;
+    c.hintSq = null; c.arrows = null;
+    play(c, m, 'good'); c.step++;
+    if (pos.status() || (!c.dyn && c.step >= it.line.length) || (c.dyn && !isMate)) return resolve(true, isMate ? 'Checkmate' : 'Correct', explain());
+    D.busy = true;
+    setTimeout(() => {
+      if (!D || D.ctl !== c) return;
+      let reply;
+      if (!c.dyn) reply = pos.fromUci(it.line[c.step]);
+      else { let best = null, bestK = -1; const left = mateLeft(); for (const d of pos.legal()){ pos.make(d); let k = 0; for (let j = 1; j <= left; j++){ const r = C.mateIn(pos, j, { nodes: 200000 }); if (r && r !== -1){ k = j; break; } } pos.unmake(); if (k > bestK){ bestK = k; best = d; } } reply = best; }
+      D.busy = false;
+      if (!reply) return resolve(true, 'Correct', explain());
+      play(c, reply, null); c.step++;
+      render();
+    }, reduced ? 50 : 520);
+  };
+  return Object.assign(c, {
+    prompt(){
+      const who = sideName(me);
+      if (D.done) return { title: isMate ? `${who} to move: mate in ${it.n}` : `${who} to move`, sub: '', side: me };
+      if (isMate) return { title: `${who} to move: mate in ${mateLeft()}`, sub: c.step ? 'Good. Keep going.' : 'Find the first move. Your opponent\'s best defence comes next.', side: me };
+      const label = { knightFork: 'Find the knight fork', fork: 'Find the fork', pin: 'Find the pin', skewer: 'Find the skewer', mixed: 'Win material', combo: 'Win material in two moves' }[it.set];
+      return { title: `${who} to move. ${label}`, sub: c.step ? 'Good. Now collect.' : it.set === 'mixed' ? 'A fork, a pin or a skewer is hiding here.' : it.set === 'combo' ? 'A forcing move first, then the tactic.' : 'One move wins material.', side: me };
+    },
+    view: () => moveView(c),
+    hint(){ const u = c.dyn ? null : it.line[c.step]; if (u) c.hintSq = to64(C.sqFrom(u.slice(0, 2))); else { const m = C.mateIn(pos, mateLeft(), { nodes: 400000 }); if (m && m !== -1) c.hintSq = to64(mFrom(m)); } },
+    timeout(){ showSolution('Time is up', ''); },
+  });
+}
+
+// ---------- boot ----------
+drawMap();
+GameNav.init({ id: 'trainer', note: () => D ? 'Leaving now ends this level.' : '',
+  actions: () => [
+    D && { icon: 'restart', label: 'Restart this level', note: 'New positions, score back to zero.', run: () => { const { tk, li } = D; startLevel(tk, li); } },
+    D && { icon: 'mode', label: 'All drills', note: 'Back to the list of levels.', run: backToMap },
+  ] });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
