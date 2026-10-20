@@ -5,6 +5,7 @@
 // Usage: node tools/generate-chess-trainer.js [perSet=40] [out=chess-trainer-data.js] [maxMinutes=120]
 // The file is rewritten every 30 seconds, so a long run can be stopped at any point; running again resumes from it.
 // ONLY=pin,combo limits a run to some sets (the others are kept). MERGE=other.js folds in positions from another file.
+// COMBO_N sets how many combinations to make (default 3/4 of perSet).
 'use strict';
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const os = require('os'), fs = require('fs'), path = require('path');
@@ -14,7 +15,7 @@ const SETS = process.env.ONLY ? process.env.ONLY.split(',') : ['knightFork', 'fo
 
 if (isMainThread) {
   const per = +(process.argv[2] || 40), out = process.argv[3] || path.join(__dirname, '..', 'chess-trainer-data.js'), maxMin = +(process.argv[4] || 120);
-  const want = Object.fromEntries(SETS.map(s => [s, s === 'combo' ? Math.round(per * 0.75) : per]));
+  const want = Object.fromEntries(SETS.map(s => [s, s === 'combo' ? +(process.env.COMBO_N || Math.round(per * 0.75)) : per]));
   const got = Object.fromEntries(SETS.map(s => [s, []])), seen = new Set(), t0 = Date.now();
   // Resume: keep what an earlier (stopped) run already wrote, including sets this run doesn't generate.
   // Extra files given with MERGE=a.js,b.js are folded in too.
@@ -267,12 +268,14 @@ if (isMainThread) {
   function sanLine(pos0, line) { const p = new Position(pos0.fen()), out = []; for (const u of line) { const m = p.fromUci(u); out.push(p.san(m)); p.make(m); } return out; }
   const whatTaken = (pos0, line) => { const p = new Position(pos0.fen()), got = []; line.forEach((u, i) => { const m = p.fromUci(u); if (i % 2 === 0 && (C.mFlags(m) & C.F_CAP)) got.push(NAME[C.typeOf(p.b[C.mTo(m)])]); p.make(m); }); return got; };
 
-  function explain(pos0, res, mo, k) {
+  function explain(pos0, res, mo, k, how, info) {
     const s = sanLine(pos0, res.line), won = whatTaken(pos0, res.line).filter(Boolean);
     const prize = won.length ? `the ${won[won.length - 1]}` : 'material';
     const label = { fork: 'Fork', pin: 'Pin', skewer: 'Skewer' }[mo.theme];
     let t = '';
-    if (k === 1) t = `${s[0]} forces ${s[1]}. Now ${s[2]} ${mo.text}.`;
+    if (k === 1 && how === 'guard') t = `${s[0]} removes the ${info.name} that guarded ${info.sq}. After ${s[1]}, ${s[2]} ${mo.text}.`;
+    else if (k === 1 && how === 'decoy') t = `Decoy: ${s[0]} has to be taken, ${s[1]}, which puts the king on the wrong square. Now ${s[2]} ${mo.text}.`;
+    else if (k === 1) t = `${s[0]} drives the king: after ${s[1]}, ${s[2]} ${mo.text}.`;
     else t = `${label}: ${s[0]} ${mo.text}.`;
     const rest = s.slice(2 * k + 1);
     if (rest.length >= 2) t += ` After ${rest[0]}, ${rest[1]} wins ${prize}.`;
@@ -311,7 +314,30 @@ if (isMainThread) {
       pos0.unmake();
       if (!check || !toK1 || replies.length > (decoy ? 3 : 2)) continue;
       const key = pos0.fen(); if (seen.has(key)) continue; seen.add(key);
-      out.push(pos0);
+      out.push({ pos: pos0, how: decoy ? 'decoy' : 'drive', first: [w0, w1] });
+    }
+    return out;
+  }
+  // Remove the defender: a black piece guards the square the tactic needs, and White captures it first
+  function addGuard(pos1, line1) {
+    const out = [], seen = new Set();
+    const P = {}; for (let s = 0; s < 64; s++) { const p = pos1.b[to88(s)]; if (p) P[s] = (C.colorOf(p) ? 'pnbrqk' : 'PNBRQK')[C.typeOf(p) - 1]; }
+    const m1 = pos1.fromUci(line1[0]), Fq = to64(C.mTo(m1)), from1 = to64(C.mFrom(m1));
+    for (let tries = 0; tries < 120 && out.length < 3; tries++) {
+      const Q = Object.assign({}, P), dt = pick(['n', 'b', 'r', 'n', 'b']), d = freeSq(Q, s => s !== Fq && R(s) >= 2); if (d < 0) continue;
+      Q[d] = dt;
+      // the defender must cover the tactic's square
+      let pos0; try { pos0 = new Position(fenOf(Q)); } catch (e) { continue; }
+      pos0.makeNull(); const covers = pos0.gen([], false).some(x => to64(C.mFrom(x)) === d && to64(C.mTo(x)) === Fq); pos0.unmakeNull();
+      if (!covers) continue;
+      // a white piece (not the one that makes the tactic) that can take the defender
+      const wt = pick(['N', 'B', 'R', 'Q', 'B', 'N']), w = originFor(Q, wt, d, null); if (w < 0 || w === from1) continue;
+      Q[w] = wt;
+      try { pos0 = new Position(fenOf(Q)); } catch (e) { continue; }
+      if (pos0.king[0] < 0 || pos0.king[1] < 0 || pos0.inCheck(1) || pos0.inCheck(0) || !pos0.legal().length) continue;
+      if (!pos0.legal().some(x => to64(C.mFrom(x)) === w && to64(C.mTo(x)) === d)) continue;
+      const key = pos0.fen(); if (seen.has(key)) continue; seen.add(key);
+      out.push({ pos: pos0, how: 'guard', first: [w, d], info: { name: NAME[{ n: 2, b: 3, r: 4 }[dt]], sq: C.sqName(to88(Fq)) } });
     }
     return out;
   }
@@ -328,19 +354,22 @@ if (isMainThread) {
 
   function attempt(set) {
     const busy = set === 'mixed' || set === 'combo';
-    const kind = set === 'mixed' || set === 'combo' ? pick(['knightFork', 'fork', 'pin', 'skewer']) : set;
+    const kind = set === 'mixed' ? pick(['knightFork', 'fork', 'pin', 'skewer']) : set === 'combo' ? pick(['knightFork', 'fork', 'pin', 'skewer', 'pin', 'skewer']) : set;
     const pos1 = build(kind, busy && set !== 'combo' ? true : set === 'combo' ? rnd() < 0.5 : false);
     if (!pos1) return null;
     const depth = busy ? 5 : 4;
-    let pos = pos1, k = 0, res = null, mo = null;
+    let pos = pos1, k = 0, res = null, mo = null, how = null, info = null;
     if (set === 'combo') {
       const r1 = lineFrom(pos1, depth, 2); if (!r1) return null;
       const mo1 = motifAt(pos1, r1.line, 0); if (!mo1) return null;
-      // try each forcing set-up until one checks out
-      for (const p0 of addPrelude(pos1, r1.gain)) {
-        const r = lineFrom(p0, 5, 3); if (!r || r.line.length < 5) continue;
-        const m = motifAt(p0, r.line, 1); if (!m) continue;
-        pos = p0; res = r; mo = m; k = 1; break;
+      // try forcing set-ups (decoy, drive, remove the defender) until one checks out
+      const cands = addPrelude(pos1, r1.gain).concat(addGuard(pos1, r1.line));
+      for (let a = cands.length - 1; a > 0; a--) { const b = (rnd() * (a + 1)) | 0; [cands[a], cands[b]] = [cands[b], cands[a]]; }
+      for (const c of cands.slice(0, 4)) {
+        const r = lineFrom(c.pos, 5, 3); if (!r || r.line.length < 5) continue;
+        const f = c.pos.fromUci(r.line[0]); if (to64(C.mFrom(f)) !== c.first[0] || to64(C.mTo(f)) !== c.first[1]) continue; // the set-up move must come first
+        const m = motifAt(c.pos, r.line, 1); if (!m) continue;
+        pos = c.pos; res = r; mo = m; k = 1; how = c.how; info = c.info; break;
       }
       if (!res) return null;
     } else {
@@ -352,9 +381,11 @@ if (isMainThread) {
     if ((set === 'pin' || set === 'skewer') && mo.theme !== set) return null;
     // deeper look must agree for the busy sets
     if (busy) { const d = C.scoreMoves(pos, depth + 1), w = winners(d, material(pos, pos.turn)); if (!w || !w.some(x => Position.uci(x.move) === res.line[0])) return null; }
-    let fen = pos.fen().split(' ').slice(0, 2).join(' ') + ' - - 0 1', line = res.line, alts = res.alts, text = explain(pos, res, mo, k);
+    let fen = pos.fen().split(' ').slice(0, 2).join(' ') + ' - - 0 1', line = res.line, alts = res.alts, text = explain(pos, res, mo, k, how, info);
     if (rnd() < 0.5) { const m = mirror(fen, line, alts); fen = m.fen; line = m.line; alts = m.alts; text = flipText(text); }
-    return [fen, line.join(' '), alts.map(a => a.join(' ')).join('|'), mo.theme, text, res.gain];
+    const item = [fen, line.join(' '), alts.map(a => a.join(' ')).join('|'), mo.theme, text, res.gain];
+    if (how) item.push(how);
+    return item;
   }
 
   let need = SETS.slice();

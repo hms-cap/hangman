@@ -140,7 +140,7 @@ const TRACKS = [
     { name: 'Pins', kind: 'tactic', count: 8, pass: 6, clock: 75, p: { set: 'pin' }, about: 'Pin a piece to its king (or to something bigger), then win it.' },
     { name: 'Skewers', kind: 'tactic', count: 8, pass: 6, clock: 75, p: { set: 'skewer' }, about: 'Attack a big piece so that when it moves, the one behind it falls.' },
     { name: 'Mixed: busy positions', kind: 'tactic', count: 8, pass: 6, clock: 90, p: { set: 'mixed' }, about: 'Forks, pins and skewers in full positions. Nobody tells you which.' },
-    { name: 'Two-move combinations', kind: 'tactic', count: 8, pass: 5, clock: 150, p: { set: 'combo' }, about: 'A forcing move first sets up the fork, pin or skewer. Calculate both moves before you play.' },
+    { name: 'Two-move combinations', kind: 'tactic', count: 8, pass: 5, clock: 150, p: { set: 'combo' }, about: 'A decoy sacrifice, a check that drives the king, or a capture that removes a defender sets up the fork, pin or skewer. Calculate both moves before you play.' },
   ] },
   { key: 'endgames', name: 'Endgame technique', blurb: 'The endings every player must know, against perfect defence.', levels: [
     { name: 'Rule of the square', kind: 'square', count: 10, pass: 8, clock: 15, p: {}, about: 'Can the king catch the pawn? Answer without counting moves one by one.' },
@@ -340,7 +340,8 @@ function mateItems(p) {
 }
 function tacticItems(p) {
   const d = DATA(); if (!d) return [];
-  return (d[p.set] || []).map(x => ({ kind: 'tactic', set: p.set, fen: x[0], line: x[1].split(' '), alts: x[2] ? x[2].split('|').map(s => s ? s.split(' ') : []) : [], theme: x[3], text: x[4], gain: x[5] }));
+  return (d[p.set] || []).map(x => ({ kind: 'tactic', set: p.set, fen: x[0], line: x[1].split(' '), alts: x[2] ? x[2].split('|').map(s => s ? s.split(' ') : []) : [], theme: x[3], text: x[4], gain: x[5],
+    how: x[6] || (p.set !== 'combo' ? null : /forces Kx/.test(x[4]) ? 'decoy' : 'drive') }));
 }
 
 // A fresh set of drills for a level. `seen` (optional): keys of fixed items played recently, to avoid repeats.
@@ -349,7 +350,15 @@ function makeSet(trackKey, levelIdx, seed, seen) {
   if (L.kind === 'mate' || L.kind === 'tactic') {
     const pool = L.kind === 'mate' ? mateItems(L.p) : tacticItems(L.p);
     const fresh = pool.filter(x => !(seen && seen.has(x.fen)));
-    return shuffle((fresh.length >= L.count ? fresh : pool).slice(), r).slice(0, L.count);
+    const use = shuffle((fresh.length >= L.count ? fresh : pool).slice(), r);
+    if (L.kind === 'tactic' && L.p.set === 'combo') {
+      // rotate through the kinds (set-up and motif) so one try sees decoys, drives and removed defenders, forks, pins and skewers
+      const groups = {}; for (const x of use) (groups[x.how + '/' + x.theme] ||= []).push(x);
+      const keys = shuffle(Object.keys(groups), r), out = [];
+      while (out.length < L.count && keys.some(k => groups[k].length)) for (const k of keys) if (groups[k].length && out.length < L.count) out.push(groups[k].shift());
+      return out;
+    }
+    return use.slice(0, L.count);
   }
   for (let k = 0; k < L.count; k++) {
     if (L.kind === 'kpath') out.push(genKpath(L.p, r));

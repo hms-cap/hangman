@@ -835,7 +835,7 @@ function lineCtl(it, isMate){
       if (D.done) return { title: isMate ? `${who} to move: mate in ${it.n}` : `${who} to move`, sub: '', side: me };
       if (isMate) return { title: `${who} to move: mate in ${mateLeft()}`, sub: c.step ? 'Good. Keep going.' : 'Find the first move. Your opponent\'s best defence comes next.', side: me };
       const label = { knightFork: 'Find the knight fork', fork: 'Find the fork', pin: 'Find the pin', skewer: 'Find the skewer', mixed: 'Win material', combo: 'Win material in two moves' }[it.set];
-      return { title: `${who} to move. ${label}`, sub: c.step ? 'Good. Now collect.' : it.set === 'mixed' ? 'A fork, a pin or a skewer is hiding here.' : it.set === 'combo' ? 'A forcing move first, then the tactic.' : 'One move wins material.', side: me };
+      return { title: `${who} to move. ${label}`, sub: c.step ? 'Good. Now collect.' : it.set === 'mixed' ? 'A fork, a pin or a skewer is hiding here.' : it.set === 'combo' ? 'Something forcing comes first: a check, a sacrifice or a capture.' : 'One move wins material.', side: me };
     },
     view: () => moveView(c),
     hint(){ const u = c.dyn ? null : it.line[c.step]; if (u) c.hintSq = to64(C.sqFrom(u.slice(0, 2))); else { const m = C.mateIn(pos, mateLeft(), { nodes: 400000 }); if (m && m !== -1) c.hintSq = to64(mFrom(m)); } },
