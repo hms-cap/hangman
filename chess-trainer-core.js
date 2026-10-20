@@ -794,7 +794,13 @@ function placementResult(results) {
 }
 
 // Stars for a finished set: 1 = passed, 2 = at most one miss, 3 = perfect
-function stars(L, score) { return score < L.pass ? 0 : score === L.count ? 3 : score >= L.count - 1 ? 2 : 1; }
+// Stars for a finished set: score counts drills solved (on any try); firstTry those solved first time. Three stars need
+// every drill right first time.
+function stars(L, score, firstTry) {
+  if (score < L.pass) return 0;
+  if (score === L.count && (firstTry == null || firstTry === L.count)) return 3;
+  return score >= L.count - 1 ? 2 : 1;
+}
 
 const api = { PATHS, pathSteps, mixedSet, checkpointSpec, placementSet, placementResult, PLACEMENT, openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
   squareFacts, egKey, egValue, egMoves, routeMoves, routeWhy, routeSolve, genRoute, genPawnRoute, checkers, attacks, escapeWay, isCheckMove, isMateMove,

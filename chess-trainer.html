@@ -72,7 +72,7 @@
 .dots{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
 .dots i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--line)}
 .dots i.cur{border-color:var(--ink)}
-.dots i.ok{background:var(--good);border-color:var(--good)} .dots i.miss{background:var(--miss);border-color:var(--miss)} .dots i.help{background:var(--star);border-color:var(--star)}
+.dots i.ok{background:var(--good);border-color:var(--good)} .dots i.retry{background:var(--present);border-color:var(--present)} .dots i.miss{background:var(--miss);border-color:var(--miss)} .dots i.help{background:var(--star);border-color:var(--star)}
 .clock{font-family:var(--mono);font-weight:600;font-size:.88rem;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--key);color:var(--ink);font-variant-numeric:tabular-nums}
 .clock.low{color:var(--miss);border-color:var(--miss)}
 .prompt{display:flex;align-items:center;gap:10px;min-height:42px}
@@ -184,7 +184,10 @@
 .act .tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .act .tool:disabled{opacity:.35;cursor:default}
 .fb{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:var(--sheet);border:1.5px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.08);animation:rise .2s ease-out}
-.fb.ok{border-color:var(--good)} .fb.miss{border-color:var(--miss)} .fb.help{border-color:var(--star)}
+.fb.ok{border-color:var(--good)} .fb.miss{border-color:var(--miss)} .fb.help{border-color:var(--star)} .fb.retry,.fb.again{border-color:var(--present)}
+.fb.again h3,.fb.retry h3{color:var(--present)}
+.fb.again .row{flex-wrap:wrap}
+.fb .row .left{flex-basis:100%;color:var(--muted);font-size:.84rem;font-weight:600}
 .fb h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.4rem;line-height:1.05}
 .fb.ok h3{color:var(--good)} .fb.miss h3{color:var(--miss)} .fb.help h3{color:var(--star)}
 .fb p{margin:0;line-height:1.42;font-size:.92rem}
@@ -464,7 +467,7 @@ function needTables(kind){
 let D = null;   // { tk, li, L, items, k, results[], ctl, done, helped, t0, left }
 async function startLevel(tk, li){
   const t = T.TRACKS.find(x => x.key === tk), L = t.levels[li];
-  D = { tk, li, L, items: [], k: 0, results: [], ctl: null, done: false, helped: false, t0: Date.now() };
+  D = { tk, li, L, items: [], k: 0, results: [], tries: [], ctl: null, done: false, helped: false, t0: Date.now() };
   $('mapView').hidden = true; $('drillView').hidden = false;
   $('dName').textContent = L.name; $('fb').hidden = true; $('act').innerHTML = '';
   const egKind = L.kind === 'eg' ? L.p.piece : L.kind === 'square' ? 'P' : null;
@@ -481,7 +484,7 @@ async function startLevel(tk, li){
 }
 // A mixed run (placement test or path checkpoint): items come from several levels
 async function startMixed(meta){
-  D = { custom: meta, L: { name: meta.name, count: 0, pass: 0 }, items: [], k: 0, results: [], ctl: null, done: false, helped: false, t0: Date.now() };
+  D = { custom: meta, L: { name: meta.name, count: 0, pass: 0 }, items: [], k: 0, results: [], tries: [], ctl: null, done: false, helped: false, t0: Date.now() };
   $('mapView').hidden = true; $('drillView').hidden = false;
   $('dName').textContent = meta.name; $('fb').hidden = true; $('act').innerHTML = '';
   showBusy('Setting up…'); $('pTitle').textContent = 'One moment'; $('pSub').textContent = ''; $('pSide').className = 'side none'; clearBoard();
@@ -493,7 +496,7 @@ function startPlacement(){ close(); startMixed({ kind: 'placement', name: 'Place
 function startCheckpoint(key){ close(); const P = T.PATHS.find(p => p.key === key);
   startMixed({ kind: 'checkpoint', path: key, name: `${P.name} checkpoint`, make: () => T.mixedSet(T.checkpointSpec(key), (Date.now() ^ (Math.random() * 1e9)) >>> 0), pass: n => Math.ceil(n * 0.75) }); }
 function finishMixed(){
-  const m = D.custom, score = D.results.filter(r => r === 'ok').length, n = D.items.length;
+  const m = D.custom, score = D.results.filter(r => r === 'ok' || r === 'retry').length, n = D.items.length;
   const secs = Math.round((Date.now() - D.t0) / 1000), time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
   const btns = [];
   if (m.kind === 'placement'){
@@ -528,20 +531,43 @@ function backToMap(){
 }
 
 function startItem(k){
-  D.k = k; D.helped = false; D.done = false; $('fb').hidden = true;
+  D.k = k; D.helped = false; D.done = false; D.busy = false; $('fb').hidden = true;
   const item = D.items[k];
   if (D.custom && item.src) $('dName').textContent = `${D.custom.name} · ${item.src.name}`;
   D.ctl = CTL[item.kind](item);
   render(); drawDots(); startClock();
 }
 function drawDots(){
-  $('dDots').innerHTML = D.items.map((_, k) => `<i class="${D.results[k] || (k === D.k ? 'cur' : '')}"></i>`).join('');
+  $('dDots').innerHTML = D.items.map((_, k) => `<i class="${D.results[k] || (k === D.k ? 'cur' : '')}"${!D.results[k] && D.tries[k] ? ' style="border-color:var(--present)"' : ''}></i>`).join('');
 }
 // Result of the current drill: 'ok' | 'miss'. A solved drill after a hint counts as 'help' (not a pass).
+// ---- tries: every drill allows three attempts (the placement test one). A wrong attempt explains what went wrong
+// without giving the answer away, then offers another go or the answer.
+const maxTries = () => D.custom && D.custom.kind === 'placement' ? 1 : 3;
+const triesUsed = () => (D.tries && D.tries[D.k]) || 0;
+// title, why (HTML): what went wrong. final(why): give up and show the answer. retry(): set up the next attempt
+// (default: start the drill again from scratch). Returns true if the learner gets another go.
+function wrong(title, why, final, retry){
+  if (D.done) return false;
+  D.tries[D.k] = triesUsed() + 1;
+  const left = maxTries() - D.tries[D.k];
+  try{ navigator.vibrate && navigator.vibrate(60); }catch(_){}
+  if (left <= 0){ D.busy = false; final(why); return false; }
+  D.busy = true; // the board waits while the card is up
+  const fb = $('fb');
+  fb.className = 'fb again';
+  fb.innerHTML = `<h3>${title}</h3>${why}<div class="row"><span class="left">${left === 1 ? 'One try left' : 'Two tries left'}</span><button class="btn" id="fbShow" type="button">Show the answer</button><button class="btn primary" id="fbRetry" type="button">Try again</button></div>`;
+  fb.hidden = false; drawDots(); render();
+  $('fbRetry').onclick = () => { fb.hidden = true; D.busy = false; (retry || restartItem)(); render(); };
+  $('fbShow').onclick = () => { fb.hidden = true; D.busy = false; final(why); };
+  return true;
+}
+function restartItem(){ const item = D.items[D.k]; D.ctl = CTL[item.kind](item); }
 function resolve(ok, title, body){
   if (D.done) return;
   D.done = true; stopClock();
-  const res = ok ? (D.helped ? 'help' : 'ok') : 'miss';
+  const res = ok ? (D.helped ? 'help' : triesUsed() ? 'retry' : 'ok') : 'miss';
+  if (res === 'retry' && (!title || title === 'Correct')) title = `Correct on try ${triesUsed() + 1}`;
   D.results[D.k] = res; drawDots();
   const last = D.k === D.items.length - 1;
   const fb = $('fb');
@@ -555,7 +581,7 @@ function resolve(ok, title, body){
 }
 function finishLevel(){
   if (D.custom) return finishMixed();
-  const L = D.L, score = D.results.filter(r => r === 'ok').length, stars = T.stars(L, score);
+  const L = D.L, first = D.results.filter(r => r === 'ok').length, score = first + D.results.filter(r => r === 'retry').length, stars = T.stars(L, score, first);
   const p = (progress[D.tk] ||= {}), prev = p[D.li] || { stars: 0, best: 0, plays: 0 };
   const firstPass = stars > 0 && !(prev.stars > 0);
   p[D.li] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, score), plays: prev.plays + 1 };
@@ -567,6 +593,7 @@ function finishLevel(){
   $('resSub').textContent = stars
     ? (firstPass && opened ? `${opened.name} is now open.` : nextL ? '' : `That's the last level of ${t.name}.`)
     : `You need ${L.pass} of ${L.count} to pass. Each try brings new positions.`;
+  if (score > first) $('resSub').textContent += ` ${T.plural(score - first, 'drill')} solved on a second or third try${stars === 2 && score === L.count ? ': three stars need every one first time' : ''}.`;
   $('resStars').innerHTML = starRow(stars, true);
   const secs = Math.round((Date.now() - D.t0) / 1000);
   $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${L.count}</b></div><div><span class="label">Best</span><b>${p[D.li].best}/${L.count}</b></div><div><span class="label">Time</span><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></div>`;
@@ -606,7 +633,7 @@ function startClock(){
   clockT = setInterval(() => {
     if (document.hidden || D.busy || D.done) return;
     D.left--; drawClock();
-    if (D.left <= 0){ stopClock(); D.ctl.timeout ? D.ctl.timeout() : resolve(false, 'Time is up', ''); }
+    if (D.left <= 0){ stopClock(); D.tries[D.k] = maxTries() - 1; /* running out of time is final: no retry */ D.ctl.timeout ? D.ctl.timeout() : resolve(false, 'Time is up', ''); }
   }, 1000);
 }
 function stopClock(){ clearInterval(clockT); clockT = null; }
@@ -657,6 +684,36 @@ function drawBoard(anim){
   }
 }
 const posPieces = pos => T.piecesOf(pos);
+// Squares (s64) of `color` pieces that attack s64 in fen: put an enemy knight there and list the captures onto it
+function attackersOf(fen, s64, color){
+  const P = posPieces(new Position(fen)); P[s64] = color === BLACK ? 'N' : 'n';
+  let pos; try { pos = new Position(T.fenOf(P, color)); } catch (e) { return []; }
+  return pos.legal().filter(m => to64(mTo(m)) === s64).map(m => to64(mFrom(m)));
+}
+// Why a move in a tactic, mate or trap fails, from the engine's best reply. Never names the right move.
+function whyWrong(p0, m, isMate){
+  const p = new Position(p0.fen()), san = p.san(m), took = (mFlags(m) & F_CAP) ? typeOf(p.b[mTo(m)]) : 0;
+  p.make(m);
+  const S = `<span class="mono">${esc(san)}</span>`, st = p.status();
+  if (st) return st.reason === 'stalemate' ? `<p>${S} is stalemate: your opponent has no legal move and isn't in check, so it's a draw.</p>` : `<p>${S} ends the game in a draw.</p>`;
+  const check = p.inCheck(), sm = C.scoreMoves(p, 3), r = sm[0]; if (!r) return '';
+  const R = `<span class="mono">${esc(p.san(r.move))}</span>`, capT = (mFlags(r.move) & F_CAP) ? typeOf(p.b[mTo(r.move)]) : 0;
+  if (r.score > C.MATE - 100) return `<p>${S} walks into a mating attack: ${R} starts it.</p>`;
+  if (isMate) return `<p>${S} ${check ? `is check, but your opponent answers ${R}` : `isn't forcing enough: your opponent answers ${R}`}${capT && !check ? ` and takes your ${NAME[capT]}` : ''}, and there's no mate.</p><p class="tip">In a mate puzzle, look at checks first, then captures.</p>`;
+  if (capT){
+    if (took && mTo(r.move) === mTo(m)) return PTS[capT] > PTS[took]
+      ? `<p>${S} takes a ${NAME[took]}, but ${R} wins your ${NAME[capT]} back: you lose material.</p>`
+      : `<p>${S} takes a ${NAME[took]}, but ${R} takes back: just a trade.</p>`;
+    // was that piece already loose before the move? then the move simply didn't deal with it
+    const q = new Position(p0.fen()); q.makeNull();
+    const already = q.legal().some(x => mTo(x) === mTo(r.move) && (mFlags(x) & F_CAP));
+    return already ? `<p>${S} leaves your ${NAME[capT]} on ${nm64(to64(mTo(r.move)))} hanging: ${R} takes it.</p>`
+      : `<p>After ${S}, your opponent plays ${R} and wins your ${NAME[capT]}.</p>`;
+  }
+  const tip = '<p class="tip">Look for a move that attacks two things at once, or a piece that can\'t move because something more valuable stands behind it.</p>';
+  if (took) return `<p>${S} wins a ${NAME[took]}, but there's a move here that wins more. Your opponent answers ${R}.</p>` + tip;
+  return `<p>${S} doesn't win material: your opponent answers ${R}.</p>` + tip;
+}
 
 // The page asks the controller for its view, prompt and buttons
 function render(anim){
@@ -759,7 +816,8 @@ const CTL = {
     const leftTargets = () => new Set(it.targets.filter((_, j) => !(c.got & (1 << (it.stars.length + j)))));
     const leftStars = () => it.stars.filter((_, j) => !(c.got & (1 << j)));
     const best = () => `The fewest is ${T.plural(it.min, 'move')}: <span class="mono">${it.path.map(nm64).join(' → ')}</span>.`;
-    const fail = (title, why) => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>${best()}</p>`); };
+    const fail = (title, why) => wrong(title, `<p>${why}</p><p>Try another route: the ${pname} starts again from ${nm64(it.from)}.</p>`,
+      () => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>${best()}</p>`); });
     const what = it.capture ? 'every black piece' : it.stars.length === 1 && !it.targets.length ? 'the star' : 'all the stars';
     return Object.assign(c, {
       prompt(){
@@ -808,36 +866,43 @@ const CTL = {
     const goodSans = sansOf(it.answers), list = a => a.map(x => `<span class="mono">${esc(x)}</span>`).join(', ');
     const WAY = { king: 'moving the king', capture: 'capturing the piece giving check', block: 'blocking: putting a piece in between' };
     const arrowsFor = us => us.slice(0, 3).map(u => [to64(C.sqFrom(u.slice(0, 2))), to64(C.sqFrom(u.slice(2, 4))), 'good']);
+    const last0 = c.last;
     c.move = m => {
       const u = Position.uci(m), before = new Position(pos.fen()), san = before.san(m), ok = ans.has(u);
       const way = it.goal === 'escape' ? T.escapeWay(before, m, [it.checker]) : null;
       play(c, m, ok ? 'good' : 'bad');
-      let title = ok ? 'Correct' : 'Not quite', text = '';
+      let title = ok ? 'Correct' : 'Not quite', text = '', why = '', sol = '';
       const S = `<span class="mono">${esc(san)}</span>`;
       if (it.goal === 'check'){
         text = ok ? `<p>${S} attacks the black king: that's <b>check</b>. Black has to get out of it on the very next move. In chess notation a check gets a +.</p>`
-                  : `<p>${S} doesn't attack the black king.</p><p>Check${goodSans.length > 1 ? 's' : ''} here: ${list(goodSans)}</p>`;
+                  : (why = `<p>${S} doesn't attack the black king. A check is a move that attacks the king: look at what each of your pieces could reach.</p>`, sol = `<p>Check${goodSans.length > 1 ? 's' : ''} here: ${list(goodSans)}</p>`, '');
       } else if (it.goal === 'escape'){
         const others = Object.keys(it.ways).filter(w => w !== it.way);
         text = ok ? `<p>${S} gets out of check by ${WAY[way]}.${others.length ? ` Here you could also get out by ${others.map(w => WAY[w]).join(' or ')}.` : ''}</p>`
-                  : `<p>${S} does get out of check, by ${WAY[way]}. This time the task was ${WAY[it.way]}: ${list(goodSans)}.</p>`;
+                  : (why = `<p>${S} does get out of check, by ${WAY[way]}. This time the task was ${WAY[it.way]}.</p>`, sol = `<p>${list(goodSans)}</p>`, '');
       } else if (it.goal === 'mate'){
         if (ok){ title = 'Checkmate!'; text = `<p>${S} is <b>checkmate</b>: the king is attacked, it has no safe square, and nothing can capture or block. That wins the game. It's written with a #.</p>`; }
         else { const esc1 = pos.inCheck() ? pos.legal()[0] : null;
-          text = `<p>${esc1 ? `${S} is check, but Black gets out with <span class="mono">${esc(pos.san(esc1))}</span>.` : `${S} isn't check.`}</p><p>Mate: ${list(goodSans)}</p>`; }
+          why = `<p>${esc1 ? `${S} is check, but Black gets out with <span class="mono">${esc(pos.san(esc1))}</span>.` : `${S} isn't check, and checkmate always starts with a check.`}</p>`; sol = `<p>Mate: ${list(goodSans)}</p>`; }
       } else if (it.goal === 'castle'){
         const side = it.side === 'k' ? 'kingside' : 'queenside';
         text = ok ? `<p>${S}: the king moves two squares toward the rook, and the rook jumps over it to the square next to it. ${it.side === 'k' ? 'Kingside castling is written O-O.' : 'Queenside castling is written O-O-O.'}${it.why ? ` The other side wasn't allowed: ${it.why}` : ''}</p>`
-                  : `<p>That wasn't castling ${side}. Tap the king, then ${it.side === 'k' ? 'g1' : 'c1'}, two squares toward the rook.${it.why ? ` (The other side wasn't allowed: ${it.why})` : ''}</p>`;
+                  : (why = `<p>That wasn't castling ${side}.${it.why ? ` (The other side isn't allowed: ${it.why})` : ''}</p>`, sol = `<p>Tap the king, then ${it.side === 'k' ? 'g1' : 'c1'}, two squares toward the rook.</p>`, '');
       } else if (it.goal === 'promote'){
         text = ok ? `<p>${S}: the pawn reaches the last row and becomes a <b>queen</b>.</p>`
-                  : (mFlags(m) & F_PROMO) ? `<p>${S} promotes, but to a smaller piece. A queen is the strongest choice: ${list(goodSans)}.</p>` : `<p>Move the pawn on the 7th row to the last row and choose the queen: ${list(goodSans)}.</p>`;
+                  : (why = (mFlags(m) & F_PROMO) ? `<p>${S} promotes, but to a smaller piece. A queen is the strongest choice.</p>` : `<p>${S} doesn't promote: a pawn becomes a new piece when it reaches the last row.</p>`, sol = `<p>${list(goodSans)}</p>`, '');
       } else if (it.goal === 'ep'){
         text = ok ? `<p>${S}: <b>en passant</b>. Your pawn captures the black pawn that has just stepped past it, as if it had moved only one square. It's only allowed on the very next move.</p>`
-                  : `<p>The black pawn has just moved two squares and landed beside your pawn. Capture it en passant: ${list(goodSans)}, moving diagonally behind it.</p>`;
+                  : (why = `<p>${S} isn't the en passant capture. The black pawn has just moved two squares and landed beside your pawn: your pawn can take it by moving diagonally behind it.</p>`, sol = `<p>${list(goodSans)}</p>`, '');
       }
-      if (!ok) c.arrows = arrowsFor(it.answers);
-      resolve(ok, title, text);
+      if (ok) return resolve(true, title, text);
+      if (!why) why = text;
+      D.busy = true;
+      setTimeout(() => {
+        if (!D || D.ctl !== c) return;
+        wrong(title, why, w => { c.arrows = arrowsFor(it.answers); resolve(false, title, w + sol); },
+          () => { pos.unmake(); c.last = last0; c.mark = null; c.arrows = null; });
+      }, reduced ? 0 : 450);
     };
     return Object.assign(c, {
       prompt(){
@@ -862,7 +927,8 @@ const CTL = {
     const base = it.fen ? posPieces(new Position(it.fen)) : Object.assign({}, it.pieces);
     delete base[it.from];
     const forb = new Set(it.forbidden), c = { cur: it.from, n: 0, trail: [it.from], hint: null, reveal: false };
-    const fail = (title, why) => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>Shortest: <span class="mono">${it.path.map(nm64).join(' → ')}</span>, ${T.plural(it.min, 'move')}.</p>`); };
+    const fail = (title, why) => wrong(title, `<p>${why}</p>`,
+      () => { c.reveal = true; resolve(false, title, `<p>${why}</p><p>Shortest: <span class="mono">${it.path.map(nm64).join(' → ')}</span>, ${T.plural(it.min, 'move')}.</p>`); });
     return Object.assign(c, {
       prompt: () => ({ title: `Knight to the flag in ${T.plural(it.min, 'move')}`, sub: it.forbidden.length ? 'Never land on a piece or on a square a black piece or pawn attacks.' : `Tap the squares the knight jumps to. Moves so far: <b>${c.n}</b>.`, side: null }),
       view(){
@@ -880,10 +946,15 @@ const CTL = {
       tap(s){
         if (!T.KNIGHT[c.cur].includes(s)) return;
         c.n++; c.hint = null;
-        if (forb.has(s)){ c.bad = s; c.cur = s; c.trail.push(s); return fail('Guarded square', `${nm64(s)} is ${base[s] ? 'occupied' : 'attacked by a black piece or pawn'}. The striped squares are all the ones to avoid.`); }
+        if (forb.has(s)){
+          c.bad = s; c.cur = s; c.trail.push(s);
+          const by = base[s] ? null : attackersOf(it.fen, s, BLACK)[0];
+          return fail('Guarded square', base[s] ? `There's a ${NAME[' pnbrqk'.indexOf(base[s].toLowerCase())]} on ${nm64(s)}: the knight may not land on pieces in this drill.`
+            : by != null ? `${nm64(s)} is attacked by the ${NAME[' pnbrqk'.indexOf(base[by].toLowerCase())]} on ${nm64(by)}.` : `${nm64(s)} is attacked by a black piece.`);
+        }
         c.cur = s; c.trail.push(s);
-        if (s === it.to) return c.n === it.min ? resolve(true, 'Correct', `<p>${T.plural(it.min, 'move')}: <span class="mono">${c.trail.map(nm64).join(' → ')}</span></p>`) : fail('There in the end', `You took ${c.n}.`);
-        if (c.n >= it.min) return fail('Too many moves', `That's ${T.plural(c.n, 'move')} and the knight isn't there yet.`);
+        if (s === it.to) return c.n === it.min ? resolve(true, 'Correct', `<p>${T.plural(it.min, 'move')}: <span class="mono">${c.trail.map(nm64).join(' → ')}</span></p>`) : fail('There in the end', `You took ${T.plural(c.n, 'move')}; it can be done in ${it.min}.`);
+        if (c.n >= it.min) return fail('Too many moves', `That's ${T.plural(c.n, 'move')} and the knight isn't there yet. Count the route out before the first move: from ${nm64(it.from)} the flag is ${T.plural(it.min, 'move')} away.`);
         render();
       },
       hint(){ const p = T.knightPath(c.cur, it.to, forb.size ? forb : null); c.hint = p && p[1]; },
@@ -895,7 +966,8 @@ const CTL = {
   grab(it){
     const left = new Set(it.pawns), c = { cur: it.from, n: 0, trail: [it.from], hint: null, reveal: false };
     const best = `Best order: <span class="mono">${it.order.map(nm64).join(', ')}</span>, ${T.plural(it.min, 'move')}.` + (it.greedy > it.min ? ` Taking the nearest pawn each time costs ${it.greedy}.` : '');
-    const fail = why => { c.reveal = true; resolve(false, 'Too many moves', `<p>${why}</p><p>${best}</p>`); };
+    const fail = why => wrong('Too many moves', `<p>${why}</p><p>Think about the order: which pawn should come first so the others are close together?</p>`,
+      () => { c.reveal = true; resolve(false, 'Too many moves', `<p>${why}</p><p>${best}</p>`); });
     return Object.assign(c, {
       prompt: () => ({ title: `Take every pawn in ${T.plural(it.min, 'move')}`, sub: `Pawns left: <b>${left.size}</b> · moves used: <b>${c.n}</b>`, side: null }),
       view(){
@@ -923,7 +995,6 @@ const CTL = {
   loose(it){
     const pos = new Position(it.fen), picks = new Set(), c = { reveal: false, hintN: false };
     const check = () => {
-      c.reveal = true;
       const ans = new Set(it.answers), ok = picks.size === ans.size && [...picks].every(s => ans.has(s));
       const lines = [];
       for (const s of it.answers){ const w = it.why[s]; lines.push(`<li><span class="mono">${esc(w.san)}</span> wins the ${NAME[typeOf(pos.b[to88(s)])]}` + (w.line.length > 1 ? ` (<span class="mono">${w.line.map(esc).join(' ')}</span>)` : '') + `: <b>+${w.gain}</b>${picks.has(s) ? '' : ' <i>missed</i>'}</li>`); }
@@ -934,7 +1005,14 @@ const CTL = {
           const line = T.exchangeLine(pos, best).map(x => x.san);
           lines.push(`<li>The ${name} on ${nm64(s)} is safe: <span class="mono">${line.map(esc).join(' ')}</span> ${bv === 0 ? 'is only a trade' : `loses ${-bv}`}.</li>`); }
       }
-      resolve(ok, ok ? 'Correct' : 'Not quite', `<ul>${lines.join('')}</ul>`);
+      if (ok) return resolve(true, 'Correct', `<ul>${lines.join('')}</ul>`);
+      // another go: explain the wrong picks, only count the missed ones
+      const wrongLines = [], missed = it.answers.filter(s => !picks.has(s)).length;
+      for (const s of picks) if (!ans.has(s)) wrongLines.push(lines.find(l => l.includes(`on ${nm64(s)} `)) || '');
+      if (missed) wrongLines.push(`<li>${missed === 1 ? 'One piece that can be won is' : `${missed} pieces that can be won are`} still unpicked.</li>`);
+      c.reveal = false;
+      wrong('Not quite', `<ul>${wrongLines.join('')}</ul>`, () => { c.reveal = true; resolve(false, 'Not quite', `<ul>${lines.join('')}</ul>`); },
+        () => { for (const s of [...picks]) if (!ans.has(s)) picks.delete(s); });
     };
     return Object.assign(c, {
       prompt: () => ({ title: 'Which black pieces can White win?', side: WHITE,
@@ -955,15 +1033,29 @@ const CTL = {
 
   // White captures; after all sensible recaptures, who is ahead?
   count(it){
-    const pos = new Position(it.fen), m0 = pos.fromUci(it.move), c = { shown: false, hl: null, step: -1 };
+    const pos = new Position(it.fen), m0 = pos.fromUci(it.move), c = { shown: false, hl: null, step: -1, gone: new Set() };
     const answer = a => {
       const ok = a === it.answer;
+      if (!ok && a != null){
+        const S = `<span class="mono">${esc(it.san)}</span>`, re = it.line[1] && `<span class="mono">${esc(it.line[1].san)}</span>`;
+        const why = a === 'win' ? `<p>White doesn't come out ahead. After ${S}, Black can recapture with ${re}: keep counting what each side takes.</p>`
+          : a === 'lose' ? `<p>White doesn't lose material here. Look at who runs out of captures first, and whether the side that would lose stops taking.</p>`
+          : it.net > 0 ? `<p>It's better than an even trade for White: check whether Black can really afford to take back every time.</p>`
+          : `<p>It's worse than an even trade for White: add up the value of what each side gives up, not just the number of captures.</p>`;
+        c.gone.add(a);
+        if (c.gone.size < 2 && wrong('Not quite', why, w => finalAnswer(false, w), () => {})) return; // with one choice left a retry would give it away
+        if (c.gone.size >= 2){ D.tries[D.k] = maxTries(); return finalAnswer(false, why); }
+        return;
+      }
+      finalAnswer(ok, '');
+    };
+    const finalAnswer = (ok, pre) => {
       let tot = 0;
       const rows = it.line.map(x => { const g = PTS[x.took] * (x.side === WHITE ? 1 : -1); tot += g; return `<span class="mono">${esc(x.san)}</span> <span class="${g > 0 ? 'p' : 'm'}">${g > 0 ? '+' : ''}${g}</span>`; });
       const verdict = it.net > 0 ? `White comes out <b>${it.net} up</b>.` : it.net < 0 ? `White ends up <b>${-it.net} down</b>.` : 'It is an <b>even trade</b>.';
       const stop = it.line.length % 2 === 1 && it.line.length > 1 ? ' Black stops recapturing because the next capture would lose more.' : it.line.length % 2 === 0 && it.line.length > 2 ? ' White stops there: taking again would lose material.' : '';
       c.shown = true;
-      resolve(ok, ok ? 'Correct' : 'Not quite', `<p class="tally">${rows.join(' · ')}</p><p>${verdict}${stop}</p>`);
+      resolve(ok, ok ? 'Correct' : 'Not quite', `${pre || ''}<p class="tally">${rows.join(' · ')}</p><p>${verdict}${stop}</p>`);
       replay();
     };
     const replay = async () => { const p = new Position(it.fen); D.busy = true; for (const x of it.line){ await wait(650); if (!D || D.ctl !== c) return; const m = p.legal().find(y => p.san(y) === x.san); if (!m) break; p.make(m); c.p = p; c.lastMv = [to64(mFrom(m)), to64(mTo(m))]; render(c.lastMv); } D.busy = false; };
@@ -977,9 +1069,9 @@ const CTL = {
         return v;
       },
       buttons: () => [
-        { label: 'White wins material', cls: 'ans', run: () => answer('win') },
-        { label: 'Even trade', cls: 'ans', run: () => answer('even') },
-        { label: 'White loses material', cls: 'ans', run: () => answer('lose') }],
+        { label: 'White wins material', cls: 'ans', disabled: c.gone.has('win'), run: () => answer('win') },
+        { label: 'Even trade', cls: 'ans', disabled: c.gone.has('even'), run: () => answer('even') },
+        { label: 'White loses material', cls: 'ans', disabled: c.gone.has('lose'), run: () => answer('lose') }],
       hint(){ const p = new Position(it.fen), out = []; for (const x of it.line){ const m = p.legal().find(y => p.san(y) === x.san); if (!m) break; out.push(to64(mFrom(m))); p.make(m); } c.hl = out; },
       timeout(){ answer(null); },
     });
@@ -1019,7 +1111,7 @@ const CTL = {
     const mine = () => it.ucis.filter((_, k) => (k % 2 === 0) === (me === WHITE)).length;
     const finish = () => {
       const txt = it.sans.map((x, i) => (i % 2 ? '' : (i / 2 + 1) + '.') + x).join(' ');
-      resolve(c.mistakes === 0, c.mistakes ? `${T.plural(c.mistakes, 'slip')}` : 'Line complete',
+      resolve(!c.failed, c.failed ? 'Line finished with the book moves shown' : c.mistakes ? `Line complete, with ${T.plural(c.mistakes, 'slip')}` : 'Line complete',
         `<p><b>${esc(it.fam)}: ${esc(it.name)}.</b> ${esc(T.openingData().families[it.fam] || '')}</p><p class="tip"><span class="mono">${esc(txt)}</span></p>`);
     };
     const opponent = async () => {
@@ -1041,14 +1133,33 @@ const CTL = {
       }
       // a different move: show it, take it back, then show the book move and why
       c.mistakes++;
-      const san = pos.san(m);
+      const san = pos.san(m), keep = { last: c.last };
+      // why it isn't the move: does it lose material (engine), or is it just a different plan?
+      const sm = C.scoreMoves(pos, 3), mine = sm.find(x => x.move === m), bk = sm.find(x => Position.uci(x.move) === book);
+      const loses = mine && bk && bk.score - mine.score > 150;
+      const reason = loses ? whyWrong(pos, m, false).replace(/<p class="tip">.*?<\/p>/g, '').replace(/<\/?p>/g, ' ').trim()
+        : `<span class="mono">${esc(san)}</span> is playable, but it isn't the move this line teaches.`;
       play(c, m, 'bad'); D.busy = true;
+      if (!c.failed){
+        D.tries[D.k] = triesUsed() + 1;
+        const left = maxTries() - D.tries[D.k];
+        if (left > 0){
+          setTimeout(() => {
+            if (!D || D.ctl !== c) return;
+            pos.unmake(); c.last = keep.last; c.mark = null; D.busy = false;
+            c.note = `${reason} Idea of the right move: ${esc(why)} <b>${left === 1 ? 'One try left' : 'Two tries left'}.</b>`; c.noteBad = true;
+            drawDots(); render();
+          }, reduced ? 50 : 650);
+          return;
+        }
+        c.failed = true; // out of tries: the book move is shown and the line goes on, but the drill counts as missed
+      }
       setTimeout(async () => {
         if (!D || D.ctl !== c) return;
         pos.unmake(); c.last = null; c.mark = null;
         const bm = pos.fromUci(book);
         c.arrows = [[to64(mFrom(bm)), to64(mTo(bm)), 'good']];
-        c.note = `Not ${esc(san)}. The book move is <b>${esc(bookSan)}</b>: ${esc(why)}`; c.noteBad = true;
+        c.note = `${reason} The book move is <b>${esc(bookSan)}</b>: ${esc(why)}`; c.noteBad = true;
         render(); await wait(1500); if (!D || D.ctl !== c) return;
         c.arrows = null; play(c, bm, 'good'); c.k++;
         opponent();
@@ -1072,15 +1183,26 @@ const CTL = {
   oname(it){
     const pos = new Position(it.fen), c = { gone: new Set() };
     const last = [C.sqFrom(it.last.slice(0, 2)), C.sqFrom(it.last.slice(2, 4))].map(to64);
+    const reveal = (ok, pre) => resolve(ok, ok ? 'Correct' : 'Not quite', (pre || '') + `<p><b>${esc(it.answer)}.</b> ${esc(it.about)}</p>` + (it.deep ? `<p class="tip">${esc(it.line.why[it.line.why.length - 1])}</p>` : ''));
+    // what the wrong choice actually is, so the next guess is an informed one
+    const whatIs = o => {
+      const O = T.openingData();
+      if (!it.deep) return `<p>Not the ${esc(o)}: ${esc(O.families[o] || '')}</p>`;
+      const L = O.lines.find(x => x.full === o), n = Math.min(L.sans.length, L.famPly + 4);
+      return `<p>Not the ${esc(o)}. That one goes <span class="mono">${esc(T.moveText(L.sans.slice(0, n)))}…</span></p>`;
+    };
     const answer = a => {
-      const ok = a === it.answer;
-      resolve(ok, ok ? 'Correct' : 'Not quite', `<p><b>${esc(it.answer)}.</b> ${esc(it.about)}</p>` + (it.deep ? `<p class="tip">${esc(it.line.why[it.line.why.length - 1])}</p>` : ''));
+      if (a == null || a === it.answer) return reveal(a === it.answer);
+      c.gone.add(a);
+      const left = it.options.filter(o => !c.gone.has(o)).length;
+      if (left <= 1){ D.tries[D.k] = maxTries(); return reveal(false, whatIs(a)); } // the last choice would be a giveaway
+      wrong('Not quite', whatIs(a), w => reveal(false, w), () => {});
     };
     return Object.assign(c, {
       prompt: () => ({ title: it.deep ? 'Which variation is this?' : 'Which opening is this?', sub: `<span class="mono">${esc(it.moves)}</span>`, side: null }),
       view: () => { const v = { pieces: posPieces(pos), cls: {}, arrows: [], flip: false }; v.cls[last[0]] = 'last'; v.cls[last[1]] = 'last'; return v; },
       buttons: () => it.options.map(o => ({ label: esc(o), cls: 'opt' + (c.gone.has(o) ? ' gone' : ''), run: () => answer(o) })),
-      hint(){ const wrong = it.options.filter(o => o !== it.answer); c.gone = new Set(wrong.slice(0, 2)); },
+      hint(){ const no = it.options.filter(o => o !== it.answer && !c.gone.has(o)); no.slice(0, 2).forEach(o => c.gone.add(o)); },
       timeout(){ answer(null); },
     });
   },
@@ -1092,6 +1214,12 @@ const CTL = {
     const limit = it.limit || it.moves;
     const bestFor = p => { const ms = T.egMoves(p); return ms[0]; };
     const tell = (ok, title, text) => { c.arrows = c.better ? [c.better] : null; resolve(ok, title, `<p>${text}</p>`); };
+    // a move that throws the result away: explain, then take it back for another go (the right move only with the answer)
+    const slip = (title, why, rightSan, keep) => {
+      c.arrows = null;
+      wrong(title, `<p>${why}</p>`, w => { c.arrows = c.better ? [c.better] : null; resolve(false, title, w + `<p><span class="mono">${esc(rightSan)}</span> was right.</p>`); },
+        () => { pos.unmake(); c.n--; c.last = keep.last; c.mark = null; c.better = null; });
+    };
     const reply = async () => {
       D.busy = true; await wait(380); if (!D || D.ctl !== c) return;
       const ms = T.egMoves(pos);
@@ -1109,26 +1237,38 @@ const CTL = {
       render();
     };
     c.move = m => {
-      const before = new Position(pos.fen()), san = pos.san(m);
-      const alt = bestFor(before);
+      const before = new Position(pos.fen()), san = pos.san(m), keep = { last: c.last };
+      const alt = bestFor(before), mover = typeOf(before.b[mFrom(m)]);
       c.hintSq = null; c.arrows = null; c.n++;
       play(c, m, null);
       const st = pos.status(), v = T.egValue(pos);
       if (it.piece !== 'P'){
         if (st && st.reason === 'checkmate') return tell(true, 'Checkmate', `Mate in ${T.plural(c.n, 'move')}. The fastest possible from the start was ${it.best}.`);
         if (!v){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good'];
-          return tell(false, st && st.reason === 'stalemate' ? 'Stalemate' : 'The win is gone', (st && st.reason === 'stalemate' ? `After ${esc(san)} Black has no legal move but isn't in check: that's a draw.` : `After ${esc(san)} Black can take your ${it.piece === 'Q' ? 'queen' : 'rook'}.`) + ` ${esc(before.san(alt.move))} was safe.`); }
-        if (c.n >= limit) return tell(false, 'Out of moves', `${T.plural(limit, 'move')} are up and Black's king is still on the board. Mate was ${T.plural(Math.ceil((v - 1) / 2), 'move')} away.`);
+          const stale = st && st.reason === 'stalemate';
+          return slip(stale ? 'Stalemate' : 'The win is gone', stale ? `After ${esc(san)} Black has no legal move but isn't in check: that's stalemate, a draw. Before every move, make sure the king still has a square or you're giving check.`
+            : `After ${esc(san)} Black's king can take your ${it.piece === 'Q' ? 'queen' : 'rook'}: it's next to the king and your own king isn't guarding it.`, before.san(alt.move), keep); }
+        if (c.n >= limit) return wrong('Out of moves', `<p>${T.plural(limit, 'move')} are up and Black's king is still on the board. Push the king to the edge first, then bring your own king up to help mate.</p><p>The ending starts again from the beginning.</p>`,
+          w => tell(false, 'Out of moves', `${T.plural(limit, 'move')} are up and Black's king is still on the board. Mate was ${T.plural(Math.ceil((v - 1) / 2), 'move')} away.`));
         return reply();
       }
       if (it.win){
-        if (mFlags(m) & F_PROMO){ return v > 0 ? tell(true, 'Promoted', `${esc(san)}: the pawn is through and ${san.includes('=Q') ? 'king and queen' : 'this'} against king is a win.`) : tell(false, 'Stalemate trap', `${esc(san)} throws the win away.`); }
-        if (!v){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good']; return tell(false, 'That lets Black draw', `After ${esc(san)} Black can hold. ${esc(before.san(alt.move))} kept the win. ${typeOf(before.b[mFrom(alt.move)]) === 6 ? 'The king leads the way.' : 'Here the pawn move was right.'}`); }
-        if (c.n >= limit) return tell(false, 'Out of moves', 'The win is still there, but it is taking too long. Head for the queening square with your king in front.');
+        if (mFlags(m) & F_PROMO){
+          if (v > 0) return tell(true, 'Promoted', `${esc(san)}: the pawn is through and ${san.includes('=Q') ? 'king and queen' : 'this'} against king is a win.`);
+          c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good'];
+          return slip('The win is gone', st && st.reason === 'stalemate' ? `${esc(san)} is stalemate: Black has no move and isn't in check.` : `After ${esc(san)} the new piece can be taken, or it can't force mate.`, before.san(alt.move), keep);
+        }
+        if (!v){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good'];
+          return slip('That lets Black draw', `After ${esc(san)} Black can hold the draw with correct play. ` + (mover === 1
+            ? 'Pushing the pawn too early lets the black king get in front of it. Usually your king has to lead the way to the key squares first.'
+            : 'Black\'s king can now take the opposition or get in front of the pawn. Look at where the kings face each other, and who is to move.'), before.san(alt.move), keep); }
+        if (c.n >= limit) return wrong('Out of moves', '<p>The win is still there, but it is taking too long. Head for the queening square with your king in front of the pawn.</p><p>The ending starts again from the beginning.</p>',
+          w => tell(false, 'Out of moves', 'The win is still there, but it is taking too long. Head for the queening square with your king in front.'));
         return reply();
       }
       // holding the draw as Black
-      if (v > 0){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good']; return tell(false, 'That loses', `After ${esc(san)} White can force the pawn through. ${esc(before.san(alt.move))} held.`); }
+      if (v > 0){ c.better = [to64(mFrom(alt.move)), to64(mTo(alt.move)), 'good'];
+        return slip('That loses', `After ${esc(san)} White can force the pawn through. Keep your king in front of the pawn, and when the white king comes forward, step into the opposition (kings facing with one square between, White to move).`, before.san(alt.move), keep); }
       if (!T.egKey(pos) || T.egKey(pos).kind === 'draw') return tell(true, 'Pawn won', 'Only the kings are left: a draw.');
       if (st) return tell(true, 'Draw held', 'A draw.');
       if (c.n >= limit) return tell(true, 'Draw held', `${T.plural(limit, 'move')} and White has made no progress.`);
@@ -1165,16 +1305,20 @@ function lineCtl(it, isMate){
   };
   c.move = m => {
     const uci = Position.uci(m);
-    let ok = !c.dyn && (uci === it.line[c.step] || (!isMate && (it.alts[c.step / 2] || []).includes(uci)));
+    let ok = !c.dyn && (uci === it.line[c.step] || (!isMate && ((it.alts && it.alts[c.step / 2]) || []).includes(uci)));
     if (!ok && isMate){
       pos.make(m); const left = mateLeft() - 1, mated = !pos.legal().length && pos.inCheck();
       const still = mated || (left >= 1 && C.isMated(pos, left, { nodes: 400000 }) === true); pos.unmake();
       if (still){ ok = true; if (uci !== it.line[c.step]) c.dyn = true; }
     }
     if (!ok){
-      const san = pos.san(m);
+      const why = whyWrong(pos, m, isMate), keep = { last: c.last, mark: c.mark };
       play(c, m, 'bad'); D.busy = true;
-      setTimeout(() => { if (!D || D.ctl !== c) return; showSolution('Not quite', `<p><span class="mono">${esc(san)}</span> isn't it. Here is the winning line.</p>`); }, reduced ? 50 : 700);
+      setTimeout(() => {
+        if (!D || D.ctl !== c) return;
+        wrong('Not quite', why, w => showSolution('Not quite', w + '<p>Here is the winning line.</p>'),
+          () => { pos.unmake(); c.last = keep.last; c.mark = keep.mark; c.sel = -1; c.targets = new Map(); });
+      }, reduced ? 50 : 700);
       return;
     }
     if (uci !== it.line[c.step] && !isMate) c.dyn = true;

@@ -210,5 +210,10 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
   const ok = T.PATHS.every(P => html.includes(`${P.key}: ['${P.name}', '${T.pathSteps(P.key).map(([a, b]) => a + ':' + b).join(' ')}']`));
   check('home tile knows each path\'s steps', ok);
 }
+// stars: drills solved on a retry count toward passing, three stars need every drill first time
+{
+  const L = { count: 10, pass: 8 };
+  check('stars with retries', T.stars(L, 10, 10) === 3 && T.stars(L, 10, 8) === 2 && T.stars(L, 9, 9) === 2 && T.stars(L, 8, 5) === 1 && T.stars(L, 7, 7) === 0 && T.stars(L, 10) === 3);
+}
 console.log(fails ? `${fails} failed` : 'all passed');
 process.exit(fails ? 1 : 0);
