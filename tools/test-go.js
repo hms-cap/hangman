@@ -61,6 +61,24 @@ const at = (b, s) => b.parse(s);
 // a full game finishes, with a sensible score
 { const t0 = Date.now(), g = G.selfPlay(9, { playouts: 200, noise: 0.2 }, { playouts: 200, noise: 0.2 }, 2);
   check('a 9x9 game between two computers finishes', g.moves > 30 && g.moves < 250, `${g.moves} moves, margin ${g.margin}, ${Date.now() - t0} ms`); }
+// tutor
+{ const T = require('../go-tutor.js');
+  const b = setup(['.........', '.........', '..XOX....', '..XOX....', '...X.....', '.........', '.........', '.........', '.........'], BLACK);
+  const f = T.tactics(b, b.parse('H5'));
+  check('tutor: a missed capture is pointed out', f.some(x => x.kind === 'missed' && x.text.includes('D8')), f.map(x => x.text).join(' | '));
+  const g = T.tactics(b, b.parse('D8'));
+  check('tutor: a capture is recognised', g.some(x => x.kind === 'capture'), g.map(x => x.text).join(' | '));
+  const c = setup(['.........', '.........', '..OXO....', '..OXO....', '...O.....', '.........', '.........', '.........', '.........'], BLACK);
+  const h = T.tactics(c, c.parse('H5'));
+  check('tutor: stones left in atari are pointed out', h.some(x => x.kind === 'ignored' && x.text.includes('D8')), h.map(x => x.text).join(' | '));
+  const w = T.warn(c); check('tutor: warns about stones in atari before the move', w.some(x => x.kind === 'danger'));
+  const e = setup(['.X.......', 'X.X......', '.X.......', '.........', '.........', '.........', '.........', '.........', '.........'], BLACK);
+  check('tutor: filling your own eye', T.tactics(e, e.parse('B8')).some(x => x.kind === 'eye'));
+  const t0 = Date.now(), rv = T.review(b, b.parse('H5'), { playouts: 1500, seed: 3 });
+  check('tutor review grades a missed capture as a mistake or worse', ['mistake', 'blunder'].includes(rv.grade) && rv.bestName === 'D8', `${rv.label}: ${rv.text} (${Date.now() - t0} ms)`);
+  const rv2 = T.review(b, b.parse('D8'), { playouts: 1500, seed: 4 });
+  check('tutor review: the capture is best', rv2.grade === 'best' || rv2.grade === 'good', `${rv2.label}: ${rv2.text}`);
+}
 if (process.argv[2] !== 'quick') {
   // strength ladder: a stronger level beats a weaker one most of the time
   for (const [a, b, n] of [[1, 3, 6], [2, 4, 4]]) {

@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Go</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="paper.css">
+<style>
+:root{
+  --gb:#e9dcb8; --gb-line:#5b4a2c; --st-b:#1f2a33; --st-b-edge:#0d1419; --st-w:#fbfbf6; --st-w-edge:#3a4650;
+  --own-b:rgba(31,42,51,.75); --own-w:rgba(251,251,246,.95); --mark:#c4353d; --good:#2f8a5b; --hintc:#2e5ea6;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --own-b:rgba(5,10,16,.85); --own-w:rgba(238,243,247,.95); --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff }}
+:root[data-theme="dark"]{ --gb:#3b4f63; --gb-line:#c9d6e2; --st-b:#0b141c; --st-b-edge:#000; --st-w:#eef3f7; --st-w-edge:#93a9bd; --own-b:rgba(5,10,16,.85); --own-w:rgba(238,243,247,.95); --mark:#ff8a8a; --good:#5cc08a; --hintc:#8cc2ff }
+
+.app{gap:8px}
+.player{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:30px}
+.player .who{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.player .who small{overflow:hidden;text-overflow:ellipsis}
+.player .who b{font-weight:600;white-space:nowrap}
+.player .who small{color:var(--muted);font-size:.8rem;white-space:nowrap}
+.dotc{width:18px;height:18px;border-radius:50%;flex:none;border:1.5px solid var(--st-w-edge)}
+.dotc.b{background:var(--st-b);border-color:var(--st-b-edge)} .dotc.w{background:var(--st-w)}
+.player.turn .who b{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.caps{font-family:var(--mono);font-size:.82rem;color:var(--muted);white-space:nowrap;flex:none}
+.think{font-size:.78rem;color:var(--hit);font-weight:600}
+
+.boardWrap{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;position:relative}
+.goboard{width:min(100cqw,100cqh);height:min(100cqw,100cqh);display:block;touch-action:none;cursor:pointer;border-radius:6px}
+.goboard .bg{fill:var(--gb)}
+.goboard .ln{stroke:var(--gb-line);stroke-width:.32}
+.goboard .hoshi{fill:var(--gb-line)}
+.goboard .crd{font-family:var(--mono);font-size:2.6px;fill:var(--gb-line);opacity:.75;text-anchor:middle;dominant-baseline:central}
+.goboard .sb{fill:var(--st-b);stroke:var(--st-b-edge);stroke-width:.25}
+.goboard .sw{fill:var(--st-w);stroke:var(--st-w-edge);stroke-width:.3}
+.goboard .ghost{opacity:.45}
+.goboard .dead{opacity:.35}
+.goboard .lastb{fill:none;stroke:var(--st-w);stroke-width:.55} .goboard .lastw{fill:none;stroke:var(--st-b);stroke-width:.55}
+.goboard .ownb{fill:var(--own-b)} .goboard .ownw{fill:var(--own-w);stroke:var(--st-w-edge);stroke-width:.2}
+.goboard .ring{fill:none;stroke-width:.7}
+.goboard .ring.danger{stroke:var(--mark)} .goboard .ring.chance{stroke:var(--good)} .goboard .ring.hint{stroke:var(--hintc);stroke-dasharray:1.2 .8}
+.goboard .xmark{stroke:var(--mark);stroke-width:.6;stroke-linecap:round}
+
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tool{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:10px;cursor:pointer;color:var(--ink);font-size:.72rem}
+.tool svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tool:disabled{opacity:.35;cursor:default}
+.tool.armed{color:var(--miss)}
+
+.coach{border:1.5px solid var(--line);background:var(--sheet);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;flex:none}
+.coachHead{display:flex;align-items:center;gap:8px;min-height:26px}
+.coachHead .badge{font-weight:700;font-size:.74rem;color:var(--sheet);background:var(--g,var(--muted));border-radius:999px;padding:2px 9px;white-space:nowrap}
+.coachHead .badge:empty{display:none}
+.coachHead b{font-family:var(--hand);font-weight:400;font-size:1.15rem;line-height:1;flex:1;min-width:0}
+.coach p{margin:0;font-size:.86rem;line-height:1.38}
+.coach p.warn{color:var(--miss);font-weight:600}
+.coach .busy{color:var(--muted);font-style:italic}
+.coachBtns{display:flex;gap:6px;justify-content:flex-end}
+.coachBtns[hidden]{display:none}
+.coachBtns button{border:1px solid var(--line);background:var(--key);border-radius:999px;padding:3px 10px;font-size:.78rem;font-weight:600;cursor:pointer}
+.g-best,.g-good{--g:var(--good)} .g-inaccuracy{--g:#c98a12} .g-mistake{--g:#d06a1f} .g-blunder{--g:var(--miss)}
+
+.scoreCard{border:1.5px solid var(--ink);background:var(--sheet);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.scoreCard p{margin:0;font-size:.88rem;line-height:1.4}
+.scoreCard .sc{display:flex;gap:14px;font-family:var(--mono);font-weight:600}
+.scoreCard .row{display:flex;gap:8px;justify-content:flex-end}
+.scoreCard .row .btn{font-family:var(--ui);font-size:.92rem;font-weight:600;padding:7px 14px}
+
+.seg2,.seg3{display:grid;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.seg2{grid-template-columns:1fr 1fr} .seg3{grid-template-columns:repeat(3,1fr)} .seg6{grid-template-columns:repeat(6,1fr)}
+.seg2 button,.seg3 button{border:0;background:transparent;border-radius:9px;padding:8px 2px;font-weight:600;font-size:.86rem;cursor:pointer;color:var(--muted)}
+.seg2 button[aria-pressed="true"],.seg3 button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.choice{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.choice button{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;border:0;border-bottom:1px solid var(--line);background:var(--key);padding:9px 12px;cursor:pointer;color:var(--ink)}
+.choice button:last-child{border-bottom:0}
+.choice button[aria-pressed="true"]{background:var(--peer);font-weight:600}
+.choice small{color:var(--muted);font-size:.78rem}
+.learnlink{color:var(--hit);font-size:.88rem;text-decoration:none}
+.result{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;text-align:center}
+.result div{display:flex;flex-direction:column;gap:2px;padding:8px;border-radius:10px;background:var(--peer)}
+.result b{font-family:var(--mono);font-size:1.3rem;font-weight:500}
+.result small{color:var(--muted);font-size:.76rem;line-height:1.3}
+.rec{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px 6px;font-size:.78rem;text-align:center;align-items:center}
+.rec b{font-family:var(--mono);font-weight:600}
+.rec span{color:var(--muted)}
+.toast{position:fixed;left:50%;top:max(14px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.9rem;padding:9px 14px;border-radius:10px;pointer-events:none;max-width:90vw;text-align:center}
+@media (max-height:680px){.tool .lbl{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>Games</a>
+    <h1>Go</h1>
+    <button class="btn small end" id="newBtn" type="button">New</button>
+  </header>
+
+  <div class="player" id="topBar"><div class="who"><span class="dotc"></span><b></b><small></small><span class="think" hidden>thinking…</span></div><div class="caps"></div></div>
+  <div class="boardWrap"><svg class="goboard" id="board" role="img" aria-label="Go board"></svg></div>
+  <div class="player" id="botBar"><div class="who"><span class="dotc"></span><b></b><small></small><span class="think" hidden>thinking…</span></div><div class="caps"></div></div>
+
+  <div class="scoreCard" id="scoreCard" hidden>
+    <p><b>Counting.</b> Faded stones are counted as dead. Tap a group to change it, then confirm.</p>
+    <div class="sc" id="scoreLine"></div>
+    <div class="row"><button class="btn" id="resumeBtn" type="button">Keep playing</button><button class="btn primary" id="countBtn" type="button">Confirm score</button></div>
+  </div>
+
+  <div class="coach" id="coach" hidden aria-live="polite">
+    <div class="coachHead"><span class="badge" id="coachBadge"></span><b id="coachTitle">Tutor</b></div>
+    <p id="coachText"></p>
+    <p class="warn" id="coachWarn" hidden></p>
+    <div class="coachBtns" id="coachBtns"><button id="coachShow" type="button" hidden>Show</button><button id="coachBack" type="button" hidden>Take back</button></div>
+  </div>
+
+  <div class="tools" id="tools">
+    <button class="tool" id="undo" type="button"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg><span class="lbl">Undo</span></button>
+    <button class="tool" id="pass" type="button"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="lbl">Pass</span></button>
+    <button class="tool" id="hint" type="button"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg><span class="lbl">Hint</span></button>
+    <button class="tool" id="est" type="button"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 16V9M12 16V5M17 16v-4"/></svg><span class="lbl">Who's ahead</span></button>
+    <button class="tool" id="resign" type="button"><svg viewBox="0 0 24 24"><path d="M6 21V4"/><path d="M6 4h11l-2.5 4L17 12H6"/></svg><span class="lbl">Resign</span></button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="sheet" id="newSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="newTitle">
+    <h2 id="newTitle">New game</h2>
+    <div class="seg2" id="sizeSeg"><button type="button" data-v="9">9 × 9</button><button type="button" data-v="13">13 × 13</button></div>
+    <div class="seg2" id="modeSeg"><button type="button" data-v="ai">Against the computer</button><button type="button" data-v="two">Two players</button></div>
+    <div id="aiOpts">
+      <div class="label" style="margin-bottom:6px">Play as</div>
+      <div class="seg3" id="sideSeg"><button type="button" data-v="b">Black</button><button type="button" data-v="w">White</button><button type="button" data-v="r">Random</button></div>
+      <div class="label" style="margin:12px 0 6px">Computer strength</div>
+      <div class="choice" id="levels"></div>
+      <div class="label" style="margin:12px 0 6px">Handicap stones for you (as Black)</div>
+      <div class="seg3 seg6" id="hcSeg"></div>
+      <label class="switch" style="margin-top:8px"><span>Tutor mode<small>Comments on each of your moves, points out stones in atari and missed captures, and suggests better moves. Tutor games don't count toward your record.</small></span><input type="checkbox" id="tutorSwitch"></label>
+    </div>
+    <p id="twoNote" hidden>Pass the phone between turns. Black plays first.</p>
+    <div class="label">Settings</div>
+    <label class="switch"><span>Tap twice to place a stone<small>The first tap shows where the stone will go. On by default for 13 × 13.</small></span><input type="checkbox" id="confirmSwitch"></label>
+    <label class="switch"><span>Coordinates</span><input type="checkbox" id="coordSwitch"></label>
+    <a class="learnlink" href="go-trainer.html">New to Go? <b>Learn the rules step by step</b> →</a>
+    <button class="btn primary" id="startBtn" type="button">Start game</button>
+    <button class="btn" id="newCancel" type="button">Back to current game</button>
+    <div class="label">Your record against the computer</div>
+    <div class="rec" id="record"></div>
+  </div>
+</div>
+
+<div class="sheet" id="overSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="overTitle">
+    <h2 id="overTitle"></h2>
+    <p id="overSub"></p>
+    <div class="result" id="overScore"></div>
+    <div class="row"><button class="btn primary" id="overNew" type="button">New game</button><button class="btn" id="overLook" type="button">Look at the board</button></div>
+    <div id="overNav"></div>
+  </div>
+</div>
+
+<script src="go-core.js"></script>
+<script src="go-tutor.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const { BLACK, WHITE, EMPTY, other } = Go;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NAME = c => c === BLACK ? 'Black' : 'White';
+let settings = Object.assign({ confirm9: false, confirm13: true, coords: true }, store.get('go-settings', {}));
+let stats = store.get('go-stats', {});   // { '9-3': { w, l } }
+let G = null;  // { N, handicap, komi, mode, level, human, moves: [], over, tutor, tutored, assisted, reviews: {}, phase, dead: [] }
+let B = null;  // the board for G.moves
+let pending = -1, thinking = false, hintAt = -1, estimate = null, lastReview = null;
+
+// ---------- workers: one plays, one reviews ----------
+function mkWorker(){
+  let w = null, seq = 0; const wait = new Map();
+  try { w = new Worker('go-worker.js'); w.onmessage = e => { const f = wait.get(e.data.id); wait.delete(e.data.id); f && f(e.data); }; } catch (e) { w = null; }
+  return msg => new Promise(res => {
+    const job = Object.assign({ N: G.N, handicap: G.handicap, komi: G.komi, moves: G.moves.slice(), seed: (Math.random() * 1e9) >>> 0 }, msg);
+    if (!w){ setTimeout(() => { // no worker (file://): run here
+      const b = Go.replay(job.N, job.handicap, job.komi, job.moves);
+      if (job.type === 'think'){ const r = Go.think(b, Go.LEVELS[job.level], { seed: job.seed }); res({ move: r.move, resign: !!r.resign }); }
+      else if (job.type === 'review') res({ review: GoTutor.review(b, job.move, job) });
+      else if (job.type === 'estimate'){ const e = Go.estimate(b, job.playouts || 300, job.seed); res({ dead: [...e.dead], own: Array.from(e.own), margin: e.margin }); }
+      else if (job.type === 'hint'){ const r = Go.search(b, { playouts: 2500, time: 2500, seed: job.seed }); res({ move: r.move }); }
+    }, 20); return; }
+    const id = ++seq; wait.set(id, res); w.postMessage(Object.assign({ id }, job));
+  });
+}
+let engine, reviewer;
+
+// ---------- game state ----------
+function save(){ store.set('go-game', G); }
+function rebuild(){ B = Go.replay(G.N, G.handicap, G.komi, G.moves); }
+function confirmOn(){ return G && (G.N >= 13 ? settings.confirm13 : settings.confirm9); }
+function startGame(o){
+  const human = o.mode === 'two' ? BLACK : o.side === 'w' ? WHITE : o.side === 'b' ? BLACK : (Math.random() < .5 ? BLACK : WHITE);
+  const handicap = o.mode === 'ai' && human === BLACK ? o.handicap : 0;
+  G = { N: o.N, handicap, komi: handicap >= 2 ? 0.5 : 7.5, mode: o.mode, level: o.level, human, moves: [], over: null, tutor: o.mode === 'ai' && o.tutor, tutored: o.mode === 'ai' && o.tutor, assisted: false, reviews: {}, phase: 'play', dead: [] };
+  rebuild(); pending = -1; hintAt = -1; estimate = null; lastReview = null; thinking = false;
+  save(); render(); computerTurn();
+}
+const humanTurn = () => G && !G.over && G.phase === 'play' && !thinking && (G.mode === 'two' || B.turn === G.human);
+
+// ---------- board drawing ----------
+const CELL = 10;
+const pad = () => settings.coords ? 9 : 6;
+const X = x => pad() + x * CELL;
+function hoshi(N){ const e = N >= 13 ? 3 : 2, m = (N - 1) / 2, f = N - 1 - e; return N === 9 ? [[e, e], [f, e], [e, f], [f, f], [m, m]] : [[e, e], [f, e], [e, f], [f, f], [m, m], [e, m], [f, m], [m, e], [m, f]]; }
+function render(){
+  if (!G) return;
+  const N = G.N, P = pad(), size = (N - 1) * CELL + 2 * P, svg = $('board');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  let h = `<rect class="bg" x="0" y="0" width="${size}" height="${size}" rx="2"/>`;
+  for (let i = 0; i < N; i++) h += `<line class="ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
+  for (const [x, y] of hoshi(N)) h += `<circle class="hoshi" cx="${X(x)}" cy="${X(y)}" r=".9"/>`;
+  if (settings.coords) for (let i = 0; i < N; i++){
+    h += `<text class="crd" x="${X(i)}" y="${P / 2.4}">${Go.COLS[i]}</text><text class="crd" x="${X(i)}" y="${size - P / 2.4}">${Go.COLS[i]}</text>`;
+    h += `<text class="crd" x="${P / 2.4}" y="${X(i)}">${N - i}</text><text class="crd" x="${size - P / 2.4}" y="${X(i)}">${N - i}</text>`;
+  }
+  const dead = new Set(G.phase === 'score' || G.over ? G.dead : []);
+  // territory: in the counting phase, at the end, or while showing an estimate
+  let owner = null;
+  if (G.phase === 'score' || (G.over && G.over.reason === 'score')) owner = B.score(dead).owner;
+  for (const p of B.points){
+    const [x, y] = B.xy(p), v = B.c[p];
+    if (v === BLACK || v === WHITE){
+      h += `<circle class="${v === BLACK ? 'sb' : 'sw'}${dead.has(p) ? ' dead' : ''}" cx="${X(x)}" cy="${X(y)}" r="4.6"/>`;
+      if (dead.has(p)) h += `<path class="xmark" d="M${X(x) - 1.8} ${X(y) - 1.8}l3.6 3.6M${X(x) + 1.8} ${X(y) - 1.8}l-3.6 3.6"/>`;
+    }
+    if (owner && owner[p] && (v === EMPTY || dead.has(p))) h += `<rect class="${owner[p] === BLACK ? 'ownb' : 'ownw'}" x="${X(x) - 1.7}" y="${X(y) - 1.7}" width="3.4" height="3.4"/>`;
+    else if (estimate && !owner && v === EMPTY && Math.abs(estimate[p]) > 0.45) h += `<rect class="${estimate[p] > 0 ? 'ownb' : 'ownw'}" x="${X(x) - 1.4}" y="${X(y) - 1.4}" width="2.8" height="2.8" opacity="${Math.min(1, Math.abs(estimate[p]))}"/>`;
+  }
+  if (B.lastMove > 0 && !G.over && G.phase === 'play'){ const [x, y] = B.xy(B.lastMove); h += `<circle class="${B.c[B.lastMove] === BLACK ? 'lastb' : 'lastw'}" cx="${X(x)}" cy="${X(y)}" r="2.1"/>`; }
+  // tutor warnings and hints
+  if (G.tutor && humanTurn()) for (const w of GoTutor.warn(B)) for (const p of w.points){ const [x, y] = B.xy(p); h += `<circle class="ring ${w.kind}" cx="${X(x)}" cy="${X(y)}" r="5.3"/>`; }
+  if (hintAt > 0){ const [x, y] = B.xy(hintAt); h += `<circle class="ring hint" cx="${X(x)}" cy="${X(y)}" r="4.4"/>`; }
+  if (pending > 0 && humanTurn()){ const [x, y] = B.xy(pending); h += `<circle class="${B.turn === BLACK ? 'sb' : 'sw'} ghost" cx="${X(x)}" cy="${X(y)}" r="4.6"/>`; }
+  svg.innerHTML = h;
+  renderBars(); renderTools(); renderScore(); renderCoach();
+}
+function renderBars(){
+  const flipped = G.mode === 'ai' ? G.human === WHITE : false;
+  const bottom = flipped ? WHITE : BLACK, top = other(bottom);
+  for (const [id, col] of [['topBar', top], ['botBar', bottom]]){
+    const el = $(id), who = el.querySelector('.who');
+    who.querySelector('.dotc').className = 'dotc ' + (col === BLACK ? 'b' : 'w');
+    const isAI = G.mode === 'ai' && col !== G.human;
+    who.querySelector('b').textContent = G.mode === 'ai' ? (isAI ? `Computer (${Go.LEVELS[G.level].name})` : 'You') : NAME(col);
+    who.querySelector('small').textContent = G.mode === 'ai' ? NAME(col) + (col === WHITE ? ` · komi ${G.komi}` : G.handicap ? ` · ${G.handicap} handicap` : '') : col === WHITE ? `komi ${G.komi}` : '';
+    who.querySelector('.think').hidden = !(thinking && isAI);
+    el.querySelector('.caps').textContent = `${B.caps[col]} captured`;
+    el.classList.toggle('turn', !G.over && G.phase === 'play' && B.turn === col);
+  }
+}
+function renderTools(){
+  const playing = G && !G.over && G.phase === 'play';
+  $('undo').disabled = !playing || thinking || !G.moves.length || (G.mode === 'ai' && !G.moves.some((_, k) => moverOf(k) === G.human));
+  $('pass').disabled = !humanTurn();
+  $('hint').disabled = !humanTurn();
+  $('est').disabled = !playing || thinking;
+  $('resign').disabled = !playing;
+}
+const moverOf = k => { const first = G.handicap >= 2 ? WHITE : BLACK; return k % 2 === 0 ? first : other(first); };
+
+// ---------- input ----------
+function pointAt(e){
+  const svg = $('board'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  const q = pt.matrixTransform(svg.getScreenCTM().inverse()), x = Math.round((q.x - pad()) / CELL), y = Math.round((q.y - pad()) / CELL);
+  if (x < 0 || y < 0 || x >= G.N || y >= G.N) return -1;
+  if (Math.hypot(q.x - X(x), q.y - X(y)) > CELL * 0.62) return -1;
+  return B.pt(x, y);
+}
+$('board').addEventListener('pointerdown', e => {
+  if (!G) return;
+  const p = pointAt(e); if (p < 0) return;
+  if (G.phase === 'score') return toggleDead(p);
+  if (!humanTurn()) return;
+  if (B.c[p] !== EMPTY) return toast('That point is taken.');
+  if (!B.legal(p)){ return toast(p === B.ko ? 'Ko: you can\'t take back straight away. Play somewhere else first.' : B.legal(p, B.turn, false) ? 'That would repeat an earlier position.' : 'Suicide isn\'t allowed: the stone would have no liberties.'); }
+  if (confirmOn() && pending !== p){ pending = p; render(); return; }
+  humanMove(p);
+});
+function humanMove(p){
+  pending = -1; hintAt = -1; estimate = null;
+  const ply = G.moves.length;
+  if (G.tutor && G.mode === 'ai'){
+    lastReview = { ply, move: p, busy: true }; renderCoach();
+    reviewer({ type: 'review', move: p, moves: G.moves.slice(), playouts: G.N >= 13 ? 1500 : 2500, time: 2500 }).then(r => { G.reviews[ply] = r.review; if (lastReview && lastReview.ply === ply){ lastReview = Object.assign({ ply, move: p }, r.review); save(); renderCoach(); } });
+  }
+  const n = B.play(p); G.moves.push(p); save();
+  if (n > 0 && !reduced) try{ navigator.vibrate && navigator.vibrate(15); }catch(_){}
+  afterMove();
+}
+function afterMove(){
+  if (B.passes >= 2) return startCounting();
+  render(); computerTurn();
+}
+function computerTurn(){
+  if (!G || G.over || G.phase !== 'play' || G.mode !== 'ai' || B.turn === G.human) return;
+  thinking = true; render();
+  const at = G.moves.length;
+  engine({ type: 'think', level: G.level }).then(r => {
+    if (!G || G.moves.length !== at || G.over){ thinking = false; return; }
+    thinking = false;
+    if (r.resign) return finish({ winner: G.human, reason: 'resign', who: other(G.human) });
+    if (r.move && !B.legal(r.move)) r.move = 0;
+    B.play(r.move); G.moves.push(r.move); save();
+    if (r.move === 0) toast('The computer passes.' + (B.passes >= 2 ? '' : ' Pass too if you think the game is over.'));
+    afterMove();
+  });
+}
+$('pass').addEventListener('click', () => {
+  if (!humanTurn()) return;
+  const ply = G.moves.length;
+  if (G.tutor && G.mode === 'ai'){ lastReview = { ply, move: 0, busy: true }; reviewer({ type: 'review', move: 0, moves: G.moves.slice(), playouts: 1500, time: 2000 }).then(r => { G.reviews[ply] = r.review; if (lastReview && lastReview.ply === ply){ lastReview = Object.assign({ ply, move: 0 }, r.review); renderCoach(); } }); }
+  pending = -1; hintAt = -1; B.play(0); G.moves.push(0); save();
+  if (G.mode === 'two' && B.passes < 2) toast(`${NAME(other(B.turn))} passes.`);
+  afterMove();
+});
+$('undo').addEventListener('click', () => {
+  if (thinking || !G.moves.length) return;
+  G.assisted = true;
+  if (G.mode === 'ai'){ do { G.moves.pop(); } while (G.moves.length && moverOf(G.moves.length) !== G.human); }
+  else G.moves.pop();
+  lastReview = null; hintAt = -1; pending = -1; estimate = null; rebuild(); save(); render();
+});
+$('hint').addEventListener('click', () => {
+  if (!humanTurn()) return;
+  G.assisted = true; $('hint').disabled = true; toast('Thinking…');
+  engine({ type: 'hint', playouts: G.N >= 13 ? 3000 : 5000, time: 3000 }).then(r => { hintAt = r.move > 0 ? r.move : -1; if (r.move === 0) toast('Passing is fine here: nothing useful is left.'); render(); });
+});
+$('est').addEventListener('click', () => {
+  if (thinking) return;
+  $('est').disabled = true;
+  engine({ type: 'estimate', playouts: 300 }).then(r => {
+    const own = r.own, dead = new Set(r.dead), s = B.score(dead), m = s.margin;
+    estimate = own; render();
+    toast(Math.abs(m) < 2 ? 'It\'s very close.' : `${m > 0 ? 'Black' : 'White'} is ahead by about ${Math.round(Math.abs(m))} points.`);
+    setTimeout(() => { estimate = null; render(); }, 3500);
+  });
+});
+let resignArm = null;
+$('resign').addEventListener('click', () => {
+  const b = $('resign');
+  if (!resignArm){ b.classList.add('armed'); b.querySelector('.lbl').textContent = 'Tap again'; resignArm = setTimeout(() => { resignArm = null; b.classList.remove('armed'); b.querySelector('.lbl').textContent = 'Resign'; }, 3000); return; }
+  clearTimeout(resignArm); resignArm = null; b.classList.remove('armed'); b.querySelector('.lbl').textContent = 'Resign';
+  const loser = G.mode === 'ai' ? G.human : B.turn;
+  finish({ winner: other(loser), reason: 'resign', who: loser });
+});
+
+// ---------- counting ----------
+function startCounting(){
+  G.phase = 'score'; G.dead = []; save(); render();
+  $('scoreLine').textContent = 'Working out which stones are dead…';
+  engine({ type: 'estimate', playouts: G.N >= 13 ? 300 : 500 }).then(r => { if (G.phase !== 'score') return; G.dead = r.dead; save(); render(); });
+}
+function toggleDead(p){
+  if (B.c[p] !== BLACK && B.c[p] !== WHITE) return;
+  const st = B.stones(p), dead = new Set(G.dead), on = !dead.has(p);
+  st.forEach(s => on ? dead.add(s) : dead.delete(s));
+  G.dead = [...dead]; save(); render();
+}
+function renderScore(){
+  const on = G && G.phase === 'score' && !G.over;
+  $('scoreCard').hidden = !on; $('tools').hidden = on;
+  if (!on) return;
+  const s = B.score(new Set(G.dead));
+  $('scoreLine').innerHTML = `<span>Black ${s.black}</span><span>White ${s.white}</span><span>${s.margin > 0 ? 'Black' : 'White'} +${Math.abs(s.margin)}</span>`;
+}
+$('countBtn').addEventListener('click', () => { const s = B.score(new Set(G.dead)); finish({ winner: s.margin > 0 ? BLACK : WHITE, reason: 'score', black: s.black, white: s.white, margin: Math.abs(s.margin) }); });
+$('resumeBtn').addEventListener('click', () => { G.phase = 'play'; G.dead = []; B.passes = 0; save(); render(); computerTurn(); });
+
+// ---------- end of game ----------
+function finish(over){
+  G.over = over; G.phase = 'over'; thinking = false;
+  const counted = G.mode === 'ai' && !G.tutored && !G.assisted;
+  if (counted){ const k = `${G.N}-${G.level}`, r = (stats[k] ||= { w: 0, l: 0 }); over.winner === G.human ? r.w++ : r.l++; store.set('go-stats', stats); }
+  save(); render(); showOver(counted);
+}
+function showOver(counted){
+  const o = G.over, youWon = G.mode === 'ai' && o.winner === G.human;
+  $('overTitle').textContent = G.mode === 'ai' ? (youWon ? 'You win!' : 'The computer wins') : `${NAME(o.winner)} wins`;
+  const how = o.reason === 'resign' ? `${G.mode === 'ai' ? (o.who === G.human ? 'You resigned' : 'The computer resigned') : `${NAME(o.who)} resigned`}.` : `${NAME(o.winner)} wins by ${o.margin} points.`;
+  $('overSub').textContent = how + (G.mode === 'ai' ? (counted ? '' : ' (Not counted in your record: tutor, hints or undo were used.)') : '');
+  $('overScore').innerHTML = o.reason === 'score'
+    ? `<div><b>${o.black}</b><small>Black: stones and territory</small></div><div><b>${o.white}</b><small>White: stones, territory and ${G.komi} komi</small></div>`
+    : `<div><b>${B.caps[BLACK]}</b><small>captured by Black</small></div><div><b>${B.caps[WHITE]}</b><small>captured by White</small></div>`;
+  if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('overNav', 'go');
+  open('overSheet');
+}
+$('overNew').addEventListener('click', openNew);
+$('overLook').addEventListener('click', close);
+
+// ---------- tutor card ----------
+function renderCoach(){
+  const box = $('coach');
+  box.hidden = !(G && G.tutor && G.mode === 'ai' && !G.over);
+  if (box.hidden) return;
+  const r = lastReview, badge = $('coachBadge'), title = $('coachTitle'), text = $('coachText');
+  box.className = 'coach' + (r && r.grade ? ' g-' + r.grade : '');
+  if (!r){ badge.textContent = ''; title.textContent = 'Tutor'; text.textContent = 'Play a move: the tutor will comment on it.'; }
+  else if (r.busy){ badge.textContent = ''; title.textContent = `Your move: ${r.move ? B.name(r.move) : 'pass'}`; text.innerHTML = '<span class="busy">Looking at your move…</span>'; }
+  else { badge.textContent = r.label; title.textContent = `Your move: ${r.move ? B.name(r.move) : 'pass'}`; text.textContent = r.text || ''; }
+  const warns = humanTurn() ? GoTutor.warn(B) : [];
+  $('coachWarn').hidden = !warns.length; $('coachWarn').textContent = warns.map(w => w.text).join(' ');
+  const showable = r && !r.busy && r.grade && !['best', 'good'].includes(r.grade) && r.best;
+  $('coachBtns').hidden = !showable; $('coachShow').hidden = !showable; $('coachBack').hidden = !showable;
+}
+$('coachShow').addEventListener('click', () => { if (lastReview && lastReview.best){ hintAt = lastReview.best; render(); } });
+$('coachBack').addEventListener('click', () => {
+  if (!lastReview || thinking) return;
+  G.moves = G.moves.slice(0, lastReview.ply); lastReview = null; hintAt = -1; rebuild(); save(); render();
+});
+
+// ---------- sheets ----------
+function open(id){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = s.id !== id); }
+function close(){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = true); }
+let toastT = null;
+function toast(t, ms = 2200){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+const pick = { N: 9, mode: 'ai', side: 'b', level: 2, handicap: 0, tutor: false };
+Object.assign(pick, store.get('go-pick', {}));
+function seg(id, key, cast){ $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(String(pick[key]) === b.dataset.v))); $(id).onclick = e => { const b = e.target.closest('button'); if (!b) return; pick[key] = cast ? cast(b.dataset.v) : b.dataset.v; drawNew(); }; }
+function drawNew(){
+  seg('sizeSeg', 'N', Number); seg('modeSeg', 'mode'); seg('sideSeg', 'side');
+  $('levels').innerHTML = Go.LEVELS.slice(1).map((L, k) => { const r = stats[`${pick.N}-${k + 1}`]; return `<button type="button" data-v="${k + 1}" aria-pressed="${pick.level === k + 1}">${L.name}<small>${r ? `${r.w} won · ${r.l} lost` : ''}</small></button>`; }).join('');
+  $('levels').onclick = e => { const b = e.target.closest('button'); if (b){ pick.level = +b.dataset.v; drawNew(); } };
+  $('hcSeg').innerHTML = [0, 2, 3, 4, 5, 6].map(n => `<button type="button" data-v="${n}">${n || 'None'}</button>`).join(''); seg('hcSeg', 'handicap', Number);
+  $('aiOpts').hidden = pick.mode !== 'ai'; $('twoNote').hidden = pick.mode !== 'two';
+  $('hcSeg').closest('#aiOpts').querySelector('#hcSeg').style.opacity = pick.side === 'w' ? .4 : 1;
+  $('tutorSwitch').checked = !!pick.tutor;
+  $('confirmSwitch').checked = pick.N >= 13 ? settings.confirm13 : settings.confirm9; $('coordSwitch').checked = settings.coords;
+  $('newCancel').hidden = !G || !!G.over;
+  $('record').innerHTML = '<span></span>' + Go.LEVELS.slice(1).map(L => `<span>${L.name}</span>`).join('') + [9, 13].map(n => `<span>${n} × ${n}</span>` + Go.LEVELS.slice(1).map((_, k) => { const r = stats[`${n}-${k + 1}`]; return `<b>${r ? `${r.w}–${r.l}` : '–'}</b>`; }).join('')).join('');
+}
+function openNew(){ drawNew(); open('newSheet'); }
+$('tutorSwitch').addEventListener('change', e => { pick.tutor = e.target.checked; });
+$('confirmSwitch').addEventListener('change', e => { if (pick.N >= 13) settings.confirm13 = e.target.checked; else settings.confirm9 = e.target.checked; store.set('go-settings', settings); });
+$('coordSwitch').addEventListener('change', e => { settings.coords = e.target.checked; store.set('go-settings', settings); render(); });
+$('startBtn').addEventListener('click', () => { store.set('go-pick', pick); close(); startGame(pick); });
+$('newCancel').addEventListener('click', close);
+$('newBtn').addEventListener('click', openNew);
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'newSheet') close(); }));
+
+// ---------- boot ----------
+engine = mkWorker(); reviewer = mkWorker();
+G = store.get('go-game', null);
+if (G && Array.isArray(G.moves)){
+  try { rebuild(); } catch (e) { G = null; }
+}
+if (G){ render(); if (G.over) showOver(false); else if (G.phase === 'score') startCounting(); else computerTurn(); }
+else { G = null; openNew(); }
+if (G === null){ /* draw an empty 9x9 behind the sheet */ G = { N: 9, handicap: 0, komi: 7.5, mode: 'ai', level: 2, human: BLACK, moves: [], over: null, phase: 'play', dead: [], reviews: {} }; rebuild(); render(); G.placeholder = true; }
+GameNav.init({ id: 'go', note: () => G && !G.over && !G.placeholder ? 'Your game is saved.' : '',
+  actions: () => [
+    { icon: 'new', label: 'New game…', note: 'Choose the board, opponent and strength.', run: openNew },
+    G && !G.over && !G.placeholder && { icon: 'quit', label: 'Quit this game', note: 'Throws it away and goes back to the games.', danger: true, confirm: 'Tap again to quit', leave: true, run: () => { store.set('go-game', null); } },
+  ] });
+addEventListener('keydown', e => { if (e.key === 'Escape') { pending = -1; render(); } });
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

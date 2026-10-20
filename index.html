@@ -28,15 +28,16 @@
   --snake:#4f7f2a; --snake-edge:#375d1a;
   --chowka:#a8592c; --chowka-edge:#7c3d1a;
   --trainer:#8a4f7d; --trainer-edge:#663859;
+  --go:#5a6b3a; --go-edge:#3f4c27;
   --on:#ffffff; --on-soft:rgba(255,255,255,.78); --on-faint:rgba(255,255,255,.22); --on-line:rgba(255,255,255,.4);
   --flame:#e0782a;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --flame:#f08c3c}}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --flame:#f08c3c}}
 :root[data-theme="dark"]{
   --five:#c98a28; --five-edge:#8f5f12; --trail:#3b6fbf; --trail-edge:#264d8a; --sudoku:#22856c; --sudoku-edge:#155a49;
-  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --flame:#f08c3c}
+  --chess:#3c5163; --chess-edge:#253442; --hang:#c4474d; --hang-edge:#8e2a2f; --groups:#8064b4; --groups-edge:#5a4188; --cpz:#357d97; --cpz-edge:#22576a; --snake:#5b8f33; --snake-edge:#3d6420; --chowka:#b0663a; --chowka-edge:#7a4120; --trainer:#96598a; --trainer-edge:#6a3c5f; --go:#677a44; --go-edge:#47552d; --flame:#f08c3c}
 
 html,body{height:auto;min-height:100%}
 .hub{max-width:820px;margin:0 auto;padding:max(14px,env(safe-area-inset-top,0px)) 16px max(24px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
@@ -63,7 +64,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .tile::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.10;
   background-image:linear-gradient(rgba(255,255,255,.9) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.9) 1px,transparent 1px);background-size:16px 16px}
 .t-five{--bg:var(--five);--edge:var(--five-edge)} .t-trail{--bg:var(--trail);--edge:var(--trail-edge)}
-.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)} .t-cpz{--bg:var(--cpz);--edge:var(--cpz-edge)} .t-snake{--bg:var(--snake);--edge:var(--snake-edge)} .t-chowka{--bg:var(--chowka);--edge:var(--chowka-edge)} .t-trainer{--bg:var(--trainer);--edge:var(--trainer-edge)}
+.t-sudoku{--bg:var(--sudoku);--edge:var(--sudoku-edge)} .t-chess{--bg:var(--chess);--edge:var(--chess-edge)} .t-hang{--bg:var(--hang);--edge:var(--hang-edge)} .t-groups{--bg:var(--groups);--edge:var(--groups-edge)} .t-cpz{--bg:var(--cpz);--edge:var(--cpz-edge)} .t-snake{--bg:var(--snake);--edge:var(--snake-edge)} .t-chowka{--bg:var(--chowka);--edge:var(--chowka-edge)} .t-trainer{--bg:var(--trainer);--edge:var(--trainer-edge)} .t-go{--bg:var(--go);--edge:var(--go-edge)}
 .tile h3{margin:0;font-family:var(--hand);font-weight:400;font-size:1.65rem;line-height:1;text-wrap:balance}
 .tile .status{margin:0;font-size:.86rem;line-height:1.35;color:var(--on-soft)}
 .tile .status b{color:var(--on);font-weight:600}
@@ -105,6 +106,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .f-correct{fill:var(--on)} .f-present{fill:rgba(255,255,255,.55)} .f-absent{fill:rgba(0,0,0,.22)} .f-empty{fill:none;stroke:var(--on-line);stroke-width:1.6}
 .su-given{fill:var(--on)} .su-user{fill:rgba(255,255,255,.55)} .su-empty{fill:var(--on-faint)}
 .ch-l{fill:rgba(255,255,255,.88)} .ch-d{fill:rgba(255,255,255,.45)}
+.go-bd{fill:#e9dcb8} .go-ln{stroke:#5b4a2c;stroke-width:1.2} .go-b{fill:#1f2a33} .go-w{fill:#fbfbf6;stroke:#3a4650;stroke-width:1.2}
 .tr-path{fill:none;stroke:var(--trainer-edge);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 6}
 .tr-flag{fill:#f2a196;stroke:var(--trainer-edge);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .pc .pb{stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
@@ -183,6 +185,10 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <div class="art" id="artChess"></div>
       <div class="meta"><h3>Chess</h3><p class="status" id="sChess"></p><span class="cta" id="cChess">Play</span></div>
     </a>
+    <a class="tile wide t-go" href="go.html">
+      <div class="art" id="artGo"></div>
+      <div class="meta"><h3>Go</h3><p class="status" id="sGo"></p><span class="cta" id="cGo">Play</span></div>
+    </a>
     <a class="tile wide t-trainer" href="chess-trainer.html">
       <div class="art" id="artTrainer"></div>
       <div class="meta"><h3>Chess Trainer</h3><p class="status" id="sTrainer"></p><div class="prog" id="bTrainer" hidden><i></i></div><span class="cta" id="cTrainer">Train</span></div>
@@ -230,6 +236,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 <script src="trail-daily.js"></script>
 <script src="chess-core.js"></script>
 <script src="chess-pieces.js"></script>
+<script src="go-core.js"></script>
 <script src="chess-puzzles.js"></script>
 <script src="chess-daily.js"></script>
 <script src="groups-bank.js"></script>
@@ -393,6 +400,27 @@ let groupsDone = false;
   } else {
     const st = get('chess-stats', {}), w = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
     $('sChess').innerHTML = w ? `<b>${w}</b> win${w > 1 ? 's' : ''} against the computer` : 'Play the computer or a friend';
+  }
+})();
+
+// ---- Go: the current position (or a small opening), and wins against the computer ----
+(function(){
+  const g = get('go-game', null), Gm = window.Go;
+  let stones = [[2, 2, 1], [6, 6, 1], [2, 6, 2], [6, 2, 2], [4, 4, 1], [5, 3, 2]], N = 9;
+  if (g && Array.isArray(g.moves) && Gm && !g.over){
+    try { const b = Gm.replay(g.N, g.handicap, g.komi, g.moves); N = g.N; stones = []; for (const p of b.points){ const v = b.c[p]; if (v){ const [x, y] = b.xy(p); stones.push([x, y, v]); } } } catch (e) {}
+  }
+  const c = 100 / (N + 1), X = i => c * (i + 1);
+  let body = `<rect class="go-bd" width="100" height="100" rx="6"/>`;
+  for (let i = 0; i < N; i++) body += `<line class="go-ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="go-ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
+  for (const [x, y, v] of stones) body += `<circle class="${v === 1 ? 'go-b' : 'go-w'}" cx="${X(x)}" cy="${X(y)}" r="${c * 0.46}"/>`;
+  $('artGo').innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+  const lv = ['', 'Beginner', 'Casual', 'Intermediate', 'Advanced', 'Expert'];
+  if (g && g.moves && g.moves.length && !g.over){
+    $('sGo').innerHTML = `${g.mode === 'two' ? 'Two players' : `vs ${lv[g.level]}`}, ${g.N} × ${g.N}, move <b>${g.moves.length + 1}</b>`; $('cGo').textContent = 'Continue';
+  } else {
+    const st = get('go-stats', {}) || {}, w = Object.values(st).reduce((n, r) => n + (r.w || 0), 0);
+    $('sGo').innerHTML = w ? `<b>${w}</b> win${w > 1 ? 's' : ''} against the computer` : '9 × 9 and 13 × 13, against the computer or a friend';
   }
 })();
 

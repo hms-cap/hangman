@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Go, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -110,6 +110,16 @@ Short drills that build the skills you use to calculate in real games, plus a be
 - Optional speed clock in Settings: each drill gets a time limit, and running out counts as a miss
 - Tips for each level, such as how to draw the square or how the rook boxes in the king
 
+### Go
+- 9 × 9 and 13 × 13, against the computer or two players on one device
+- Five computer strengths, from Beginner to Expert: a Monte Carlo tree search with RAVE whose playouts answer ataris anywhere on the board; it runs in a Web Worker, with time limits so 13 × 13 stays quick on a phone. The stronger levels beat the weaker ones (tested by self-play)
+- Handicap stones (2 to 6) when you play Black; komi 7.5, or 0.5 with handicap
+- Rules: captures, no suicide, ko and superko (a move may not repeat an earlier position)
+- Area scoring: after two passes the app marks the stones it thinks are dead (from hundreds of playouts) and shows each side's territory; tap a group to change it, then confirm, or keep playing
+- Tap twice to place a stone (on by default for 13 × 13, so a slightly-off tap doesn't cost a move), coordinates, undo, a hint, "Who's ahead" (a score estimate shown as territory on the board), resign
+- **Tutor mode:** each of your moves is graded (Best, Good, Inaccuracy, Mistake, Blunder) against the computer's search, with the reason in plain words: stones left in atari, a group in atari that could have escaped, a missed capture, filling your own eye, a small edge move early on, a slow move next to a safe group, or the winning chances after your move and the better one. Before you move it rings your stones in atari and enemy stones you can capture. Show the better move, or take yours back. Tutor games don't count toward your record
+- Your record against each strength on each board size
+
 ### Word Trail
 A letter-grid word search in the style of Squares.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
@@ -181,6 +191,7 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
+| `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
 | `chess-trainer.html`, `chess-trainer-core.js`, `chess-trainer-data.js`, `chess-openings.js` (opening lines, ideas and traps), `chess-endgames.js`, `chess-endgames-worker.js` | Chess Trainer page; drill generators and level map; engine-checked fork, pin, skewer and combination positions (`tools/generate-chess-trainer.js`); exact K+Q, K+R and K+P vs K tables built on first use (about a second) in a worker |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |

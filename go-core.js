@@ -232,11 +232,12 @@ function selfAtariBig(b, p, col) {
 // Monte Carlo tree search with RAVE. opts: { playouts, time, noise, seed }. Returns { move, winrate, visits, top: [...] }.
 const LEVELS = [
   null,
-  { name: 'Beginner', playouts: 120, noise: 0.35 },
-  { name: 'Casual', playouts: 500, noise: 0.15 },
-  { name: 'Intermediate', playouts: 2000, noise: 0.04 },
-  { name: 'Advanced', playouts: 6000, noise: 0 },
-  { name: 'Expert', playouts: 16000, noise: 0, time: 6000 },
+  // time caps (ms) keep 13x13 moves quick on a phone; on 9x9 the playout count is usually reached first
+  { name: 'Beginner', playouts: 120, noise: 0.35, time: 1000 },
+  { name: 'Casual', playouts: 500, noise: 0.15, time: 2000 },
+  { name: 'Intermediate', playouts: 2000, noise: 0.04, time: 3500 },
+  { name: 'Advanced', playouts: 6000, noise: 0, time: 6000 },
+  { name: 'Expert', playouts: 16000, noise: 0, time: 9000 },
 ];
 class Node {
   constructor(move, col, prior) { this.move = move; this.col = col; this.n = 0; this.w = 0; this.rn = 0; this.rw = 0; this.kids = null; this.prior = prior || 0; }
