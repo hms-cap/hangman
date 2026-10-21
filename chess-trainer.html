@@ -55,6 +55,18 @@
 .lv .num{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:.9rem;border:2px solid var(--ink)}
 .lv.passed .num{background:var(--ink);color:var(--paper)}
 .lv.mastered .num{background:var(--star);border-color:var(--star);color:#fff}
+/* opening lessons: one per named opening, listed under their repertoire level */
+.subs{display:flex;flex-direction:column;border-bottom:1px solid var(--line);background:var(--peer);padding:2px 0 4px}
+.subs:last-child{border-bottom:0}
+.subs .sh{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 12px 2px 54px}
+.sublv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;padding:6px 12px 6px 54px;cursor:pointer;color:var(--ink);font-size:.9rem}
+.sublv:active{background:var(--line)}
+.sublv .dot{flex:none;width:10px;height:10px;border-radius:50%;border:2px solid var(--ink)}
+.sublv.passed .dot{background:var(--ink)} .sublv.mastered .dot{background:var(--star);border-color:var(--star)}
+.sublv .nm{flex:1;min-width:0;font-weight:600}
+.sublv .nm small{display:block;font-weight:400;color:var(--muted);font-size:.74rem}
+.sublv.locked{cursor:default;color:var(--muted)} .sublv.locked .dot{border-color:var(--line)}
+.sublv .stars svg{width:13px;height:13px}
 .mpill{font-family:var(--ui);font-size:.68rem;font-weight:700;letter-spacing:.02em;color:var(--star);border:1px solid var(--star);border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:1px;white-space:nowrap}
 .mnote{margin:0;font-size:.86rem;color:var(--muted)} .mnote b{color:var(--ink)}
 .lv .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
@@ -335,6 +347,20 @@ const prevRequired = (tk, i) => { const ls = levelsOf(tk); for (let j = i - 1; j
 const mastered_ = (tk, i) => ((lvState(tk, i) || {}).stars || 0) >= 3;
 const masteryNote = (tk, i) => { const st = lvState(tk, i), n = levelsOf(tk)[i].count;
   return mastered_(tk, i) ? '<b>Mastered.</b> Replay it any time to stay sharp.' : st && st.stars ? `Passed. <b>Master it</b> by getting all ${n} right first time.` : `Get all ${n} right first time to <b>master</b> it.`; };
+// ---- opening lessons: each repertoire level split into one lesson per named opening, open once the level is ----
+const lsState = key => ((progress.lessons || {})[key]) || null;
+const lessonsOf = L => L.kind === 'oline' ? T.openingLessons(L.p.lvl) : [];
+const lessonLabel = les => { const def = /Defence$/.test(les.fam), white = les.lvl.endsWith('w'), neutral = /Gambit (Declined|Accepted)/.test(les.fam);
+  return !neutral && (white ? def : !def) ? `Against the ${les.fam}` : les.fam; };
+const lessonFind = key => { for (const t of T.TRACKS) for (let i = 0; i < t.levels.length; i++){ const les = lessonsOf(t.levels[i]).find(x => x.key === key); if (les) return { tk: t.key, li: i, les, L: t.levels[i] }; } return null; };
+const lessonCount = les => [les.lines.length && T.plural(les.lines.length, 'line'), les.traps.length && T.plural(les.traps.length, 'trap')].filter(Boolean).join(' + ');
+function subList(tk, i, L, open){
+  const ls = lessonsOf(L); if (!ls.length) return '';
+  return `<div class="subs"><span class="sh">One opening at a time</span>` + ls.map(les => {
+    const st = lsState(les.key), pass = st && st.stars > 0, mast = st && st.stars >= 3;
+    return `<button class="sublv${pass ? ' passed' : ''}${mast ? ' mastered' : ''}${open ? '' : ' locked'}" type="button" data-sub="${esc(les.key)}"${open ? '' : ' aria-disabled="true"'}><i class="dot"></i><span class="nm">${esc(lessonLabel(les))}<small>${lessonCount(les)}</small></span>${open && st ? starRow(st.stars) : ''}</button>`;
+  }).join('') + '</div>';
+}
 // What "next" means at the end of a level: the next level in the group, or the first level of the next group
 function nextAfter(tk, li){
   const ti = T.TRACKS.findIndex(x => x.key === tk), t = T.TRACKS[ti];
@@ -411,7 +437,7 @@ function drawMap(){
           <span class="num">${i + 1}</span>
           <span class="txt"><b>${L.name}${mast ? '<span class="mpill">Mastered</span>' : ''}${L.optional ? ' <span class="opt">Optional</span>' : ''}${pathStepNo(t.key, i) ? ` <span class="pstep">Step ${pathStepNo(t.key, i)}</span>` : ''}</b><small>${open ? L.about : pathStepNo(t.key, i) ? 'A later step in your path' : `Pass level ${prevRequired(t.key, i) + 1} to unlock`}</small></span>
           ${open ? (st ? starRow(st.stars) : '') : '<svg class="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'}
-        </button>`;
+        </button>` + subList(t.key, i, L, open);
       }).join('') + '</div></section>';
   }).join('');
 }
@@ -432,6 +458,7 @@ const tipFor = L => L.tip ? L.tip : L.kind === 'eg' ? TIPS[L.p.piece === 'Q' ? '
 
 let chosen = null;
 $('tracks').addEventListener('click', e => {
+  const sb = e.target.closest('.sublv'); if (sb){ if (!sb.classList.contains('locked')) openLesson(sb.dataset.sub); return; }
   const b = e.target.closest('.lv'); if (!b || b.classList.contains('locked')) return;
   openLevel(b.dataset.t, +b.dataset.i);
 });
@@ -443,10 +470,23 @@ function openLevel(tk, i){
   const clock = settings.clock && L.clock ? ` · <b>${L.clock}s</b> each` : '';
   $('lvInfo').innerHTML = `<span><b>${L.count}</b> drills · pass with <b>${L.pass}</b>${clock}</span>` + (st ? `<span>Best <b>${st.best}/${L.count}</b> ${starRow(st.stars)}</span>` : '') + `<p class="mnote">${masteryNote(tk, i)}</p>`;
   $('lvTip').textContent = tipFor(L);
+  if (lessonsOf(L).length) $('lvInfo').innerHTML += '<p class="mnote">Or take it <b>one opening at a time</b>: the lessons are listed under this level.</p>';
   $('lvGo').textContent = !st ? 'Start' : mastered_(tk, i) ? 'Play again' : st.stars ? 'Try for mastery' : 'Try again';
   open('lvSheet');
 }
-$('lvGo').addEventListener('click', () => { close(); startLevel(chosen.tk, chosen.i); });
+function openLesson(key){
+  const f = lessonFind(key); if (!f) return;
+  const { les, L } = f, st = lsState(key), t = T.TRACKS.find(x => x.key === f.tk);
+  chosen = { lesson: key };
+  $('lvTrack').textContent = `${t.name} · ${L.name}`;
+  $('lvTitle').textContent = lessonLabel(les); $('lvAbout').textContent = les.about;
+  $('lvInfo').innerHTML = `<span>${lessonCount(les)}: play ${les.count === 1 ? 'it' : 'each'} through with the idea behind every move${les.traps.length ? ', then punish the classic mistake' : ''}</span>` + (st ? `<span>Best <b>${st.best}/${les.count}</b> ${starRow(st.stars)}</span>` : '') +
+    `<p class="mnote">${st && st.stars >= 3 ? '<b>Mastered.</b> Replay it any time to stay sharp.' : `Get ${les.count === 1 ? 'it' : `all ${les.count}`} right first time to <b>master</b> it.`}</p>`;
+  $('lvTip').textContent = L.tip;
+  $('lvGo').textContent = !st ? 'Start' : st.stars >= 3 ? 'Play again' : st.stars ? 'Try for mastery' : 'Try again';
+  open('lvSheet');
+}
+$('lvGo').addEventListener('click', () => { close(); chosen.lesson ? startLesson(chosen.lesson) : startLevel(chosen.tk, chosen.i); });
 $('lvCancel').addEventListener('click', close);
 
 // ---------- sheets ----------
@@ -497,6 +537,15 @@ async function startLevel(tk, li){
   }
   D.items = T.makeSet(tk, li, (Date.now() ^ (Math.random() * 1e9)) >>> 0, new Set(seen)).filter(Boolean);
   if (L.kind === 'mate' || L.kind === 'tactic'){ seen = seen.concat(D.items.map(x => x.fen)).slice(-400); store.set('trainer-seen', seen); }
+  startItem(0);
+}
+// One opening's lesson: its lines, then its traps. Runs like a level, but its progress is kept per lesson.
+function startLesson(key){
+  const f = lessonFind(key); if (!f) return;
+  const les = f.les, L = { name: lessonLabel(les), count: les.count, pass: les.pass, kind: 'lesson' };
+  D = { tk: f.tk, li: f.li, lesson: les, L, items: T.lessonSet(les.lvl, les.fam), k: 0, results: [], tries: [], ctl: null, done: false, helped: false, t0: Date.now() };
+  $('mapView').hidden = true; $('drillView').hidden = false;
+  $('dName').textContent = L.name; $('fb').hidden = true; $('act').innerHTML = '';
   startItem(0);
 }
 // A mixed run (placement test or path checkpoint): items come from several levels
@@ -596,8 +645,32 @@ function resolve(ok, title, body){
   try{ navigator.vibrate && navigator.vibrate(ok ? 20 : 60); }catch(_){}
   render();
 }
+function finishLesson(){
+  const les = D.lesson, L = D.L, first = D.results.filter(r => r === 'ok').length, score = first + D.results.filter(r => r === 'retry').length, stars = T.stars(L, score, first);
+  const all = (progress.lessons ||= {}), prev = all[les.key] || { stars: 0, best: 0, plays: 0 };
+  all[les.key] = { stars: Math.max(prev.stars, stars), best: Math.max(prev.best, score), plays: prev.plays + 1 };
+  store.set('trainer-progress', progress);
+  const mast = all[les.key].stars >= 3, level = levelsOf(D.tk)[D.li], sibs = lessonsOf(level), nx = sibs[sibs.indexOf(sibs.find(x => x.key === les.key)) + 1];
+  $('resTitle').textContent = stars === 3 ? (prev.stars >= 3 ? 'Mastered again' : 'Mastered!') : stars ? 'Lesson done' : 'Not this time';
+  let sub = !stars ? `Play ${L.count === 1 ? 'it' : `all ${L.count}`} through to finish the lesson. Each wrong move is explained, and you get three tries.` : '';
+  if (score > first) sub += ` Solved on a second or third try: ${T.plural(score - first, 'drill')}.`;
+  if (stars && !mast) sub += ` To master it, get ${L.count === 1 ? 'it' : `all ${L.count}`} right first time.`;
+  if (stars && !nx) sub += ` That's every opening in ${level.name}: the level test mixes them all.`;
+  $('resSub').textContent = sub.trim();
+  $('resStars').innerHTML = starRow(stars, true);
+  const secs = Math.round((Date.now() - D.t0) / 1000);
+  $('resGrid').innerHTML = `<div><span class="label">Score</span><b>${score}/${L.count}</b></div><div><span class="label">Best</span><b>${all[les.key].best}/${L.count}</b></div><div><span class="label">Time</span><b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b></div>`;
+  // the learner chooses: the next opening in this level, or (after the last) the level's own test
+  const move = !stars ? '' : nx ? `data-a="lesson" data-k="${esc(nx.key)}">Next: ${esc(lessonLabel(nx))}` : `data-a="goto" data-t="${D.tk}" data-i="${D.li}">Level test: ${esc(level.name)}`;
+  const again = `<button class="btn${mast && move ? '' : ' primary'}" type="button" data-a="again">${!stars ? 'Try again' : mast ? 'Play again' : 'Try for mastery'}</button>`;
+  const mv = move ? `<button class="btn${mast ? ' primary' : ''}" type="button" ${move}</button>` : '';
+  $('resRow').innerHTML = (mast ? [mv, again] : [again, mv]).join('') + `<button class="btn" type="button" data-a="map">All drills</button>`;
+  if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'trainer');
+  open('resSheet');
+}
 function finishLevel(){
   if (D.custom) return finishMixed();
+  if (D.lesson) return finishLesson();
   const L = D.L, first = D.results.filter(r => r === 'ok').length, score = first + D.results.filter(r => r === 'retry').length, stars = T.stars(L, score, first);
   const p = (progress[D.tk] ||= {}), prev = p[D.li] || { stars: 0, best: 0, plays: 0 };
   const firstPass = stars > 0 && !(prev.stars > 0);
@@ -641,7 +714,8 @@ $('resRow').addEventListener('click', e => {
   const a = b.dataset.a, { tk, li, custom } = D;
   if (a === 'next'){ close(); startLevel(tk, li + 1); }
   else if (a === 'goto'){ close(); startLevel(b.dataset.t, +b.dataset.i); }
-  else if (a === 'again'){ close(); custom ? (custom.kind === 'placement' ? startPlacement() : startCheckpoint(custom.path)) : startLevel(tk, li); }
+  else if (a === 'again'){ close(); D.lesson ? startLesson(D.lesson.key) : custom ? (custom.kind === 'placement' ? startPlacement() : startCheckpoint(custom.path)) : startLevel(tk, li); }
+  else if (a === 'lesson'){ close(); startLesson(b.dataset.k); }
   else if (a === 'step'){ close(); startLevel(b.dataset.t, +b.dataset.i); }
   else if (a === 'checkpoint'){ startCheckpoint(path.key); }
   else if (a === 'path'){ backToMap(); setPath(b.dataset.p); }

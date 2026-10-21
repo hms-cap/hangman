@@ -181,9 +181,24 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
     check('naming questions have four different options including the answer', !amb.length, amb.join(', '));
   }
 }
+// opening lessons: every repertoire line is in exactly one lesson of its level, and every lesson's drills build
+{
+  const OD = T.openingData(); let ok = true, msg = '';
+  for (const lvl of ['e4w', 'e4b', 'd4w', 'd4b']) {
+    const ls = T.openingLessons(lvl), ids = ls.flatMap(l => l.lines);
+    const want = OD.lines.filter(l => l.lvl === lvl).map(l => l.id);
+    if (ids.length !== want.length || new Set(ids).size !== ids.length || !want.every(id => ids.includes(id))) { ok = false; msg += ` ${lvl}: lines`; }
+    for (const les of ls) {
+      const set = T.lessonSet(lvl, les.fam);
+      if (set.length !== les.count || !set.every(x => x.kind === 'oline' ? x.sans && x.side : x.fen && x.line)) { ok = false; msg += ` ${les.key}`; }
+      if (les.traps.some(k => OD.traps[k].side !== lvl[2])) { ok = false; msg += ` ${les.key}: trap side`; }
+    }
+  }
+  check('opening lessons cover every line once', ok, msg);
+}
 // the home tile's level count and optional list match the level map
 {
-  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8'), tot = +(/total = (\d+);/.exec(html) || [])[1];
+  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8'), tot = +(/OPTIONAL = \{[^}]*\}, total = (\d+);/.exec(html) || [])[1]; // the chess tile (the Go tile has its own total)
   const req = T.TRACKS.reduce((n, t) => n + t.levels.filter(L => !L.optional).length, 0);
   const opt = {}; T.TRACKS.forEach(t => t.levels.forEach((L, i) => { if (L.optional) (opt[t.key] ||= []).push(String(i)); }));
   const m = /OPTIONAL = (\{[^}]*\})/.exec(html), optHtml = m ? JSON.parse(m[1].replace(/'/g, '"').replace(/(\w+):/g, '"$1":')) : {};

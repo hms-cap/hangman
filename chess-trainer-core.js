@@ -649,6 +649,39 @@ function openingData() {
     return Object.assign({}, t, { fen: set.fen, before: set.list.map(x => x.san), last: set.list[set.list.length - 1].uci, line: win.list.map(x => x.uci), sansWin: win.list.map(x => x.san) }); });
   return (OCACHE = { families: O.families, lines, traps });
 }
+// ---------- openings, one at a time ----------
+// Each repertoire level (kind 'oline') broken down by named opening, in the order the openings appear in the data.
+// A lesson plays every line of that opening for that level, then any classic trap from it in which the learner is
+// the side that punishes the mistake (the trap starts with the moves that define the opening).
+let LCACHE = null;
+function openingLessons(lvl) {
+  if (!LCACHE) {
+    const D = openingData(); LCACHE = {};
+    const same = (a, b) => a.replace(/[+#!?]/g, '') === b.replace(/[+#!?]/g, '');
+    for (const L of D.lines) {
+      const ls = (LCACHE[L.lvl] ||= []);
+      let les = ls.find(x => x.fam === L.fam);
+      if (!les) ls.push(les = { key: L.lvl + ':' + L.fam, lvl: L.lvl, fam: L.fam, name: L.fam, about: D.families[L.fam] || '', lines: [], traps: [] });
+      les.lines.push(L.id);
+    }
+    D.traps.forEach((t, k) => {
+      const ms = t.moves.split(' ');
+      for (const lvl in LCACHE) for (const les of LCACHE[lvl]) {
+        if (les.traps.includes(k)) continue;
+        const hit = D.lines.some(L => L.lvl === lvl && L.fam === les.fam && L.side === t.side && L.sans.slice(0, L.famPly).every((m, i) => ms[i] && same(ms[i], m)));
+        if (hit) les.traps.push(k);
+      }
+    });
+    for (const lvl in LCACHE) for (const les of LCACHE[lvl]) { les.count = les.lines.length + les.traps.length; les.pass = les.count; }
+  }
+  return LCACHE[lvl] || [];
+}
+// The drills of a lesson: its lines in order, then its traps
+function lessonSet(lvl, fam) {
+  const D = openingData(), les = openingLessons(lvl).find(x => x.fam === fam);
+  if (!les) return [];
+  return les.lines.map(id => Object.assign({ kind: 'oline' }, D.lines[id])).concat(les.traps.map(k => Object.assign({ kind: 'trap', set: 'trap' }, D.traps[k])));
+}
 // Name the opening: the position after the moves that define the family (or, deep, the whole line) and four names to pick from
 function openingNameItems(p, r) {
   const D = openingData(), out = [], seenPos = new Set();
@@ -802,7 +835,7 @@ function stars(L, score, firstTry) {
   return score >= L.count - 1 ? 2 : 1;
 }
 
-const api = { PATHS, pathSteps, mixedSet, checkpointSpec, placementSet, placementResult, PLACEMENT, openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
+const api = { openingLessons, lessonSet, PATHS, pathSteps, mixedSet, checkpointSpec, placementSet, placementResult, PLACEMENT, openingData, playSans, moveText, TRACKS, makeSet, stars, rng, fenOf, piecesOf, attackedSet, knightDist, knightPath, grabPlan, seeMove, seeSquare, exchangeLine, capturesOn,
   squareFacts, egKey, egValue, egMoves, routeMoves, routeWhy, routeSolve, genRoute, genPawnRoute, checkers, attacks, escapeWay, isCheckMove, isMateMove,
   genCheck, genEscape, genMate1, genCastle, genSpecial, to88, to64, nm64, KNIGHT, PTS, NAME, plural, genCount, genSquare, genEg, genLoose, genKpath, genGrab };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ChessTrainer = api;
