@@ -203,6 +203,7 @@ function drawConfirm(id){
     <div class="row"><button class="btn" type="button" id="plNo">Cancel</button><button class="btn primary go" type="button" id="plYes" data-focus>Switch to ${esc(p.name)}</button></div>`;
   panel.querySelector('#plNo').addEventListener('click', () => show('list'));
   panel.querySelector('#plYes').addEventListener('click', () => {
+    dispatchEvent(new CustomEvent('players:switching')); // e.g. play time saves under the old player first
     reg.active = p.id; saveReg(); PFX = prefixFor(p.id);
     sheet.hidden = true; location.reload();
   });

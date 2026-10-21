@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
+<script src="playtime.js"></script>
 <style>
 /* Game hub: graph-paper ground, one solid color per game, chunky pressable tiles whose art is the player's live game state.
    Layout: header with streak, then three tabs (Casual, Chess, Go); each tab has its "Today" daily tiles and a library of wide tiles. */
@@ -53,7 +54,9 @@ html,body{height:auto;min-height:100%}
 .top-r .pl-badge{padding:3px;max-width:none}
 .top-r .pl-badge span:not(.pl-av){display:none}
 @media (min-width:430px){.top-r .pl-badge{padding:3px 12px 3px 3px}.top-r .pl-badge span:not(.pl-av){display:inline;max-width:9em}}
-.greet{margin:-8px 0 0;color:var(--muted);font-size:1rem;line-height:1.4}
+.greet-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:-8px 0 0}
+.greet-row .pt-pill{margin-top:-2px}
+.greet{margin:0;flex:1;min-width:0;color:var(--muted);font-size:1rem;line-height:1.4}
 .greet b{color:var(--ink);font-weight:600}
 
 h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6px;line-height:1}
@@ -182,7 +185,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     </div>
     </div>
   </header>
-  <p class="greet" id="greet"></p>
+  <div class="greet-row"><p class="greet" id="greet"></p></div>
 
   <nav class="tabs" role="tablist" aria-label="Game groups">
     <button type="button" role="tab" id="tab-more" aria-controls="p-more" data-tab="more">Casual<i class="tdot" hidden></i></button>
@@ -642,6 +645,7 @@ let gpzDone = false;
 (function(){
   if (!window.Players) return;
   $('topR').prepend(Players.badge());
+  if (window.PlayTime) document.querySelector('.greet-row').appendChild(PlayTime.pill()); // time played today, all games
   Players.welcome();
   addEventListener('players:change', () => { // first name or a rename: put the name in the greeting
     const me = Players.current, g = $('greet'); if (!me) return;

@@ -210,10 +210,18 @@ Up to 5 people can share the app on one device. A player is just a name and a co
 - **Switching**: tap the badge at the top of the home screen, or **Switch player** in any game's menu. Picking someone else always shows a confirmation screen (Switch to Maya?) before the page reloads as them; the current player's game stays saved
 - **Edit** (pencil icon) renames or recolors a player. **Remove** asks for a second tap and deletes that player's saves from the device; the player who's playing now can't be removed
 
+## Time played
+The app keeps a simple record of how long each player spends in it.
+- **Today's time** shows under the greeting on the home screen (all games) and in small type under each game's title (that game)
+- **Tap either one** for the Time played sheet: today against the last week's daily average, a bar per day (7 days, or 30 for the longer periods), time per game, and facts for the period (total, days played, average on days played, longest day, the time of day you usually play, and visits)
+- The clock runs only while the app is on screen and in use: it stops when you leave the app or after 5 minutes without a tap. A new visit starts after a 30-minute break
+- It's kept per player, like the other saves, under `playtime` (a year of days, each with the total and the time per game and per hour). `PlayTime.day()` and `PlayTime.days()` read it for anything else in the app that wants to use it
+
 ## Files
 | File | What it is |
 | --- | --- |
 | `index.html` | Home screen |
+| `playtime.js` | Time played: the clock, the per-player daily record, the today displays and the Time played sheet |
 | `profiles.js` | Players: the player list, switch/confirm/edit screens, each player's color theme, and keeping each player's saves apart (loaded first on every page; prefixes every saved key with the player, except the first player's) |
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js`, `sudoku-coach.js` | Sudoku game; puzzle set; coach (technique finder and step-by-step lessons for teach mode and the technique guide) |
