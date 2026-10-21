@@ -1,4 +1,4 @@
-// Four Groups puzzle generator: builds puzzles at three levels from the category bank (groups-bank.js) and only keeps
+// Clover puzzle generator: builds puzzles at three levels from the category bank (groups-bank.js) and only keeps
 // ones with exactly one answer. Loaded by groups.html and index.html; also runs in Node for tools/check-groups.js.
 (function (root) {
 'use strict';

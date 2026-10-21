@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#102a43">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Four Groups</title>
+<title>Clover</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
@@ -61,6 +61,9 @@
 .lives{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:.9rem}
 .lives i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:inline-block;transition:transform .25s,opacity .25s}
 .lives i.lost{transform:scale(.4);opacity:.2}
+:root{--em:var(--em-clover)}
+.lives .mini{display:inline-flex;width:30px;height:30px;color:var(--em)} .lives .mini svg{width:100%;height:100%}
+.lives .mini + i{margin-left:2px}
 .actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .actions .btn{font-family:var(--ui);font-size:.95rem;font-weight:600;padding:9px 16px}
 .toast{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.92rem;padding:9px 14px;border-radius:10px;pointer-events:none}
@@ -114,7 +117,7 @@
 <div class="app">
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
-    <h1>Four Groups</h1>
+    <h1>Clover</h1>
     <div class="icons">
       <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
       <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
@@ -163,12 +166,14 @@
     <p>Each group has a color, from the most straightforward to the trickiest:</p>
     <div class="levels"><span class="c1b">Easiest</span><span class="c2b">Medium</span><span class="c3b">Harder</span><span class="c4b">Trickiest</span></div>
     <p>There's a new daily puzzle at each level every midnight, the same for everyone. Practice has unlimited puzzles at each level, the hand-written classics and every past daily.</p>
+    <p class="why" id="whyName">Four groups, four leaves: every group you find adds a leaf to your clover.</p>
     <button class="btn primary" id="helpClose" type="button">Start</button>
   </div>
 </div>
 
 <div class="sheet" id="statsSheet" hidden>
   <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <div class="hero" id="hero"></div>
     <h2 id="statsTitle">Statistics</h2>
     <p id="result"></p>
     <div class="grid-emoji" id="guessGrid"></div>
@@ -194,6 +199,8 @@
 <script src="groups-data.js"></script>
 <script src="groups-bank.js"></script>
 <script src="groups-core.js"></script>
+<script src="emblems.js"></script>
+<script>document.querySelector('.bar h1').insertAdjacentHTML('afterbegin', Emblems.icon('clover')); document.getElementById('whyName').insertAdjacentHTML('afterbegin', Emblems.icon('clover'));</script>
 <script src="game-nav.js"></script>
 <script>
 'use strict';
@@ -281,7 +288,7 @@ function render(animateGroup){
   $('hintChip').hidden = !h;
   if (h) $('hintChip').innerHTML = `<i class="sw c${h.g + 1}b"></i><span>One group is <b>${P[h.g][0]}</b>${h.n > 1 ? `: ${marked.join(' and ')} ${marked.length > 1 ? 'are' : 'is'} in it` : ''}</span>`;
   $('tiles').innerHTML = left.map(w => `<button type="button" class="tile ${sizeClass(w)}${selected.includes(w) ? ' sel' : ''}${marked.includes(w) ? ' hinted c' + (h.g + 1) : ''}" data-w="${w}" aria-pressed="${selected.includes(w)}">${w}</button>`).join('');
-  $('lives').innerHTML = G.done ? '' : `Mistakes left: ${[0, 1, 2, 3].map(i => `<i class="${i < 4 - G.mistakes ? '' : 'lost'}"></i>`).join('')}` + (G.hints ? `<span class="hintsUsed">· ${G.hints} hint${G.hints > 1 ? 's' : ''}</span>` : '');
+  $('lives').innerHTML = G.done ? '' : `<span class="mini" title="${G.solved.length} of 4 leaves">${leaves()}</span>Mistakes left: ${[0, 1, 2, 3].map(i => `<i class="${i < 4 - G.mistakes ? '' : 'lost'}"></i>`).join('')}` + (G.hints ? `<span class="hintsUsed">· ${G.hints} hint${G.hints > 1 ? 's' : ''}</span>` : '');
   $('actions').hidden = G.done;
   $('submitBtn').disabled = selected.length !== 4;
   $('clearBtn').disabled = !selected.length;
@@ -364,13 +371,16 @@ function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden =
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
 
 function shareText(){
-  const head = (src.kind === 'daily' ? `Four Groups No. ${src.day + 1}` : src.kind === 'classic' ? `Four Groups classic ${src.i + 1}` : 'Four Groups practice') + ` · ${LNAME[level]}`;
+  const head = (src.kind === 'daily' ? `Clover No. ${src.day + 1}` : src.kind === 'classic' ? `Clover classic ${src.i + 1}` : 'Clover practice') + ` · ${LNAME[level]}`;
   return head + '\n' + G.guesses.map(g => g.map(w => EMOJI[groupOf(w)]).join('')).join('\n') + (G.hints ? `\n💡 ${G.hints} hint${G.hints > 1 ? 's' : ''}` : '');
 }
 let tick;
+// the clover: one leaf per group found, in the group's colour, in the order they were found
+const leaves = () => Emblems.clover([0, 1, 2, 3].map(k => G.solved[k] != null ? `var(--g${G.solved[k] + 1})` : null), { line: 'var(--em)', stem: 'var(--em)', vein: 'rgba(255,255,255,.55)' });
 function openStats(){
   const s = st(mode);
   $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  $('hero').innerHTML = leaves();
   const hintTxt = G.hints ? `, ${G.hints} hint${G.hints > 1 ? 's' : ''}` : '';
   $('result').textContent = !G.done ? `${G.solved.length} of 4 groups found, ${4 - G.mistakes} mistake${4 - G.mistakes === 1 ? '' : 's'} left${hintTxt}.` : G.won ? (G.mistakes || G.hints ? `Solved with ${G.mistakes} mistake${G.mistakes === 1 ? '' : 's'}${hintTxt}.` : 'Perfect: no mistakes, no hints.') : 'Out of mistakes this time.';
   $('guessGrid').innerHTML = G.done ? G.guesses.map(g => `<div>${g.map(w => `<i class="c${groupOf(w) + 1}b"></i>`).join('')}</div>`).join('') : '';

@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Five Letters, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Word Trail, Four Groups, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Starfish, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Tendril, Clover, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -53,8 +53,8 @@ Either way it opens full-screen from its own icon. The install steps on the home
 - Play a specific puzzle by its number
 - Keyboard controls: `1–9`, arrow keys, `Backspace`, `N` for notes, `H` for hint, `T` to teach, `P` to pause, `Ctrl/Cmd+Z` to undo
 
-### Five Letters
-A five-letter word-guessing game in the style of Wordle.
+### Starfish
+A five-letter word-guessing game in the style of Wordle. Five letters, five arms: the stats sheet and the home tile show a starfish whose arms take the colour of each letter's best result so far.
 - **Daily** mode: one word a day, the same for everyone, numbered from No. 1 on 14 October 2026. The 2,139 hand-picked answers last almost six years before repeating.
 - **Practice** mode: unlimited random words, with separate stats
 - 6,486 accepted guesses, from the Hunspell en_US dictionary plus the answer list
@@ -138,8 +138,8 @@ A course from the rules to life and death, 18 levels in four groups; pass a leve
 - **Saving stones** and **Life and death:** killing and living in small and bigger corners, then a mix
 - Every drill allows three tries and explains each wrong answer; the technique levels use the checked problems from Go Problems
 
-### Word Trail
-A letter-grid word search in the style of Squares.
+### Tendril
+A letter-grid word search in the style of Squares. Each word you trace is drawn as a vine that leafs out between letters, and the vine on the home tile and stats sheet grows as you find the words.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
 - Find every target word to finish the grid; each tile shows how many target words still pass through it, and inks in at zero
 - Target words are everyday words (5,843 hand-reviewed); 53,000+ other words from the Hunspell dictionary count as bonus words
@@ -150,8 +150,8 @@ A letter-grid word search in the style of Squares.
 - Hints show the first three letters of a word and outline those tiles, numbered, on the grid
 - Share your result, saves progress
 
-### Four Groups
-A word-grouping puzzle in the style of Connections.
+### Clover
+A word-grouping puzzle in the style of Connections. Four groups, four leaves: each group you find adds a leaf, in its colour, to the clover beside the mistakes counter, on the stats sheet and on the home tile.
 - Sixteen words hide four groups of four; pick four and submit, with four mistakes allowed and a "One away" nudge
 - **Three levels.** Easy uses plain categories (fruits, dog breeds, metals) with no decoys. Medium adds phrases such as "___ ball" and synonyms, with one or two decoy words that seem to fit two groups. Hard adds wordplay (hidden words, anagrams, sound-alikes, palindromes) and two to four decoys
 - **Hints:** the first names the easiest group you haven't found, the next two mark one and then two of its words. Hints are counted and shown in the shared result
@@ -205,10 +205,10 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | `index.html` | Home screen |
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js`, `sudoku-coach.js` | Sudoku game; puzzle set; coach (technique finder and step-by-step lessons for teach mode and the technique guide) |
-| `fiveletters.html`, `fivewords.js` | Five Letters game; answers in daily order plus extra accepted guesses |
+| `fiveletters.html`, `fivewords.js` | Starfish game; answers in daily order plus extra accepted guesses |
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
-| `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Word Trail page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
-| `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Four Groups page; category bank; puzzle generator and solver; hand-written classics |
+| `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Tendril page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
+| `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Clover page; category bank; puzzle generator and solver; hand-written classics |
 | `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
 | `go-solver.js`, `go-problem.js`, `go-problems-worker.js` | Capture and life-and-death reading; judging a move in a problem and explaining wrong ones; worker (`node tools/test-go-solver.js`) |
 | `go-problems.html`, `go-problems-data.js`, `go-daily.js` | Go Problems page; the problem set, made by `node tools/generate-go-problems.js` (resumable; rechecks stored problems); daily schedule (`node tools/test-go-problems.js` plays every problem through) |
@@ -218,6 +218,7 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 | `snake.html` | Snake game |
 | `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) and the computer player |
 | `paper.css` | Shared look and colors (light and dark) |
+| `emblems.js` | The Tendril, Starfish and Clover emblems (title marks, home-tile watermarks, progress pictures) |
 | `game-nav.js` | The game menu behind each game's title: back to the games, switch game, restart and quit |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png` | Offline support and home-screen install |
 | `tools/` | Puzzle generator and grader (Node.js) |

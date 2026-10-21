@@ -1,4 +1,4 @@
-// Word Trail logic: dictionary decoding, grid solving and grid generation.
+// Tendril logic: dictionary decoding, grid solving and grid generation.
 // Used by trail.html and by tools/generate-trail.js (Node).
 (function (root) {
 'use strict';

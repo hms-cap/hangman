@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#102a43">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Word Trail</title>
+<title>Tendril</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
@@ -72,7 +72,11 @@
 .tile .hn{position:absolute;bottom:5%;left:8%;font-family:var(--mono);font-size:3.2cqw;font-weight:700;color:var(--present);pointer-events:none}
 .grid.s5 .tile .hn{font-size:2.8cqw}
 .trailLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
-.trailLayer polyline{fill:none;stroke:var(--hit);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.45}
+:root{--em:var(--em-tendril)}
+/* the trail is a growing vine: a soft halo under a green stem, small leaves at each letter, a bigger leaf at the tip */
+.trailLayer .halo{fill:none;stroke:var(--paper);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.35}
+.trailLayer .stem{fill:none;stroke:var(--em-tendril);stroke-width:.85;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+.trailLayer .lf{fill:var(--em-leaf);stroke:var(--em-tendril);stroke-width:.5;stroke-linejoin:round}
 
 .words{flex:1 1 auto;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:4px;-webkit-user-select:none}
 .group h3{margin:0 0 5px;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
@@ -107,7 +111,7 @@
 <div class="app">
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
-    <h1>Word Trail</h1>
+    <h1>Tendril</h1>
     <div class="icons">
       <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
       <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
@@ -147,12 +151,14 @@
     </ol>
     <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
     <p>A new daily grid starts at midnight. Practice gives you as many fresh grids as you like, in 4×4 or 5×5.</p>
+    <p class="why" id="whyName">Every word is a tendril: it winds from letter to letter and leafs out as you go.</p>
     <button class="btn primary" id="helpClose" type="button">Start</button>
   </div>
 </div>
 
 <div class="sheet" id="statsSheet" hidden>
   <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <div class="hero" id="hero"></div>
     <h2 id="statsTitle">Statistics</h2>
     <p id="result"></p>
     <div class="stats4" id="stats4"></div>
@@ -174,6 +180,8 @@
 <script src="trailwords.js"></script>
 <script src="trail-daily.js"></script>
 <script src="trail-core.js"></script>
+<script src="emblems.js"></script>
+<script>document.querySelector('.bar h1').insertAdjacentHTML('afterbegin', Emblems.icon('tendril')); document.getElementById('whyName').insertAdjacentHTML('afterbegin', Emblems.icon('tendril'));</script>
 <script src="game-nav.js"></script>
 <script>
 'use strict';
@@ -279,9 +287,26 @@ function hintTiles(){
   return out;
 }
 const hintText = w => w.slice(0, HINT_LETTERS).toUpperCase() + '·'.repeat(Math.max(0, w.length - HINT_LETTERS));
+// A smooth stem through the letter centres (Catmull-Rom as cubic curves), with a leaf between each pair of letters,
+// alternating sides; the newest one is a little bigger.
+function vine(p){
+  const n = v => +v.toFixed(2);
+  let d = `M${p[0][0]} ${p[0][1]}`;
+  for (let i = 0; i < p.length - 1; i++){
+    const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+    d += `C${n(b[0] + (c[0] - a[0]) / 6)} ${n(b[1] + (c[1] - a[1]) / 6)} ${n(c[0] - (e[0] - b[0]) / 6)} ${n(c[1] - (e[1] - b[1]) / 6)} ${c[0]} ${c[1]}`;
+  }
+  const leaf = (x, y, deg, k) => `<path class="lf" transform="translate(${x} ${y}) rotate(${n(deg)}) scale(${k})" d="M0 0C1.4-2.4 4.6-2.9 7-1.3C5.6 1.1 2.5 1.6 0 0Z"/>`;
+  const ang = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+  let leaves = '';
+  for (let i = 0; i < p.length - 1; i++){
+    const last = i === p.length - 2, mx = (p[i][0] + p[i + 1][0]) / 2, my = (p[i][1] + p[i + 1][1]) / 2;
+    leaves += leaf(n(mx), n(my), ang(p[i], p[i + 1]) + (i % 2 ? -50 : 50), last ? .5 : .36);
+  }
+  return `<path class="halo" d="${d}"/><path class="stem" d="${d}"/>${leaves}`;
+}
 function drawTrail(){
-  const pts = path.map(i => { const [r, c] = toDisplay(i); return `${c * 10 + 5},${r * 10 + 5}`; }).join(' ');
-  $('trailLayer').innerHTML = path.length > 1 ? `<polyline points="${pts}"/>` : '';
+  $('trailLayer').innerHTML = path.length > 1 ? vine(path.map(i => { const [r, c] = toDisplay(i); return [c * 10 + 5, r * 10 + 5]; })) : '';
 }
 function drawCurrent(){
   const c = $('current');
@@ -426,13 +451,14 @@ function complete(){
   setTimeout(openStats, 1200);
 }
 function shareText(){
-  const head = mode === 'daily' ? `Word Trail No. ${S.day + 1}` : `Word Trail practice ${P.size}×${P.size}`;
+  const head = mode === 'daily' ? `Tendril No. ${S.day + 1}` : `Tendril practice ${P.size}×${P.size}`;
   return `${head}\n✏️ ${S.found.filter(w => P.targets.includes(w)).length}/${P.targets.length} words${S.bonus.length ? ` + ${S.bonus.length} bonus` : ''}\n⏱️ ${fmt(S.elapsed)}${S.hints.length ? ` · 💡 ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}`;
 }
 let tick;
 function openStats(){
   const s = st(mode);
   $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  $('hero').innerHTML = Emblems.tendril(S.done ? 1 : S.found.length / Math.max(1, P.targets.length), { line: 'var(--em-tendril)', leaf: 'var(--em-leaf)', ghost: 'var(--line)' });
   $('result').textContent = S.done ? `You found all ${P.targets.length} words${S.bonus.length ? ` and ${S.bonus.length} bonus word${S.bonus.length > 1 ? 's' : ''}` : ''} in ${fmt(S.elapsed)}${S.hints.length ? `, with ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}.` : `${S.found.length} of ${P.targets.length} words found so far.`;
   $('stats4').innerHTML = (mode === 'daily'
     ? [[s.done, 'Completed'], [s.cur, 'Current streak'], [s.max, 'Best streak'], [s.best == null ? '–' : fmt(s.best), 'Fastest']]

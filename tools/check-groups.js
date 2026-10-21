@@ -1,4 +1,4 @@
-// Four Groups checks. Run: node tools/check-groups.js [samples]
+// Clover checks. Run: node tools/check-groups.js [samples]
 // 1) the bank: word format, list sizes, wordplay lists that really fit.
 // 2) phrase lists: compounds in the system dictionary that a list is missing (e.g. PIN + BALL), so decoys are known.
 // 3) generation: success rate, speed and decoys per level, every daily for two years, and some sample puzzles.

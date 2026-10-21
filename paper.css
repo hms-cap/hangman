@@ -99,3 +99,19 @@ button{font:inherit;color:inherit}
 .seg button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Emblems (emblems.js) for Tendril, Starfish and Clover: the mark beside the title, and the picture atop the stats sheet */
+:root{--em-tendril:#3f8f4f;--em-leaf:#8fcf86;--em-star:#e0763a;--em-clover:#2e8b57}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--em-tendril:#79c27a;--em-leaf:#4f9a55;--em-star:#f2945e;--em-clover:#62c08a}}
+:root[data-theme="dark"]{--em-tendril:#79c27a;--em-leaf:#4f9a55;--em-star:#f2945e;--em-clover:#62c08a}
+.bar h1 .em{color:var(--em);flex:none}
+.hero{display:flex;justify-content:center;margin:-2px 0 -4px}
+.hero svg{width:92px;height:92px;display:block;overflow:visible}
+.why{font-size:.85rem;color:var(--muted);display:flex;gap:10px;align-items:center;margin:0}
+.why svg{width:30px;height:30px;flex:none;color:var(--em)}
+@media (prefers-reduced-motion:no-preference){
+  .hero svg{animation:em-in .7s cubic-bezier(.2,.8,.2,1.25) both}
+  .hero .em-star{animation-name:em-spin}
+}
+@keyframes em-in{from{transform:scale(.4) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes em-spin{from{transform:scale(.4) rotate(-144deg);opacity:0}to{transform:none;opacity:1}}

@@ -1,4 +1,4 @@
-// Four Groups category bank. Puzzles are built from these by groups-core.js.
+// Clover category bank. Puzzles are built from these by groups-core.js.
 // Each entry: [name, tier, family, 'WORD WORD ...', extra]
 //   tier   1 = plain category, 2 = broader idea, 3 = phrase (___ ball), 4 = wordplay (hidden words, anagrams, sounds).
 //   family puzzles take at most one category per family ('phrase' allows two), so themes don't blur together.

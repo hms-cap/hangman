@@ -1,4 +1,4 @@
-// Four Groups puzzles. Each puzzle is four groups, easiest (1) to trickiest (4): [category, word, word, word, word].
+// Clover puzzles. Each puzzle is four groups, easiest (1) to trickiest (4): [category, word, word, word, word].
 // Puzzles 1-32 are the daily cycle (No. 1 = 16 Oct 2026); 33-40 are always available in Practice.
 // Every puzzle has exactly one solution: where a word could fit two groups, the other group already has exactly four candidates.
 window.GROUPS_PUZZLES = [

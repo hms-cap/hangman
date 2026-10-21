@@ -10,11 +10,13 @@
 <meta name="theme-color" content="#102a43">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Five Letters</title>
+<title>Starfish</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
 <style>
+:root{--em:var(--em-star)}
+.hero .arm-c{fill:var(--correct)} .hero .arm-p{fill:var(--present)} .hero .arm-a{fill:var(--absent)}
 .icons{display:flex;gap:2px;justify-self:end}
 .icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
 .icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -87,7 +89,7 @@
 <div class="app">
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
-    <h1>Five Letters</h1>
+    <h1>Starfish</h1>
     <div class="icons">
       <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
       <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
@@ -122,6 +124,7 @@
       <li><b>Daily</b>: one word a day, the same for everyone. A new one starts at midnight.</li>
       <li><b>Practice</b>: as many random words as you like, with separate stats.</li>
     </ul>
+    <p class="why" id="whyName">Five letters, five arms: each guess colours your starfish.</p>
     <button class="btn primary" id="helpClose" type="button">Got it</button>
   </div>
 </div>
@@ -139,6 +142,7 @@
 
 <div class="sheet" id="statsSheet" hidden>
   <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <div class="hero" id="hero"></div>
     <h2 id="statsTitle">Statistics</h2>
     <div id="result"></div>
     <div class="stats4" id="stats4"></div>
@@ -150,6 +154,8 @@
 </div>
 
 <script src="fivewords.js"></script>
+<script src="emblems.js"></script>
+<script>document.querySelector('.bar h1').insertAdjacentHTML('afterbegin', Emblems.icon('starfish')); document.getElementById('whyName').insertAdjacentHTML('afterbegin', Emblems.icon('starfish'));</script>
 <script src="game-nav.js"></script>
 <script>
 'use strict';
@@ -320,13 +326,17 @@ document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e =
 
 function shareText(){
   const emoji = { correct: settings.hc ? '🟧' : '🟦', present: settings.hc ? '🟦' : '🟨', absent: '⬜' };
-  const head = (mode === 'daily' ? `Five Letters No. ${G.day + 1}` : 'Five Letters practice') + ` ${G.won ? G.guesses.length : 'X'}/6${G.hard ? '*' : ''}`;
+  const head = (mode === 'daily' ? `Starfish No. ${G.day + 1}` : 'Starfish practice') + ` ${G.won ? G.guesses.length : 'X'}/6${G.hard ? '*' : ''}`;
   return head + '\n\n' + G.guesses.map(g => score(g, G.answer).map(s => emoji[s]).join('')).join('\n');
 }
 let tick;
 function openStats(){
   const s = st(mode);
   $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  // the starfish: one arm per letter, coloured by the best that letter has done so far
+  const rank = { absent: 1, present: 2, correct: 3 }, best = [0, 0, 0, 0, 0];
+  G.guesses.forEach(g => score(g, G.answer).forEach((r, i) => { best[i] = Math.max(best[i], rank[r] || 0); }));
+  $('hero').innerHTML = Emblems.starfish(best.map(b => [null, 'arm-a', 'arm-p', 'arm-c'][b]), { line: 'var(--em)', dots: 'rgba(0,0,0,.14)' });
   $('result').innerHTML = G.done ? `<p>${G.won ? `Solved in ${G.guesses.length} of 6.` : 'Not this time. The word was'}</p><div class="answer">${G.answer.toUpperCase()}</div>` : '';
   $('stats4').innerHTML = [[s.played, 'Played'], [s.played ? Math.round(100 * s.won / s.played) : 0, 'Win %'], [s.cur, 'Current streak'], [s.max, 'Best streak']]
     .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');

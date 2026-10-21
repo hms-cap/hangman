@@ -9,9 +9,9 @@
 const GAMES = [
   ['hangman', 'Hangman', 'hangman.html', '#c0393f'],
   ['sudoku', 'Sudoku', 'sudoku.html', '#1f7a63'],
-  ['five', 'Five Letters', 'fiveletters.html', '#d38c1f'],
-  ['trail', 'Word Trail', 'trail.html', '#2e5ea6'],
-  ['groups', 'Four Groups', 'groups.html', '#7457a6'],
+  ['five', 'Starfish', 'fiveletters.html', '#d38c1f'],
+  ['trail', 'Tendril', 'trail.html', '#2e5ea6'],
+  ['groups', 'Clover', 'groups.html', '#7457a6'],
   ['chess', 'Chess', 'chess.html', '#33424f'],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html', '#2b6c84'],
   ['trainer', 'Chess Trainer', 'chess-trainer.html', '#8a4f7d'],
@@ -23,7 +23,8 @@ const GAMES = [
 ];
 const css = `
 .gn-title{font:inherit;color:inherit;background:none;border:0;padding:2px 4px;margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:10px;line-height:1}
-.gn-title svg{width:14px;height:14px;flex:none;opacity:.55;margin-top:4px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.gn-title .em{width:1.05em;height:1.05em;margin:0 6px 0 0;opacity:1;stroke-width:7}
+.gn-title svg:not(.em){width:14px;height:14px;flex:none;opacity:.55;margin-top:4px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .gn-title:active{background:var(--peer)}
 .sheet.gnav{z-index:40}
 .gnav .panel{gap:12px}
@@ -82,8 +83,8 @@ function build(){
   // the title in the header becomes the button that opens this menu
   const h1 = document.querySelector('.bar h1');
   if (h1){
-    const label = h1.textContent.trim();
-    h1.innerHTML = `<button class="gn-title" type="button" aria-haspopup="dialog" aria-label="${label}: game menu">${label}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>`;
+    const label = h1.textContent.trim(), em = h1.querySelector('.em');
+    h1.innerHTML = `<button class="gn-title" type="button" aria-haspopup="dialog" aria-label="${label}: game menu">${em ? em.outerHTML : ''}${label}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg></button>`;
     h1.firstElementChild.addEventListener('click', () => isOpen ? close() : open());
   }
   // while the menu is open, keys don't reach the game (Escape closes it)
@@ -131,12 +132,12 @@ function close(byAction){
 
 // ---- end-of-game buttons ----
 // Today's daily puzzles, in the order the home screen shows them, and whether each is finished
-// (same rules as the home screen: Four Groups counts once any level is solved, or all three are played).
+// (same rules as the home screen: Clover counts once any level is solved, or all three are played).
 const DAILIES = [
-  ['five', 'Five Letters', 'fiveletters.html?daily', [2026, 9, 14]],
-  ['trail', 'Word Trail', 'trail.html?daily', [2026, 9, 16]],
+  ['five', 'Starfish', 'fiveletters.html?daily', [2026, 9, 14]],
+  ['trail', 'Tendril', 'trail.html?daily', [2026, 9, 16]],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html?daily', [2026, 9, 17]],
-  ['groups', 'Four Groups', 'groups.html?daily', [2026, 9, 16]],
+  ['groups', 'Clover', 'groups.html?daily', [2026, 9, 16]],
 ];
 const read = k => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } };
 const dayOf = ([y, m, d]) => { const n = new Date(); return Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(y, m, d)) / 864e5); };

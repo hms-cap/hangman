@@ -125,6 +125,15 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .pc .px{fill:none;stroke-width:2.3} .pc.w .px{stroke:#1d262d} .pc.b .px{stroke:#27323b}
 .ck-x{fill:none;stroke:var(--on-line);stroke-width:2;stroke-linecap:round} .ck-p0{fill:var(--on);stroke:var(--chowka-edge);stroke-width:1.5} .ck-p1{fill:#ffd27a;stroke:var(--chowka-edge);stroke-width:1.5}
 .sn-body{fill:none;stroke:var(--on);stroke-width:7;stroke-linecap:round;stroke-linejoin:round} .sn-food{fill:#ffd27a}
+/* Tendril, Starfish, Clover: a big faint emblem in the corner, and themed boards */
+.wm{position:absolute;right:-16px;bottom:-20px;width:118px;height:118px;color:#fff;opacity:.14;transform:rotate(-14deg);pointer-events:none;z-index:0}
+.wm svg{width:100%;height:100%;display:block}
+.t-five .wm{right:-22px;bottom:-26px;transform:rotate(18deg)} .t-groups .wm{width:132px;height:132px;bottom:-30px}
+.daily .art{position:relative;z-index:1}
+.sf-c{fill:var(--on)} .sf-p{fill:rgba(255,255,255,.55)} .sf-a{fill:rgba(0,0,0,.22)} .sf-pip{fill:var(--on-faint)} .sf-pip.on{fill:var(--on)}
+.vn-ghost{fill:none;stroke:var(--on-line);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:2 5}
+.vn-stem{fill:none;stroke:#bfe6b4;stroke-width:4;stroke-linecap:round}
+.vn-leaf{fill:#bfe6b4}
 .tr-tile{fill:var(--on-faint)} .tr-tile.on{fill:var(--on)} .tr-l{font-family:var(--mono);font-weight:700;font-size:12px;text-anchor:middle;fill:var(--on);text-transform:uppercase} .tr-l.on{fill:var(--trail-edge)}
 
 /* entrance: one staggered moment */
@@ -176,15 +185,15 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     <section class="today" aria-label="Today's word puzzles">
       <a class="tile daily t-five" href="fiveletters.html" id="tFive">
         <div class="art" id="artFive"></div>
-        <div class="meta"><h3>Five Letters</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
+        <div class="meta"><h3>Starfish</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
       </a>
       <a class="tile daily t-trail" href="trail.html" id="tTrail">
         <div class="art" id="artTrail"></div>
-        <div class="meta"><h3>Word Trail</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
+        <div class="meta"><h3>Tendril</h3><p class="status" id="sTrail"></p><div class="prog" id="bTrail" hidden><i></i></div><span class="cta" id="cTrail">Play</span></div>
       </a>
       <a class="tile wide t-groups span" href="groups.html?daily" id="tGroups">
         <div class="art" id="artGroups"></div>
-        <div class="meta"><h3>Four Groups</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
+        <div class="meta"><h3>Clover</h3><p class="status" id="sGroups"></p><span class="cta" id="cGroups">Play</span></div>
       </a>
     </section>
     <h2 class="sec">Casual games</h2>
@@ -287,6 +296,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 <script src="groups-bank.js"></script>
 <script src="groups-core.js"></script>
 <script src="chowka-core.js"></script>
+<script src="emblems.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -299,19 +309,23 @@ const svg = (vb, body) => `<svg viewBox="${vb}" aria-hidden="true">${body}</svg>
 const setBar = (id, frac) => { const b = $(id); b.hidden = false; b.firstElementChild.style.width = Math.round(100 * Math.min(1, frac)) + '%'; };
 const badge = el => el.insertAdjacentHTML('afterbegin', '<span class="done-badge" aria-label="Done"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>');
 
-// ---- Five Letters: today's board as colors only (no spoilers) ----
+// the three nature-named games get their emblem as a big faint mark in the tile's corner
+[['tFive', 'starfish'], ['tTrail', 'tendril'], ['tGroups', 'clover']].forEach(([id, n]) => $(id).insertAdjacentHTML('beforeend', `<span class="wm">${Emblems.icon(n)}</span>`));
+
+// ---- Starfish: today's guesses as a starfish, colours only (no spoilers) ----
 let fiveDone = false;
 (function(){
   const d = get('five-daily', null), playing = d && d.day === fiveDay;
   const score = (g, a) => { const r = Array(5).fill('absent'), left = {};
     for (let i = 0; i < 5; i++){ if (g[i] === a[i]) r[i] = 'correct'; else left[a[i]] = (left[a[i]] || 0) + 1; }
     for (let i = 0; i < 5; i++) if (r[i] !== 'correct' && left[g[i]] > 0){ r[i] = 'present'; left[g[i]]--; } return r; };
-  let body = '';
-  for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++){
-    const x = c * 21 + 2, y = r * 21 + 2, g = playing && d.guesses[r];
-    body += g ? `<rect x="${x}" y="${y}" width="18" height="18" rx="3.5" class="f-${score(g, d.answer)[c]}"/>` : `<rect x="${x + .8}" y="${y + .8}" width="16.4" height="16.4" rx="3" class="f-empty"/>`;
-  }
-  $('artFive').innerHTML = svg('0 0 107 128', body);
+  // a starfish, one arm per letter, coloured by the best that letter has done today (colours only, no letters)
+  const rank = { absent: 1, present: 2, correct: 3 }, best = [0, 0, 0, 0, 0], used = playing ? d.guesses.length : 0;
+  if (playing) d.guesses.forEach(g => score(g, d.answer).forEach((x, i) => { best[i] = Math.max(best[i], rank[x]); }));
+  const star = Emblems.starfish(best.map(b => [null, 'sf-a', 'sf-p', 'sf-c'][b]), { line: 'rgba(255,255,255,.6)', dots: 'rgba(0,0,0,.13)' });
+  let pips = '';
+  for (let i = 0; i < 6; i++) pips += `<circle cx="${23 + i * 12}" cy="112" r="3.6" class="sf-pip${i < used ? ' on' : ''}"/>`;
+  $('artFive').innerHTML = svg('0 0 100 118', star.replace('<svg', '<svg width="100" height="100"') + pips);
   const st = get('five-stats', {}).daily;
   if (playing && d.done){
     fiveDone = true; badge($('tFive'));
@@ -323,17 +337,23 @@ let fiveDone = false;
   } else $('sFive').innerHTML = `No. ${fiveDay + 1} is ready`;
 })();
 
-// ---- Word Trail: today's grid, letters only ----
+// ---- Tendril: today's grid, letters only, and a vine that grows with your progress ----
 let trailDone = false;
 (function(){
   const grids = (window.TRAIL_DAILY || '').match(/.{16}/g) || [], grid = grids.length ? grids[((trailDay % grids.length) + grids.length) % grids.length] : '';
   const d = get('trail-daily', null), playing = d && d.day === trailDay;
+  // today's letters, with a vine climbing up the side of the grid that grows as you find the words
   let body = '';
   for (let i = 0; i < 16; i++){
-    const x = (i % 4) * 36 + 2, y = Math.floor(i / 4) * 36 + 2, done = playing && d.done;
-    body += `<rect x="${x}" y="${y}" width="32" height="32" rx="6" class="tr-tile${done ? ' on' : ''}"/><text x="${x + 16}" y="${y + 21}" class="tr-l${done ? ' on' : ''}" style="font-size:15px">${grid[i] || ''}</text>`;
+    const x = (i % 4) * 33 + 40, y = Math.floor(i / 4) * 33 + 16, done = playing && d.done;
+    body += `<rect x="${x}" y="${y}" width="29" height="29" rx="6" class="tr-tile${done ? ' on' : ''}"/><text x="${x + 14.5}" y="${y + 19.5}" class="tr-l${done ? ' on' : ''}" style="font-size:14px">${grid[i] || ''}</text>`;
   }
-  $('artTrail').innerHTML = svg('0 0 146 146', body);
+  const frac = !playing ? 0 : d.done ? 1 : d.total ? (d.found || []).length / d.total : 0;
+  const VINE = 'M12 160C6 132 26 114 18 88C12 66 10 40 24 22C36 6 58 4 60 14C62 22 52 26 48 20';
+  const LEAVES = [[.18, 'M15 128C4 126 0 116 2 108C12 110 17 118 15 128Z'], [.42, 'M17 82C24 74 34 72 38 76C34 84 25 87 17 82Z'], [.66, 'M15 40C5 36 3 26 6 19C14 23 18 31 15 40Z']];
+  body += `<path d="${VINE}" class="vn-ghost"/>` + (frac > 0 ? `<path d="${VINE}" pathLength="1" class="vn-stem" style="stroke-dasharray:${frac.toFixed(3)} 2"/>` : '')
+    + LEAVES.filter(([at]) => frac >= at).map(([, dd]) => `<path d="${dd}" class="vn-leaf"/>`).join('');
+  $('artTrail').innerHTML = svg('0 0 172 164', body);
   if (playing && d.done){
     trailDone = true; badge($('tTrail'));
     $('sTrail').innerHTML = `No. ${trailDay + 1} complete in <b>${fmt(d.elapsed || 0)}</b>`;
@@ -374,21 +394,17 @@ let chessDone = false;
   if (st && st.games) $('sDaily').innerHTML += `<br>Practice rating <b>${Math.round(st.rating)}</b>`;
 })();
 
-// ---- Four Groups: today's three dailies; the board shows your usual level ----
+// ---- Clover: today's three dailies; the clover shows your usual level ----
 let groupsDone = false;
 (function(){
   const prog = get('groups-progress', {}), names = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
   let lv = get('groups-level', 'medium'); if (!names[lv]) lv = 'medium';
   const at = l => prog['d' + groupsDay + l[0]];
   const g = at(lv);
-  let body = '';
   const rows = g ? g.solved.slice() : [];
   if (g && g.done && !g.won) [0, 1, 2, 3].forEach(x => { if (!rows.includes(x)) rows.push(x); });
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++){
-    const cls = rows[r] != null ? 'gr-' + (rows[r] + 1) : 'gr-cell';
-    body += `<rect x="${c * 24 + 2}" y="${r * 24 + 2}" width="21" height="21" rx="4" class="${cls}"/>`;
-  }
-  $('artGroups').innerHTML = svg('0 0 100 100', body);
+  // a clover that gains a leaf, in the group's colour, for each group found at your usual level
+  $('artGroups').innerHTML = Emblems.clover([0, 1, 2, 3].map(k => rows[k] != null ? 'gr-' + (rows[k] + 1) : null), { line: 'rgba(255,255,255,.6)', stem: 'rgba(255,255,255,.75)', vein: 'rgba(0,0,0,.18)' });
   $('tGroups').href = 'groups.html?daily&level=' + lv;
   const done = Object.keys(names).filter(l => at(l) && at(l).done), won = done.filter(l => at(l).won);
   groupsDone = won.length > 0 || done.length === 3; // one solved daily keeps the streak going
@@ -607,7 +623,7 @@ let gpzDone = false;
   $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const left = [!fiveDone && 'Five Letters', !trailDone && 'Word Trail', !chessDone && 'Chess Puzzles', !groupsDone && 'Four Groups'].filter(Boolean);
+  const left = [!fiveDone && 'Starfish', !trailDone && 'Tendril', !chessDone && 'Chess Puzzles', !groupsDone && 'Clover'].filter(Boolean);
   $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${['', '', 'Two', 'Three', 'Four'][left.length]} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
