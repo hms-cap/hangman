@@ -67,15 +67,8 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .tdot[hidden]{display:none}
 .panel-tab{display:flex;flex-direction:column;gap:18px}
 .panel-tab[hidden]{display:none}
-/* swiping between tabs: the new tab slides in from the side it came from; at the first/last tab the page nudges and settles */
-.panel-tab.from-r{animation:tabR .24s ease-out}
-.panel-tab.from-l{animation:tabL .24s ease-out}
-.panel-tab.edge-l{animation:edgeL .28s ease-out}
-.panel-tab.edge-r{animation:edgeR .28s ease-out}
-@keyframes tabR{from{transform:translateX(28%);opacity:0}to{transform:none;opacity:1}}
-@keyframes tabL{from{transform:translateX(-28%);opacity:0}to{transform:none;opacity:1}}
-@keyframes edgeL{40%{transform:translateX(14px)}}
-@keyframes edgeR{40%{transform:translateX(-14px)}}
+/* swiping between tabs (script below moves the panels); vertical scrolling stays with the browser */
+.hub{touch-action:pan-y}
 .hub{overflow-x:clip}
 
 /* Tiles */
@@ -677,26 +670,39 @@ let gpzDone = false;
       if (d){ e.preventDefault(); show(TABS[(k + d + TABS.length) % TABS.length], true); }
     });
   });
-  // Swipe left for the next tab, right for the previous one (no wrap-around). Only a quick, clearly sideways swipe
-  // counts, so scrolling the page or tapping a tile still works; swipes from the screen edges are left to the system.
+  // Swipe left for the next tab, right for the previous one, round and round (Go → Casual, Casual → Go).
+  // The page follows the finger; let go past a quarter of the screen (or flick) and the next tab slides in,
+  // otherwise it springs back. Vertical scrolling, swipes from the screen edges and swipes over an open sheet are left alone.
   const cur = () => (btns.find(b => b.getAttribute('aria-selected') === 'true') || btns[0]).dataset.tab;
-  const play = (key, cls) => { const p = $('p-' + key); p.classList.remove('from-r', 'from-l', 'edge-l', 'edge-r'); void p.offsetWidth; p.classList.add(cls);
-    p.addEventListener('animationend', () => p.classList.remove(cls), { once: true }); };
-  let t0 = null;
+  const panelOf = k => $('p-' + k);
+  const set = (el, x, ms) => { el.style.transition = ms ? `transform ${ms}ms cubic-bezier(.2,.7,.3,1), opacity ${ms}ms` : 'none';
+    el.style.transform = x ? `translateX(${x}px)` : ''; el.style.opacity = x ? String(Math.max(.25, 1 - Math.abs(x) / innerWidth)) : ''; };
+  let g = null, busy = false;
   addEventListener('touchstart', e => {
     const t = e.touches[0];
-    t0 = e.touches.length === 1 && !document.querySelector('.sheet:not([hidden])') && t.clientX > 24 && t.clientX < innerWidth - 24
-      ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+    g = !busy && e.touches.length === 1 && !document.querySelector('.sheet:not([hidden])') && t.clientX > 20 && t.clientX < innerWidth - 20
+      ? { x: t.clientX, y: t.clientY, dx: 0, at: Date.now(), drag: null, el: panelOf(cur()) } : null;
   }, { passive: true });
-  addEventListener('touchend', e => {
-    if (!t0) return;
-    const t = e.changedTouches[0], dx = t.clientX - t0.x, dy = t.clientY - t0.y, ms = Date.now() - t0.at; t0 = null;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.8 || ms > 700) return;
-    const d = dx < 0 ? 1 : -1, k = TABS.indexOf(cur()) + d;
-    if (k < 0 || k >= TABS.length){ play(cur(), d > 0 ? 'edge-r' : 'edge-l'); return; }
-    show(TABS[k]); play(TABS[k], d > 0 ? 'from-r' : 'from-l');
+  addEventListener('touchmove', e => {
+    if (!g) return;
+    const t = e.touches[0], dx = t.clientX - g.x, dy = t.clientY - g.y;
+    if (g.drag === null){ if (Math.hypot(dx, dy) < 10) return; g.drag = Math.abs(dx) > Math.abs(dy) * 1.2; if (!g.drag){ g = null; return; } }
+    g.dx = dx; g.last = { x: t.clientX, at: Date.now() }; set(g.el, dx, 0);
   }, { passive: true });
-  addEventListener('touchcancel', () => { t0 = null; }, { passive: true });
+  function release(){
+    if (!g || !g.drag){ g = null; return; }
+    const { el, dx } = g, v = Math.abs(dx) / Math.max(1, Date.now() - g.at); g = null;
+    if (Math.abs(dx) < innerWidth * .25 && !(Math.abs(dx) > 50 && v > .5)){ set(el, 0, 220); return; } // spring back
+    const d = dx < 0 ? 1 : -1, next = TABS[(TABS.indexOf(cur()) + d + TABS.length) % TABS.length];
+    busy = true; set(el, -d * innerWidth * .6, 140);
+    setTimeout(() => {
+      set(el, 0, 0); show(next);
+      const n = panelOf(next); set(n, d * innerWidth * .35, 0); void n.offsetWidth; set(n, 0, 240);
+      setTimeout(() => { n.style.transition = ''; busy = false; }, 250);
+    }, 140);
+  }
+  addEventListener('touchend', release, { passive: true });
+  addEventListener('touchcancel', () => { if (g && g.drag) set(g.el, 0, 220); g = null; }, { passive: true });
 
   const tabOf = h => h === 'casual' ? 'more' : TABS.includes(h) ? h : null;
   show(tabOf(location.hash.slice(1)) || 'more');
