@@ -1,7 +1,7 @@
 {
   "name": "Paper Games",
   "short_name": "Paper Games",
-  "description": "Hangman, Sudoku, Starfish, Chess, Tendril, Clover, Snake and Chowka Bara on graph paper. Works offline.",
+  "description": "Hangman, Sudoku, Stelium, Chess, Tendril, Clover, Snake and Chowka Bara on graph paper. Works offline.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

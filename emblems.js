@@ -1,4 +1,4 @@
-// Emblems for the three daily word games: Tendril (a curling vine), Starfish (five arms) and Clover (four leaves).
+// Emblems for the three daily word games: Tendril (a curling vine), Stelium (a five-pointed star) and Clover (four leaves).
 // Every drawing is a 100×100 SVG string. icon(name) is a two-tone mark in currentColor; starfish(fills) and
 // clover(fills) take one fill per arm or leaf (a CSS colour or class name, or null for an empty outline) so a page
 // can show progress with them; tendril(frac) draws the vine grown to frac (0..1) with leaves appearing as it goes.

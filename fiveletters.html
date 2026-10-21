@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#102a43">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Starfish</title>
+<title>Stelium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
@@ -89,7 +89,7 @@
 <div class="app">
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
-    <h1>Starfish</h1>
+    <h1>Stelium</h1>
     <div class="icons">
       <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
       <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
@@ -124,7 +124,7 @@
       <li><b>Daily</b>: one word a day, the same for everyone. A new one starts at midnight.</li>
       <li><b>Practice</b>: as many random words as you like, with separate stats.</li>
     </ul>
-    <p class="why" id="whyName">Five letters, five arms: each guess colours your starfish.</p>
+    <p class="why" id="whyName"><span>Stelium, after <i>stellium</i>, a cluster of stars. Five letters, five points: each guess colours your star.</span></p>
     <button class="btn primary" id="helpClose" type="button">Got it</button>
   </div>
 </div>
@@ -326,7 +326,7 @@ document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e =
 
 function shareText(){
   const emoji = { correct: settings.hc ? '🟧' : '🟦', present: settings.hc ? '🟦' : '🟨', absent: '⬜' };
-  const head = (mode === 'daily' ? `Starfish No. ${G.day + 1}` : 'Starfish practice') + ` ${G.won ? G.guesses.length : 'X'}/6${G.hard ? '*' : ''}`;
+  const head = (mode === 'daily' ? `Stelium No. ${G.day + 1}` : 'Stelium practice') + ` ${G.won ? G.guesses.length : 'X'}/6${G.hard ? '*' : ''}`;
   return head + '\n\n' + G.guesses.map(g => score(g, G.answer).map(s => emoji[s]).join('')).join('\n');
 }
 let tick;

@@ -9,7 +9,7 @@
 const GAMES = [
   ['hangman', 'Hangman', 'hangman.html', '#c0393f'],
   ['sudoku', 'Sudoku', 'sudoku.html', '#1f7a63'],
-  ['five', 'Starfish', 'fiveletters.html', '#d38c1f'],
+  ['five', 'Stelium', 'fiveletters.html', '#d38c1f'],
   ['trail', 'Tendril', 'trail.html', '#2e5ea6'],
   ['groups', 'Clover', 'groups.html', '#7457a6'],
   ['chess', 'Chess', 'chess.html', '#33424f'],
@@ -134,7 +134,7 @@ function close(byAction){
 // Today's daily puzzles, in the order the home screen shows them, and whether each is finished
 // (same rules as the home screen: Clover counts once any level is solved, or all three are played).
 const DAILIES = [
-  ['five', 'Starfish', 'fiveletters.html?daily', [2026, 9, 14]],
+  ['five', 'Stelium', 'fiveletters.html?daily', [2026, 9, 14]],
   ['trail', 'Tendril', 'trail.html?daily', [2026, 9, 16]],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html?daily', [2026, 9, 17]],
   ['groups', 'Clover', 'groups.html?daily', [2026, 9, 16]],

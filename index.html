@@ -125,7 +125,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .pc .px{fill:none;stroke-width:2.3} .pc.w .px{stroke:#1d262d} .pc.b .px{stroke:#27323b}
 .ck-x{fill:none;stroke:var(--on-line);stroke-width:2;stroke-linecap:round} .ck-p0{fill:var(--on);stroke:var(--chowka-edge);stroke-width:1.5} .ck-p1{fill:#ffd27a;stroke:var(--chowka-edge);stroke-width:1.5}
 .sn-body{fill:none;stroke:var(--on);stroke-width:7;stroke-linecap:round;stroke-linejoin:round} .sn-food{fill:#ffd27a}
-/* Tendril, Starfish, Clover: a big faint emblem in the corner, and themed boards */
+/* Tendril, Stelium, Clover: a big faint emblem in the corner, and themed boards */
 .wm{position:absolute;right:-16px;bottom:-20px;width:118px;height:118px;color:#fff;opacity:.14;transform:rotate(-14deg);pointer-events:none;z-index:0}
 .wm svg{width:100%;height:100%;display:block}
 .t-five .wm{right:-22px;bottom:-26px;transform:rotate(18deg)} .t-groups .wm{width:132px;height:132px;bottom:-30px}
@@ -185,7 +185,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     <section class="today" aria-label="Today's word puzzles">
       <a class="tile daily t-five" href="fiveletters.html" id="tFive">
         <div class="art" id="artFive"></div>
-        <div class="meta"><h3>Starfish</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
+        <div class="meta"><h3>Stelium</h3><p class="status" id="sFive"></p><span class="cta" id="cFive">Play</span></div>
       </a>
       <a class="tile daily t-trail" href="trail.html" id="tTrail">
         <div class="art" id="artTrail"></div>
@@ -312,7 +312,7 @@ const badge = el => el.insertAdjacentHTML('afterbegin', '<span class="done-badge
 // the three nature-named games get their emblem as a big faint mark in the tile's corner
 [['tFive', 'starfish'], ['tTrail', 'tendril'], ['tGroups', 'clover']].forEach(([id, n]) => $(id).insertAdjacentHTML('beforeend', `<span class="wm">${Emblems.icon(n)}</span>`));
 
-// ---- Starfish: today's guesses as a starfish, colours only (no spoilers) ----
+// ---- Stelium: today's guesses as a starfish, colours only (no spoilers) ----
 let fiveDone = false;
 (function(){
   const d = get('five-daily', null), playing = d && d.day === fiveDay;
@@ -623,7 +623,7 @@ let gpzDone = false;
   $('streakN').textContent = n; $('streak').classList.toggle('cold', !n);
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const left = [!fiveDone && 'Starfish', !trailDone && 'Tendril', !chessDone && 'Chess Puzzles', !groupsDone && 'Clover'].filter(Boolean);
+  const left = [!fiveDone && 'Stelium', !trailDone && 'Tendril', !chessDone && 'Chess Puzzles', !groupsDone && 'Clover'].filter(Boolean);
   $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${['', '', 'Two', 'Three', 'Four'][left.length]} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
 })();
 
