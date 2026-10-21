@@ -44,6 +44,13 @@ const css = `
 .gn-act.armed b{color:var(--miss)}
 .gn-home{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;font-size:1.3rem;padding:10px 18px}
 .gn-home svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.gn-player{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--key);padding:9px 12px;cursor:pointer;color:var(--ink)}
+.gn-player:active{background:var(--peer)}
+.gn-player .pl-av{width:34px;height:34px;font-size:1.2rem}
+.gn-player .gn-pt{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.gn-player b{font-weight:600;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gn-player small{color:var(--muted);font-size:.8rem}
+.gn-player svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
 .gn-games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .gn-game{display:flex;align-items:center;gap:7px;padding:7px 9px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--key);color:var(--ink);text-decoration:none;font-size:.82rem;font-weight:600;min-width:0}
 .gn-game i{flex:none;width:12px;height:12px;border-radius:4px;background:var(--gc)}
@@ -71,6 +78,7 @@ function build(){
     <div class="gn-head"><h2 id="gnTitle">${here}</h2></div>
     <p class="gn-note" id="gnNote"></p>
     <div class="gn-acts" id="gnActs"></div>
+    <button class="gn-player" type="button" id="gnPlayer" hidden></button>
     <a class="btn primary gn-home" href="index.html"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>
     <span class="label">Switch game</span>
     <div class="gn-games">${GAMES.map(([id, name, href, c]) => `<a class="gn-game" href="${href}" style="--gc:${c}"${id === cfg.id ? ' aria-current="page"' : ''}><i></i><span>${name}</span></a>`).join('')}</div>
@@ -79,6 +87,8 @@ function build(){
   document.body.appendChild(sheet);
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
   sheet.querySelector('#gnClose').addEventListener('click', close);
+  // Switch player (profiles.js): close this menu, open the player list; switching reloads the page as them
+  sheet.querySelector('#gnPlayer').addEventListener('click', () => { close(); window.Players && Players.open(); });
   sheet.querySelector('.gn-games').addEventListener('click', e => { const a = e.target.closest('a'); if (a && a.getAttribute('aria-current')){ e.preventDefault(); close(); } });
   // the title in the header becomes the button that opens this menu
   const h1 = document.querySelector('.bar h1');
@@ -117,6 +127,10 @@ function drawActions(){
   const note = typeof cfg.note === 'function' ? cfg.note() : cfg.note;
   sheet.querySelector('#gnNote').textContent = note || '';
   sheet.querySelector('#gnNote').hidden = !note;
+  const pb = sheet.querySelector('#gnPlayer'), me = window.Players && Players.current;
+  pb.hidden = !window.Players;
+  if (window.Players) pb.innerHTML = me ? `${Players.avatar(me)}<span class="gn-pt"><b>Playing as ${me.name.replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';')}</b><small>Switch player</small></span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`
+    : `${Players.avatar({ name: '+', color: 'blue' })}<span class="gn-pt"><b>Players</b><small>Up to ${Players.MAX} people can keep their own games here</small></span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
 }
 function open(){
   if (!sheet) return;

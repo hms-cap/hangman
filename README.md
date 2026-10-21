@@ -199,10 +199,19 @@ Every game has a **‹ Games** link back to the home screen, and tapping the **g
 - Every game's end screen (Hangman, Sudoku, Snake, Chess, Chowka Bara and the daily puzzles' results) has **Up next**, which goes straight to the next of today's daily puzzles you haven't finished, and **Back to all games**. Once all four dailies are done, the daily results say so and the other games just show Back to all games
 - While the menu is open the game is paused (Sudoku's timer, Snake, Chowka Bara's clocks and computer player) and keys don't reach the game
 
+## Players
+Up to 5 people can share the app on one device. A player is just a name and a color, no password.
+- **First open** asks for a name. Any progress already on the device becomes that first player's
+- **Each player has their own everything**: games in progress, stats, streaks, daily puzzles, trainer progress and settings
+- **Color**: 8 to pick from, one per player. It becomes the player's pencil (the blue-pencil color used across the games) and tints the paper and its grid, in light and dark mode, so it's clear at a glance who's playing
+- **Switching**: tap the badge at the top of the home screen, or **Switch player** in any game's menu. Picking someone else always shows a confirmation screen (Switch to Maya?) before the page reloads as them; the current player's game stays saved
+- **Edit** (pencil icon) renames or recolors a player. **Remove** asks for a second tap and deletes that player's saves from the device; the player who's playing now can't be removed
+
 ## Files
 | File | What it is |
 | --- | --- |
 | `index.html` | Home screen |
+| `profiles.js` | Players: the player list, switch/confirm/edit screens, each player's color theme, and keeping each player's saves apart (loaded first on every page; prefixes every saved key with the player, except the first player's) |
 | `hangman.html`, `words.js` | Hangman game and word list |
 | `sudoku.html`, `puzzles.js`, `sudoku-coach.js` | Sudoku game; puzzle set; coach (technique finder and step-by-step lessons for teach mode and the technique guide) |
 | `fiveletters.html`, `fivewords.js` | Stelium game; answers in daily order plus extra accepted guesses |

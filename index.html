@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="paper.css">
+<script src="profiles.js"></script>
 <style>
 /* Game hub: graph-paper ground, one solid color per game, chunky pressable tiles whose art is the player's live game state.
    Layout: header with streak, then three tabs (Casual, Chess, Go); each tab has its "Today" daily tiles and a library of wide tiles. */
@@ -48,6 +49,10 @@ html,body{height:auto;min-height:100%}
 .streak svg{width:20px;height:20px}
 .streak .fl{fill:var(--flame)} .streak .fl2{fill:#ffd27a}
 .streak.cold .fl{fill:var(--line)} .streak.cold .fl2{fill:var(--paper)}
+.top-r{display:flex;align-items:center;gap:8px;flex:none}
+.top-r .pl-badge{padding:3px;max-width:none}
+.top-r .pl-badge span:not(.pl-av){display:none}
+@media (min-width:430px){.top-r .pl-badge{padding:3px 12px 3px 3px}.top-r .pl-badge span:not(.pl-av){display:inline;max-width:9em}}
 .greet{margin:-8px 0 0;color:var(--muted);font-size:1rem;line-height:1.4}
 .greet b{color:var(--ink);font-weight:600}
 
@@ -167,9 +172,11 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 <main class="hub">
   <header class="top">
     <h1 class="brand">Paper Games</h1>
+    <div class="top-r" id="topR">
     <div class="streak cold" id="streak" title="Days in a row you've finished a daily puzzle">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fl" d="M12 2c1 3.4 5.8 5.6 5.8 11.2A5.8 5.8 0 016.2 13.6c0-2.4 1.1-4 2.6-5.4c.2 1.6.9 2.8 2.1 3.4C11.2 8.2 10.4 5 12 2z"/><path class="fl2" d="M12 12.4c1.3 1.4 2.6 2.5 2.6 4.4a2.6 2.6 0 01-5.2 0c0-1.5.9-2.4 2.6-4.4z"/></svg>
       <span id="streakN">0</span>
+    </div>
     </div>
   </header>
   <p class="greet" id="greet"></p>
@@ -624,7 +631,20 @@ let gpzDone = false;
   $('streak').setAttribute('aria-label', `${n}-day streak`);
   const h = today.getHours(), part = h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const left = [!fiveDone && 'Stelium', !trailDone && 'Tendril', !chessDone && 'Chess Puzzles', !groupsDone && 'Clover'].filter(Boolean);
-  $('greet').innerHTML = `${part}. ` + (left.length >= 2 ? `${['', '', 'Two', 'Three', 'Four'][left.length]} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
+  const me = window.Players && Players.current, who = me ? `, <b id="greetWho">${me.name.replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';')}</b>` : '';
+  $('greet').innerHTML = `${part}${who}. ` + (left.length >= 2 ? `${['', '', 'Two', 'Three', 'Four'][left.length]} daily puzzles are waiting.` : left.length === 1 ? `<b>${left[0]}</b> is still waiting today.` : 'All of today\'s puzzles are done. See you tomorrow.');
+})();
+
+// ---- Players: badge in the header (tap to switch); on first run, name the first player ----
+(function(){
+  if (!window.Players) return;
+  $('topR').prepend(Players.badge());
+  Players.welcome();
+  addEventListener('players:change', () => { // first name or a rename: put the name in the greeting
+    const me = Players.current, g = $('greet'); if (!me) return;
+    let b = $('greetWho'); if (!b){ g.innerHTML = g.innerHTML.replace(/^([^.]+)\./, '$1, <b id="greetWho"></b>.'); b = $('greetWho'); }
+    if (b) b.textContent = me.name;
+  });
 })();
 
 // ---- Tabs: Casual (word puzzles and the other games; the landing tab), Chess and Go. A dot marks a tab with a daily waiting ----
