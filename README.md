@@ -4,7 +4,7 @@ Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Ten
 
 **Play:** https://hms-cap.github.io/hangman/
 
-The home page has three tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) and **Go** (Go Problems daily, Go, Go Trainer). `#chess` or `#go` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting.
+The home page has three tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) and **Go** (Go Problems daily, Go, Go Trainer). `#chess` or `#go` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting. Swipe left or right anywhere on the page to move between tabs.
 
 ## Install
 **iPhone and iPad**
