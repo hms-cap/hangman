@@ -30,6 +30,8 @@
 .bar h1{font-size:1.8rem}
 @media (max-width:440px){.back .txt{display:none}}
 .iconbtn{justify-self:end;border:1px solid var(--key-edge);background:var(--key);border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.hdr-r{justify-self:end;display:flex;gap:6px}
+#glBody{display:flex;flex-direction:column;gap:12px}
 .iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
 #mapView{flex:1 1 auto;min-height:0;overflow:auto;margin:0 -16px;padding:0 16px 20px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch}
@@ -129,7 +131,10 @@
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
     <h1>Go Trainer</h1>
+    <div class="hdr-r">
+    <button class="iconbtn" id="helpBtn" type="button" aria-label="Go terms: a glossary with diagrams"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
     <button class="iconbtn" id="setBtn" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+    </div>
   </header>
 
   <div id="mapView">
@@ -182,10 +187,20 @@
   </div>
 </div>
 
+<div class="sheet" id="glSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="glTitle">
+    <h2 id="glTitle">Go terms</h2>
+    <p>The words used in the drills and their explanations, each with a picture. Dots mark liberties (red: the last one), dashed circles mark a move to look at, numbers show the order of moves.</p>
+    <div id="glBody"></div>
+    <button class="btn" id="glClose" type="button">Close</button>
+  </div>
+</div>
+
 <script src="go-core.js"></script>
 <script src="go-solver.js"></script>
 <script src="go-problem.js"></script>
 <script src="go-problems-data.js"></script>
+<script src="go-glossary.js"></script>
 <script src="go-trainer-core.js"></script>
 <script src="game-nav.js"></script>
 <script>
@@ -237,6 +252,7 @@ function drawMap(){
   $('intro').innerHTML = passed
     ? `<b>${passed} of ${total}</b> levels passed${mastered ? `, <b>${mastered}</b> mastered` : ''}. Pass a level to unlock the next one in its group; replay any level as often as you like to master it (every drill right first time).`
     : 'New to Go? Start with <b>Learn the rules</b>: liberties, capturing, the moves you may not play, and counting. The other groups teach the techniques you need in real games. Every drill gives you three tries, and explains what went wrong.';
+  $('intro').innerHTML += ' Words like <a data-term="atari">atari</a>, <a data-term="ko">ko</a> and <a data-term="eye">eyes</a> are explained with pictures in the <a data-term="">glossary</a> (the ? button).';
   $('tracks').innerHTML = T.TRACKS.map(t => {
     const done = t.levels.filter((_, i) => (lvState(t.key, i) || {}).stars > 0).length;
     return `<section class="track${t.beginner ? ' beginner' : ''}"><h2>${t.name}${t.beginner ? '<span class="pill">Beginners</span>' : ''}<small>${done}/${t.levels.length}</small></h2><p>${t.blurb}</p><div class="lvls">` +
@@ -256,17 +272,31 @@ function openLevel(tk, i){
   const t = T.TRACKS.find(x => x.key === tk), L = t.levels[i], st = lvState(tk, i);
   chosen = { tk, i };
   $('lvTrack').textContent = `${t.name} · level ${i + 1}`;
-  $('lvTitle').textContent = L.name; $('lvAbout').textContent = L.about;
+  $('lvTitle').textContent = L.name; $('lvAbout').innerHTML = GoGlossary.linkify(esc(L.about));
   $('lvInfo').innerHTML = `<span><b>${L.count}</b> drills · pass with <b>${L.pass}</b></span>` + (st ? `<span>Best <b>${st.best}/${L.count}</b> ${starRow(st.stars)}</span>` : '') + `<p class="mnote">${masteryNote(tk, i)}</p>`;
-  $('lvTip').textContent = L.tip;
+  $('lvTip').innerHTML = GoGlossary.linkify(esc(L.tip));
   $('lvGo').textContent = !st ? 'Start' : mastered_(tk, i) ? 'Play again' : st.stars ? 'Try for mastery' : 'Try again';
   open('lvSheet');
 }
 $('lvGo').addEventListener('click', () => { close(); startLevel(chosen.tk, chosen.i); });
 $('lvCancel').addEventListener('click', close);
+// ---------- glossary: the ? button, and every underlined term in tips, prompts and explanations ----------
+let glFrom = null; // the sheet the glossary was opened from, to go back to
+function openGlossary(term){
+  const up = [...document.querySelectorAll('.sheet:not(.gnav)')].find(x => !x.hidden && x.id !== 'glSheet'); if (up) glFrom = up.id;
+  if (!$('glBody').innerHTML) $('glBody').innerHTML = GoGlossary.html();
+  open('glSheet');
+  const el = term && $('gl-' + term);
+  if (el){ el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+  else $('glSheet').querySelector('.panel').scrollTop = 0;
+}
 function open(id){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = s.id !== id); }
 function close(){ document.querySelectorAll('.sheet:not(.gnav)').forEach(s => s.hidden = true); }
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'resSheet') close(); }));
+GoGlossary.ensureStyle();
+document.addEventListener('click', e => { const a = e.target.closest('[data-term]'); if (!a) return; e.preventDefault(); e.stopPropagation(); openGlossary(a.dataset.term); }, true);
+$('helpBtn').addEventListener('click', () => openGlossary(null));
+$('glClose').addEventListener('click', () => { const back = glFrom; glFrom = null; back ? open(back) : close(); });
 $('setBtn').addEventListener('click', () => { $('setCoords').checked = settings.coords; $('setReset').textContent = 'Reset all progress'; open('setSheet'); });
 $('setClose').addEventListener('click', close);
 $('setCoords').addEventListener('change', e => { settings.coords = e.target.checked; store.set('go-trainer-settings', settings); if (D) render(); });
@@ -306,7 +336,7 @@ function wrong(title, why, final, retry, tries = TRIES){
   D.busy = true;
   const fb = $('fb');
   fb.className = 'fb again';
-  fb.innerHTML = `<h3>${title}</h3><p>${why}</p><div class="row"><span class="left">${left === 1 ? 'One try left' : 'Two tries left'}</span><button class="btn" id="fbShow" type="button">Show the answer</button><button class="btn primary" id="fbRetry" type="button">Try again</button></div>`;
+  fb.innerHTML = `<h3>${title}</h3><p>${GoGlossary.linkify(why)}</p><div class="row"><span class="left">${left === 1 ? 'One try left' : 'Two tries left'}</span><button class="btn" id="fbShow" type="button">Show the answer</button><button class="btn primary" id="fbRetry" type="button">Try again</button></div>`;
   fb.hidden = false; drawDots(); render();
   $('fbRetry').onclick = () => { fb.hidden = true; D.busy = false; retry(); render(); };
   $('fbShow').onclick = () => { fb.hidden = true; D.busy = false; final(why); };
@@ -320,7 +350,7 @@ function resolve(ok, title, body){
   D.results[D.k] = res; drawDots();
   const last = D.k === D.items.length - 1, fb = $('fb');
   fb.className = 'fb ' + res;
-  fb.innerHTML = `<h3>${title || (res === 'ok' ? 'Correct' : res === 'help' ? 'Solved with a hint' : 'Not quite')}</h3>${body ? `<p>${body}</p>` : ''}<div class="row"><button class="btn primary" id="fbNext" type="button">${last ? 'See results' : 'Next'}</button></div>`;
+  fb.innerHTML = `<h3>${title || (res === 'ok' ? 'Correct' : res === 'help' ? 'Solved with a hint' : 'Not quite')}</h3>${body ? `<p>${GoGlossary.linkify(body)}</p>` : ''}<div class="row"><button class="btn primary" id="fbNext" type="button">${last ? 'See results' : 'Next'}</button></div>`;
   fb.hidden = false;
   $('fbNext').onclick = () => last ? finishLevel() : startItem(D.k + 1);
   try{ navigator.vibrate && navigator.vibrate(ok ? 20 : 60); }catch(_){}
@@ -383,7 +413,7 @@ function render(){
   svg.innerHTML = h;
   const pr = c.prompt();
   $('pSide').className = 'side' + (pr.side === WHITE ? ' w' : pr.side === BLACK ? '' : ' none');
-  $('pTitle').textContent = pr.title; $('pSub').innerHTML = pr.sub || '';
+  $('pTitle').textContent = pr.title; $('pSub').innerHTML = GoGlossary.linkify(pr.sub || '');
   // buttons: the controller's own (answers) and the hint
   const btns = (c.buttons ? c.buttons() : []).map(([id, label, cls]) => `<button class="btn ${cls || ''}" type="button" data-b="${id}"${D.busy || D.done ? ' disabled' : ''}>${label}</button>`);
   if (c.hint && !D.done) btns.push(`<button class="tool" type="button" data-b="hint"${D.busy || D.helped ? ' disabled' : ''}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>Hint</button>`);

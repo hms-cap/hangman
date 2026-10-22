@@ -142,6 +142,7 @@ A course from the rules to life and death, 18 levels in four groups; pass a leve
 - **Capturing techniques:** chasing, ladders, nets, throw-ins, snapbacks, and a mix
 - **Saving stones** and **Life and death:** killing and living in small and bigger corners, then a mix
 - Every drill allows three tries and explains each wrong answer; the technique levels use the checked problems from Go Problems
+- The same illustrated glossary as Go Problems: the ? button, and the underlined terms in level descriptions, tips, drill prompts and explanations (closing it returns to the sheet it was opened from)
 
 ### Tendril
 A letter-grid word search in the style of Squares. Each word you trace is drawn as a vine that leafs out between letters, and the vine on the home tile and stats sheet grows as you find the words.
