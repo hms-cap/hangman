@@ -129,6 +129,8 @@ Tsumego on a 9 × 9 board, Black to play: capture (atari, ladders, nets, throw-i
 - Every problem is built and checked by a solver (`go-solver.js`): the listed first moves are the only ones that work, moving second would fail, and no ko is involved
 - Any correct move is accepted, not just the stored one: the solver judges each move as you play it and answers with White's strongest defence
 - A wrong move shows White's refutation and says why it fails (the stones escape with three liberties, White captures your stone, White makes two eyes…); three tries per problem
+- **Walk through it:** once a problem is solved or its solution shown, step through the solution on the board: the start, each move (numbered and ringed, with the marked stones' liberties dotted, red when only one is left, and captured stones dotted), the result and the idea behind it, and finally your own wrong try if you had one. Captions come from what happens on the board: captures, ataris, liberties gained and lost, sacrifices, the vital point. Tap the board or Next step to go on
+- **Glossary:** the ? button, the hint ("New to this? See snapback") and the underlined words in every explanation open an illustrated glossary: liberty, group, atari, capture, suicide and self-atari, eyes, ko, ladder, net, snapback, throw-in and the vital point. Each term has small diagrams built by playing the moves on a real board; the techniques use a real problem from the set, shown at the start, as a numbered sequence and as the result
 - **Daily** problem (No. 1 = 20 Oct 2026), the same for everyone, easiest on Monday and hardest on Sunday; streaks, share and a countdown. It isn't part of the home page streak
 - **Practice**: rated problems picked near your rating (Elo; a first-try solve without a hint counts as a win), filters by kind, stats by kind
 - Hint, show the solution (played out move by move), numbered moves on the board
@@ -230,6 +232,7 @@ The app keeps a simple record of how long each player spends in it.
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Tendril page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Clover page; category bank; puzzle generator and solver; hand-written classics |
 | `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
+| `go-explain.js`, `go-glossary.js` | Go Problems walkthrough captions; the glossary of terms and its diagrams (checked by `tools/test-go-problems.js`) |
 | `go-solver.js`, `go-problem.js`, `go-problems-worker.js` | Capture and life-and-death reading; judging a move in a problem and explaining wrong ones; worker (`node tools/test-go-solver.js`) |
 | `go-problems.html`, `go-problems-data.js`, `go-daily.js` | Go Problems page; the problem set, made by `node tools/generate-go-problems.js` (resumable; rechecks stored problems); daily schedule (`node tools/test-go-problems.js` plays every problem through) |
 | `go-trainer.html`, `go-trainer-core.js` | Go Trainer page; the course and its drills (`node tools/test-go-trainer.js`) |

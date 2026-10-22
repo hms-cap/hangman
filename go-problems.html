@@ -89,6 +89,17 @@
 .next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .next b{font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
 .learnlink{color:var(--hit);font-size:.88rem;text-decoration:none}
+.hdr-r{justify-self:end;display:flex;align-items:center;gap:6px}
+.helpbtn{border:1px solid var(--key-edge);background:var(--key);color:var(--ink);border-radius:12px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.helpbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* walkthrough marks: liberties of the marked stones, stones just captured, the move just played */
+.goboard .lib{fill:var(--good)} .goboard .lib.one{fill:var(--mark)}
+.goboard .ghost{fill:none;stroke-width:.45;stroke-dasharray:1 1} .goboard .ghost.b{stroke:var(--st-b)} .goboard .ghost.w{stroke:var(--st-w-edge)}
+.goboard .ring.last{stroke:var(--hintc)}
+.note .stepno{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.actions .btn.arrow{min-width:52px}
+.note.ex{min-height:8.6em;overflow:auto} @media (max-height:700px){.note.ex{min-height:7em;max-height:9em}}
+#glBody{display:flex;flex-direction:column;gap:12px}
 @media (max-height:680px){.filters button{padding:4px 10px}.note p{font-size:.82rem}}
 </style>
 </head>
@@ -97,7 +108,10 @@
   <header class="bar">
     <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
     <h1>Go Problems</h1>
-    <button class="rating" id="ratingBtn" type="button" aria-label="Your problem rating and stats"><small>Rating</small><b id="rating">1000</b><span class="delta" id="delta"></span></button>
+    <div class="hdr-r">
+      <button class="helpbtn" id="helpBtn" type="button" aria-label="Go terms: a glossary with diagrams"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
+      <button class="rating" id="ratingBtn" type="button" aria-label="Your problem rating and stats"><small>Rating</small><b id="rating">1000</b><span class="delta" id="delta"></span></button>
+    </div>
   </header>
 
   <div class="mode" id="mode" role="group" aria-label="Daily or practice">
@@ -137,12 +151,23 @@
   </div>
 </div>
 
+<div class="sheet" id="glSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="glTitle">
+    <h2 id="glTitle">Go terms</h2>
+    <p>The words used in the problems and their explanations, each with a picture. Dots mark liberties (red: the last one), dashed circles mark a move to look at, numbers show the order of moves.</p>
+    <div id="glBody"></div>
+    <button class="btn" id="glClose" type="button">Back to the problem</button>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script src="go-core.js"></script>
 <script src="go-solver.js"></script>
 <script src="go-problem.js"></script>
 <script src="go-problems-data.js"></script>
+<script src="go-explain.js"></script>
+<script src="go-glossary.js"></script>
 <script src="go-daily.js"></script>
 <script src="game-nav.js"></script>
 <script>
@@ -208,27 +233,33 @@ function remember(){
 // ---------- drawing ----------
 const CELL = 10, PAD = 10, X = x => PAD + x * CELL;
 function render(){
-  const b = Z.b, N = b.N, size = (N - 1) * CELL + 2 * PAD, svg = $('board');
+  const ex = Z.ex ? Z.ex.steps[Z.ex.i] : null; // the walkthrough step on show, if any
+  const b = ex ? GoProblem.setup(Z.p, ex.moves).b : Z.b, N = b.N, size = (N - 1) * CELL + 2 * PAD, svg = $('board');
   svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
   let h = `<rect class="bg" x="0" y="0" width="${size}" height="${size}" rx="2"/>`;
-  if (Z.p.region && !Z.done) for (const s of Z.p.region){ const [x, y] = b.xy(b.parse(s)); h += `<rect class="zone" x="${X(x) - CELL / 2}" y="${X(y) - CELL / 2}" width="${CELL}" height="${CELL}"/>`; }
+  if (Z.p.region && (!Z.done || ex)) for (const s of Z.p.region){ const [x, y] = b.xy(b.parse(s)); h += `<rect class="zone" x="${X(x) - CELL / 2}" y="${X(y) - CELL / 2}" width="${CELL}" height="${CELL}"/>`; }
   for (let i = 0; i < N; i++) h += `<line class="ln" x1="${X(0)}" y1="${X(i)}" x2="${X(N - 1)}" y2="${X(i)}"/><line class="ln" x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(N - 1)}"/>`;
   for (const [x, y] of [[2, 2], [6, 2], [2, 6], [6, 6], [4, 4]]) h += `<circle class="hoshi" cx="${X(x)}" cy="${X(y)}" r=".9"/>`;
   for (let i = 0; i < N; i++) h += `<text class="crd" x="${X(i)}" y="${PAD / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${X(i)}" y="${size - PAD / 2.8}">${Go.COLS[i]}</text><text class="crd" x="${PAD / 2.8}" y="${X(i)}">${N - i}</text><text class="crd" x="${size - PAD / 2.8}" y="${X(i)}">${N - i}</text>`;
   // the marked stones: the problem's target, as it stood at the start
   const start = GoProblem.setup(Z.p, []).b, marked = new Set(start.stones(start.parse(Z.p.target)));
   // numbers for the moves played, so explanations can be followed
-  const num = new Map(); const all = Z.moves.concat(Z.wrong || []);
+  const num = new Map(); const all = ex ? ex.moves : Z.moves.concat(Z.wrong || []);
   { const t = GoProblem.setup(Z.p, []).b; all.forEach((m, k) => { if (m === 'pass') return; const q = t.parse(m); t.play(q); num.set(q, k + 1); }); }
   for (const p of b.points){
     const [x, y] = b.xy(p), v = b.c[p];
     if (v !== BLACK && v !== WHITE) continue;
     h += `<circle class="${v === BLACK ? 'sb' : 'sw'}" cx="${X(x)}" cy="${X(y)}" r="4.6"/>`;
     if (num.has(p)) h += `<text class="num ${v === BLACK ? 'onb' : 'onw'}" x="${X(x)}" y="${X(y) + .2}">${num.get(p)}</text>`;
-    else if (marked.has(p) && !Z.done) h += `<rect class="tm" x="${X(x) - 1.6}" y="${X(y) - 1.6}" width="3.2" height="3.2" style="stroke:${v === BLACK ? 'var(--st-w)' : 'var(--mark)'}"/>`;
+    else if (marked.has(p) && (!Z.done || ex)) h += `<rect class="tm" x="${X(x) - 1.6}" y="${X(y) - 1.6}" width="3.2" height="3.2" style="stroke:${v === BLACK ? 'var(--st-w)' : 'var(--mark)'}"/>`;
   }
-  if (Z.wrong){ const [x, y] = b.xy(b.parse(Z.wrong[0])); h += `<circle class="ring bad" cx="${X(x)}" cy="${X(y)}" r="5.3"/>`; }
-  if (Z.hintAt){ const [x, y] = b.xy(b.parse(Z.hintAt)); h += `<circle class="ring hint" cx="${X(x)}" cy="${X(y)}" r="4.4"/>`; }
+  if (ex){
+    for (const g of ex.ghosts){ const [x, y] = b.xy(b.parse(g.at)); h += `<circle class="ghost ${g.color === BLACK ? 'b' : 'w'}" cx="${X(x)}" cy="${X(y)}" r="4.3"/>`; }
+    if (ex.libsOf){ const t = b.parse(ex.libsOf); if (b.c[t] === BLACK || b.c[t] === WHITE){ const L = b.libs(t); for (const q of L){ const [x, y] = b.xy(q); h += `<circle class="lib${L.length === 1 ? ' one' : ''}" cx="${X(x)}" cy="${X(y)}" r="1.6"/>`; } } }
+    if (ex.ring){ const [x, y] = b.xy(b.parse(ex.ring.at)); h += `<circle class="ring ${ex.ring.kind === 'bad' ? 'bad' : 'last'}" cx="${X(x)}" cy="${X(y)}" r="5.3"/>`; }
+  }
+  if (Z.wrong && !ex){ const [x, y] = b.xy(b.parse(Z.wrong[0])); h += `<circle class="ring bad" cx="${X(x)}" cy="${X(y)}" r="5.3"/>`; }
+  if (Z.hintAt && !ex){ const [x, y] = b.xy(b.parse(Z.hintAt)); h += `<circle class="ring hint" cx="${X(x)}" cy="${X(y)}" r="4.4"/>`; }
   svg.innerHTML = h;
   renderPrompt(); renderNote(); renderActions(); renderTop();
 }
@@ -242,24 +273,32 @@ function renderTop(){
 }
 function renderPrompt(){
   const p = Z.p, el = $('prompt');
-  el.className = 'prompt' + (Z.done ? (Z.won ? ' good' : ' bad') : '');
-  $('pTitle').textContent = Z.done ? (Z.won ? 'Solved!' : 'Solution shown') : 'Black to play';
+  el.className = 'prompt' + (Z.done && !Z.ex ? (Z.won ? ' good' : ' bad') : '');
+  $('pTitle').textContent = Z.ex ? 'Walkthrough' : Z.done ? (Z.won ? 'Solved!' : 'Solution shown') : 'Black to play';
   const theme = GoProblem.THEMES[p.theme] || ['', ''];
   const dots = `<span class="tries" aria-label="${TRIES - Z.mistakes} tries left">${Array.from({ length: TRIES }, (_, i) => `<i class="${i < Z.mistakes ? 'used' : ''}"></i>`).join('')}</span>`;
   $('pSub').innerHTML = (Z.done ? `${theme[0]} · rated <b>${p.rating}</b>` : GoProblem.GOALS[p.goal] + (mode === 'daily' ? ` · ${dInfo.weekday}` : ` · rated <b>${p.rating}</b>`)) + (Z.done ? '' : dots);
 }
 function renderNote(){
   const n = $('note'), m = Z.msg;
+  if (Z.ex){ const st = Z.ex.steps[Z.ex.i]; n.className = 'note ex' + (st.tried ? ' bad' : st.final ? ' good' : '');
+    $('noteText').innerHTML = `<span class="stepno">STEP ${Z.ex.i + 1} OF ${Z.ex.steps.length}</span><br>` + GoGlossary.linkify(st.text); return; }
   n.className = 'note' + (m && m.kind ? ' ' + m.kind : '');
   if (!m){ $('noteText').innerHTML = Z.p.goal === 'kill' || Z.p.goal === 'live' ? 'The shaded points are the eye space. Tap a point to play there.' : 'Tap a point to play there. The marked stones are the ones that matter.'; return; }
-  $('noteText').innerHTML = (m.head ? `<b class="h">${m.head}</b> ` : '') + (m.busy ? `<span class="busy">${m.text}</span>` : m.text);
+  $('noteText').innerHTML = (m.head ? `<b class="h">${m.head}</b> ` : '') + (m.busy ? `<span class="busy">${m.text}</span>` : GoGlossary.linkify(m.text));
 }
 function renderActions(){
   const a = [];
+  if (Z.ex){
+    const last = Z.ex.i === Z.ex.steps.length - 1;
+    $('actions').innerHTML = `<button class="btn arrow" type="button" data-a="exPrev"${Z.ex.i ? '' : ' disabled'} aria-label="Previous step">◀</button>` +
+      (last ? '' : `<button class="btn primary" type="button" data-a="exNext">Next step ▶</button>`) + `<button class="btn${last ? ' primary' : ''}" type="button" data-a="exEnd">${last ? 'Done' : 'Close'}</button>`;
+    return;
+  }
   if (Z.done){
     if (mode === 'practice') a.push(['next', 'Next problem', true]);
     else a.push(['dsum', 'Today\'s result', true], ['practice', 'Practice', false]);
-    if (!Z.showLine) a.push(['line', 'Replay solution', false]);
+    a.push(['walk', 'Walk through it', false]);
   } else if (Z.wrong){
     a.push(['retry', 'Try again', true]);
   } else {
@@ -280,6 +319,7 @@ let toastT = null;
 function toast(t, ms = 2200){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
 const wait = ms => new Promise(r => setTimeout(r, reduced ? 0 : ms));
 $('board').addEventListener('pointerdown', async e => {
+  if (Z && Z.ex){ if (Z.ex.i < Z.ex.steps.length - 1){ Z.ex.i++; render(); } return; } // tap the board for the next step
   if (!Z || busy || Z.done) return;
   if (Z.wrong) return toast('Tap "Try again" to go back.');
   const p = pointAt(e); if (p < 0) return;
@@ -306,6 +346,7 @@ $('board').addEventListener('pointerdown', async e => {
   }
   // wrong: show White's refutation, then let the learner go back
   Z.mistakes++; rate(false);
+  if (!Z.tried) Z.tried = { moves: Z.moves.slice(), mv, refute: r.refute, why: r.why };
   await wait(380);
   Z.wrong = r.refute && r.refute !== 'pass' ? [mv, r.refute] : [mv];
   build();
@@ -321,7 +362,8 @@ async function hint(){
   busy = true; Z.hinted = true; rate(false); renderActions();
   const r = await ask({ type: 'hint', problem: Z.p, moves: Z.moves });
   busy = false; Z.hintAt = r.move || null;
-  Z.msg = r.move ? { text: `Try the ringed point.${Z.p.goal === 'kill' ? ' Look for the point that would give White an eye.' : ''}` } : { text: 'No hint here.' };
+  const term = GoExplain.THEME_TERM[Z.p.theme], label = (GoGlossary.TERMS.find(t => t.id === term) || {}).term;
+  Z.msg = r.move ? { text: `Try the ringed point.${Z.p.goal === 'kill' ? ' Look for the point that would give White an eye.' : ''}${label ? ` New to this? See <a data-term="${term}">${label.replace(/ \(.*\)/, '').toLowerCase()}</a> in the glossary.` : ''}` } : { text: 'No hint here.' };
   remember(); render();
 }
 async function giveUp(auto){
@@ -362,6 +404,20 @@ function rate(won){
   if (won){ S.solved++; S.streak++; S.best = Math.max(S.best, S.streak); } else { S.failed++; S.streak = 0; }
   save(); renderTop();
 }
+// ---------- walkthrough: the solution one move at a time, with what each move does ----------
+function walk(){ if (busy || !Z.done) return; Z.ex = { steps: GoExplain.steps(Z.p, Z.tried), i: 0 }; render(); }
+// ---------- glossary ----------
+function openGlossary(term){
+  if (!$('glBody').innerHTML) $('glBody').innerHTML = GoGlossary.html();
+  open('glSheet');
+  const el = term && $('gl-' + term);
+  if (el){ el.scrollIntoView({ block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+  else $('glSheet').querySelector('.panel').scrollTop = 0;
+}
+document.addEventListener('click', e => { const a = e.target.closest('[data-term]'); if (!a) return; e.preventDefault(); openGlossary(a.dataset.term); });
+GoGlossary.ensureStyle(); // term links are styled from the start
+$('helpBtn').addEventListener('click', () => openGlossary(null));
+$('glClose').addEventListener('click', close);
 function next(){ lastDelta = 0; const p = pickPractice(); if (p) load(p); }
 
 $('actions').addEventListener('click', async e => {
@@ -372,6 +428,9 @@ $('actions').addEventListener('click', async e => {
   else if (a === 'hint') hint();
   else if (a === 'give') giveUp(false);
   else if (a === 'line'){ const keep = Z.msg; await playLine(); Z.msg = keep; render(); }
+  else if (a === 'walk') walk();
+  else if (a === 'exNext' || a === 'exPrev'){ Z.ex.i = Math.max(0, Math.min(Z.ex.steps.length - 1, Z.ex.i + (a === 'exNext' ? 1 : -1))); render(); }
+  else if (a === 'exEnd'){ Z.ex = null; render(); }
   else if (a === 'dsum') openDaily();
   else if (a === 'practice') setMode('practice');
 });

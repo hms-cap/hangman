@@ -46,6 +46,22 @@ for (const p of PZ.slice(0, limit)) {
 }
 console.log(`played ${played} problems through, ${wrongs} wrong moves checked`);
 
+// walkthroughs: every problem gets one step per position plus a summary, with no gaps in the wording;
+// glossary: every diagram (hand-made and from problems) plays out legally
+{
+  global.Go = require('../go-core.js'); global.GoProblem = P;
+  const E = require('../go-explain.js'), GL = require('../go-glossary.js');
+  for (const p of PZ.slice(0, limit)) {
+    const st = E.steps(p, { moves: [], mv: p.answers[0], refute: 'pass', why: 'test' });
+    ok(st.length === p.line.length + 3 && st.every(x => x.text && !/undefined|NaN|\$\{/.test(x.text)), `${p.id}: walkthrough`);
+  }
+  let frames = 0;
+  for (const t of GL.TERMS) { const fr = GL.framesFor(t); ok(fr.length >= 2, `glossary ${t.id}: diagrams`); fr.forEach(f => { try { GL.figure(f); frames++; } catch (e) { ok(false, `glossary ${t.id}: ${e.message}`); } }); }
+  const ids = new Set(GL.TERMS.map(t => t.id));
+  ok(Object.values(E.THEME_TERM).every(id => ids.has(id)), 'every theme has a glossary term');
+  console.log(`walkthroughs checked; ${GL.TERMS.length} glossary terms, ${frames} diagrams`);
+}
+
 // daily: a problem for every day of the next year, Monday easier than Sunday on average
 const by = [[], [], [], [], [], [], []];
 for (let d = 0; d < 364; d++) { const x = D.problemFor(d); ok(x && PZ[x.index], `daily ${d}`); by[x.band].push(PZ[x.index].rating); }
