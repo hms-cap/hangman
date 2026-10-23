@@ -42,8 +42,7 @@
 .cell.given .v{font-family:var(--mono);font-weight:600;font-size:6.2cqw;color:var(--ink)}
 .cell.user .v{font-family:var(--hand);font-size:7.6cqw;color:var(--hit)}
 .cell.hinted .v{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
-.cell.wrong .v,.cell.conflict .v{color:var(--miss)}
-.cell.conflict::after{content:"";position:absolute;inset:3px;border:2px dashed var(--miss);border-radius:4px;opacity:.6;pointer-events:none}
+.cell.wrong .v{color:var(--miss)}
 .n{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-family:var(--mono);font-size:2.4cqw;color:var(--muted);line-height:1}
 .n span{display:flex;align-items:center;justify-content:center}
 .n span.hl{color:var(--hit);font-weight:600}
@@ -268,7 +267,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
 const SETTINGS = [
-  ['showMistakes','Show mistakes','Wrong numbers turn red straight away', true],
+  ['showMistakes','Show mistakes','Wrong numbers turn red straight away. When off, nothing is marked and mistakes are only counted', true],
   ['limit','Three-mistake limit','The puzzle ends after three wrong numbers', false],
   ['autoClear','Auto-clear notes','Placing a number removes it from notes in the same row, column and box', true],
   ['sameHL','Highlight matching numbers','Shade every square with the selected number', true],
@@ -376,8 +375,7 @@ function render(){
     const el = cells[i], v = S.values[i], given = S.puzzle[i] !== 0;
     let cls = 'cell' + (given ? ' given' : v ? ' user' : '') + (S.hinted[i] ? ' hinted' : '');
     if (v && !given){
-      if (settings.showMistakes && v !== S.solution[i]) cls += ' wrong';
-      else if (!settings.showMistakes && PEERS[i].some(j => S.values[j] === v)) cls += ' conflict';
+      if (settings.showMistakes && v !== S.solution[i]) cls += ' wrong'; // off: nothing is marked, mistakes are only counted
     }
     if (i === sel) cls += ' sel';
     else if (sel >= 0 && settings.areaHL && IS_PEER[sel][i]) cls += ' peer';
