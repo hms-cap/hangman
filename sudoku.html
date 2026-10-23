@@ -42,7 +42,9 @@
 .cell.given .v{font-family:var(--mono);font-weight:600;font-size:6.2cqw;color:var(--ink)}
 .cell.user .v{font-family:var(--hand);font-size:7.6cqw;color:var(--hit)}
 .cell.hinted .v{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
-.cell.wrong .v{color:var(--miss)}
+.cell.wrong .v{color:var(--miss)!important}
+/* a wrong number is also ringed, so it never relies on colour alone (some player pencils are pink or orange) */
+.cell.wrong::after{content:"";position:absolute;inset:3px;border:2px dashed var(--miss);border-radius:5px;pointer-events:none}
 .n{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-family:var(--mono);font-size:2.4cqw;color:var(--muted);line-height:1}
 .n span{display:flex;align-items:center;justify-content:center}
 .n span.hl{color:var(--hit);font-weight:600}
@@ -382,6 +384,9 @@ function render(){
     if (settings.sameHL && sv && v === sv && i !== sel) cls += ' same';
     if (el.className !== cls) el.className = cls;
     el.firstChild.textContent = v || '';
+    // set the colour on the number itself too: Safari doesn't always restyle it from the square's class
+    const red = cls.includes(' wrong') ? 'var(--miss)' : '';
+    if (el.firstChild.style.color !== red) el.firstChild.style.color = red;
     const ns = el.lastChild.children, m = v ? 0 : S.notes[i];
     for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = on && settings.sameHL && d === sv ? 'hl' : ''; }
     el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty'));
