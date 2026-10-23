@@ -1,11 +1,14 @@
-// The app's version and what changed, shown on the home screen's About tab.
+// The app's version and what changed, shown on the home screen's About page (the About button above the tabs).
 // Every change to the app bumps this: a fix → 1.0.1, a new feature or game change → 1.1.0, a big overhaul → 2.0.0.
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.0.0',
+  version: '1.0.1',
   date: '2026-10-23',
   changes: [
+    { v: '1.0.1', date: '2026-10-23', notes: [
+      'About is now a button above the game tabs, next to the time played',
+    ] },
     { v: '1.0.0', date: '2026-10-23', notes: [
       'First numbered version, with an About tab on the home screen',
       'Stelium: tide-pool colours, a live starfish, win and loss moments, and stats as a night sky',

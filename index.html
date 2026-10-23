@@ -55,14 +55,19 @@ html,body{height:auto;min-height:100%}
 .top-r .pl-badge span:not(.pl-av){display:none}
 @media (min-width:430px){.top-r .pl-badge{padding:3px 12px 3px 3px}.top-r .pl-badge span:not(.pl-av){display:inline;max-width:9em}}
 .greet-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:-8px 0 0}
-.greet-row .pt-pill{margin-top:-2px}
+.greet-r{display:flex;align-items:center;gap:6px;flex:none;margin-top:-2px}
+.ab-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px 5px 8px;border-radius:999px;background:var(--key);border:1px solid var(--key-edge);color:var(--ink);font-weight:600;font-size:.88rem;cursor:pointer;white-space:nowrap}
+.ab-btn svg{width:17px;height:17px;fill:none;stroke:var(--hit);stroke-width:2.2;stroke-linecap:round}
+.ab-btn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ab-btn[aria-pressed="true"] svg{stroke:var(--paper)}
+@media (max-width:360px){.ab-btn{padding:5px 7px;font-size:0}.ab-btn svg{width:18px;height:18px}}
 .greet{margin:0;flex:1;min-width:0;color:var(--muted);font-size:1rem;line-height:1.4}
 .greet b{color:var(--ink);font-weight:600}
 
 h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6px;line-height:1}
 
 /* Tabs: Chess, Go, everything else */
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--peer);border:1px solid var(--line);position:sticky;top:max(8px,env(safe-area-inset-top,0px));z-index:5}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--peer);border:1px solid var(--line);position:sticky;top:max(8px,env(safe-area-inset-top,0px));z-index:5}
 .tabs button{position:relative;border:0;background:transparent;border-radius:10px;padding:9px 4px;font-weight:600;font-size:.95rem;cursor:pointer;color:var(--muted);-webkit-tap-highlight-color:transparent}
 .tabs button[aria-selected="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .tabs button:focus-visible{outline:3px solid var(--hit);outline-offset:1px}
@@ -201,13 +206,14 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     </div>
     </div>
   </header>
-  <div class="greet-row"><p class="greet" id="greet"></p></div>
+  <div class="greet-row"><p class="greet" id="greet"></p><div class="greet-r" id="greetR">
+    <button class="ab-btn" id="aboutBtn" type="button" aria-controls="p-about" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r=".9" fill="currentColor" stroke="none"/></svg>About</button>
+  </div></div>
 
   <nav class="tabs" role="tablist" aria-label="Game groups">
     <button type="button" role="tab" id="tab-more" aria-controls="p-more" data-tab="more">Casual<i class="tdot" hidden></i></button>
     <button type="button" role="tab" id="tab-chess" aria-controls="p-chess" data-tab="chess">Chess<i class="tdot" hidden></i></button>
     <button type="button" role="tab" id="tab-go" aria-controls="p-go" data-tab="go">Go<i class="tdot" hidden></i></button>
-    <button type="button" role="tab" id="tab-about" aria-controls="p-about" data-tab="about">About<i class="tdot" hidden></i></button>
   </nav>
 
   <div class="panel-tab" id="p-more" role="tabpanel" aria-labelledby="tab-more">
@@ -289,7 +295,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
     </section>
   </div>
 
-  <div class="panel-tab about" id="p-about" role="tabpanel" aria-labelledby="tab-about" hidden>
+  <div class="panel-tab about" id="p-about" role="region" aria-label="About Paper Games" hidden>
     <section class="ab-card">
       <img class="ab-icon" src="icon-192.png" alt="" width="64" height="64">
       <div><h2 class="ab-name">Paper Games</h2><p class="ab-ver" id="abVer"></p></div>
@@ -678,7 +684,7 @@ let gpzDone = false;
 (function(){
   if (!window.Players) return;
   $('topR').prepend(Players.badge());
-  if (window.PlayTime) document.querySelector('.greet-row').appendChild(PlayTime.pill()); // time played today, all games
+  if (window.PlayTime) $('greetR').prepend(PlayTime.pill()); // time played today, all games (left of About)
   Players.welcome();
   addEventListener('players:change', () => { // first name or a rename: put the name in the greeting
     const me = Players.current, g = $('greet'); if (!me) return;
@@ -689,12 +695,13 @@ let gpzDone = false;
 
 // ---- Tabs: Casual (word puzzles and the other games; the landing tab), Chess and Go. A dot marks a tab with a daily waiting ----
 (function(){
-  const TABS = ['more', 'chess', 'go', 'about'];
+  const TABS = ['more', 'chess', 'go'], PANELS = TABS.concat('about'); // About is opened from the button above the tabs, not swiped to
   const waiting = { chess: !chessDone, go: !gpzDone, more: !fiveDone || !trailDone || !groupsDone };
   const btns = [...document.querySelectorAll('.tabs [role=tab]')];
   function show(key, focus){
-    btns.forEach(b => { const on = b.dataset.tab === key; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); });
-    TABS.forEach(k => $('p-' + k).hidden = k !== key);
+    btns.forEach((b, i) => { const on = b.dataset.tab === key; b.setAttribute('aria-selected', String(on)); b.tabIndex = on || (key === 'about' && !i) ? 0 : -1; if (on && focus) b.focus(); });
+    PANELS.forEach(k => $('p-' + k).hidden = k !== key);
+    $('aboutBtn').setAttribute('aria-pressed', String(key === 'about'));
     const h = key === 'more' ? '' : '#' + key; // the landing tab keeps a plain address
     if (location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h);
   }
@@ -702,12 +709,13 @@ let gpzDone = false;
     b.querySelector('.tdot').hidden = !waiting[b.dataset.tab];
     if (waiting[b.dataset.tab]) b.setAttribute('aria-label', `${b.textContent}, daily puzzle waiting`);
     b.addEventListener('click', () => show(b.dataset.tab));
+    $('aboutBtn').onclick = () => { if ($('p-about').hidden){ show('about'); scrollTo({ top: 0 }); } else show('more'); };
     b.addEventListener('keydown', e => {
       const k = TABS.indexOf(b.dataset.tab), d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
       if (d){ e.preventDefault(); show(TABS[(k + d + TABS.length) % TABS.length], true); }
     });
   });
-  // Swipe left for the next tab, right for the previous one, round and round (About → Casual, Casual → About).
+  // Swipe left for the next tab, right for the previous one, round and round (Go → Casual, Casual → Go).
   // The page follows the finger; let go past a quarter of the screen (or flick) and the next tab slides in,
   // otherwise it springs back. Vertical scrolling, swipes from the screen edges and swipes over an open sheet are left alone.
   const cur = () => (btns.find(b => b.getAttribute('aria-selected') === 'true') || btns[0]).dataset.tab;
@@ -717,7 +725,7 @@ let gpzDone = false;
   let g = null, busy = false;
   addEventListener('touchstart', e => {
     const t = e.touches[0];
-    g = !busy && e.touches.length === 1 && !document.querySelector('.sheet:not([hidden])') && t.clientX > 20 && t.clientX < innerWidth - 20
+    g = !busy && e.touches.length === 1 && $('p-about').hidden && !document.querySelector('.sheet:not([hidden])') && t.clientX > 20 && t.clientX < innerWidth - 20
       ? { x: t.clientX, y: t.clientY, dx: 0, at: Date.now(), drag: null, el: panelOf(cur()) } : null;
   }, { passive: true });
   addEventListener('touchmove', e => {
@@ -752,7 +760,7 @@ let gpzDone = false;
     draw(false);
   }
 
-  const tabOf = h => h === 'casual' ? 'more' : TABS.includes(h) ? h : null;
+  const tabOf = h => h === 'casual' ? 'more' : PANELS.includes(h) ? h : null;
   show(tabOf(location.hash.slice(1)) || 'more');
   addEventListener('hashchange', () => { const t = tabOf(location.hash.slice(1)); if (t) show(t); });
 })();

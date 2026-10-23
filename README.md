@@ -4,7 +4,7 @@ Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Ten
 
 **Play:** https://hms-cap.github.io/hangman/
 
-The home page has four tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) **Go** (Go Problems daily, Go, Go Trainer) and **About** (what the app is, its version and what's new). `#chess`, `#go` or `#about` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting. Swipe left or right anywhere on the page to move between tabs; the page follows your finger and goes round and round (About → Casual and back).
+The home page has three tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) and **Go** (Go Problems daily, Go, Go Trainer). The **About** button above the tabs shows what the app is, its version and what's new. `#chess`, `#go` or `#about` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting. Swipe left or right anywhere on the page to move between tabs; the page follows your finger and goes round and round (Go → Casual and back).
 
 ## Install
 **iPhone and iPad**
@@ -223,7 +223,7 @@ The app keeps a simple record of how long each player spends in it.
 - It's kept per player, like the other saves, under `playtime` (a year of days, each with the total and the time per game and per hour). `PlayTime.day()` and `PlayTime.days()` read it for anything else in the app that wants to use it
 
 ## Version
-The version is in `version.js` and shows on the About tab with a short list of what changed in each version. Every change bumps it (fixes 1.0.x, features 1.x.0) and sets the same number in `sw.js`'s cache name, so installed copies update; `node tools/check-version.js` checks they match. See `CLAUDE.md`.
+The version is in `version.js` and shows on the About page (the About button above the home tabs) with a short list of what changed in each version. Every change bumps it (fixes 1.0.x, features 1.x.0) and sets the same number in `sw.js`'s cache name, so installed copies update; `node tools/check-version.js` checks they match. See `CLAUDE.md`.
 
 ## Files
 | File | What it is |
