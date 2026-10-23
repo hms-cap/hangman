@@ -222,6 +222,19 @@ The app keeps a simple record of how long each player spends in it.
 - The clock runs only while the app is on screen and in use: it stops when you leave the app or after 5 minutes without a tap. A new visit starts after a 30-minute break
 - It's kept per player, like the other saves, under `playtime` (a year of days, each with the total and the time per game and per hour). `PlayTime.day()` and `PlayTime.days()` read it for anything else in the app that wants to use it
 
+## End-of-game moments
+Every game except Hangman ends with a short animation in its own theme (`celebrate.js`, drawn on one full-screen layer that never blocks taps):
+- **Sudoku**: a gold wave across the grid and pencil digits flying off it ("Flawless!" with no mistakes or hints); out of mistakes, red digits drop
+- **Stelium**: the starfish spins, with stars and rising bubbles; a loss brings the tide in
+- **Tendril**: vines climb up the screen and leaves burst from the grid
+- **Clover**: four-leaf clovers shower down in the group colours, with fireworks for a perfect game; a loss drops a few wilted leaves
+- **Chess** and **Chess Puzzles**: a gold wave across the squares, crowns, stars and fireworks ("Checkmate!"); a loss drops grey squares
+- **Go** and **Go Problems**: ink rings spread across the board and black and white stones scatter; a loss leaves grey ripples
+- **Snake**: the snake crumbles into pixels, with fireworks for a new best or a full board
+- **Chowka Bara**: a rangoli blooms on the board in the winner's colour and cowry shells shower down
+- **Trainers**: stars burst for a pass, fireworks for mastery or a finished path
+They play once, when the game ends (not when a finished game is reopened). With reduced motion turned on, only the word shows.
+
 ## Version
 The version is in `version.js` and shows on the About page (the About button above the home tabs) with a short list of what changed in each version. Every change bumps it (fixes 1.0.x, features 1.x.0) and sets the same number in `sw.js`'s cache name, so installed copies update; `node tools/check-version.js` checks they match. See `CLAUDE.md`.
 
@@ -229,6 +242,7 @@ The version is in `version.js` and shows on the About page (the About button abo
 | File | What it is |
 | --- | --- |
 | `index.html` | Home screen |
+| `celebrate.js` | End-of-game animations: particles (confetti, stars, digits, leaves, clovers, shells, stones, petals, pixels, bubbles, crowns), ripples, vines, rangoli, a board wave and the big stamp word |
 | `version.js` | App version and the What's new list for the About tab |
 | `playtime.js` | Time played: the clock, the per-player daily record, the today displays and the Time played sheet |
 | `profiles.js` | Players: the player list, switch/confirm/edit screens, each player's color theme, and keeping each player's saves apart (loaded first on every page; prefixes every saved key with the player, except the first player's) |

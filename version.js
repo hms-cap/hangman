@@ -3,9 +3,15 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.0.1',
+  version: '1.1.0',
   date: '2026-10-23',
   changes: [
+    { v: '1.1.0', date: '2026-10-23', notes: [
+      'End-of-game moments in every game except Hangman, each in its own theme:',
+      'Sudoku: digits fly off the grid; Tendril: vines climb the screen; Clover: four-leaf clovers shower down',
+      'Chess: a gold wave and crowns; Go: ink ripples and scattering stones; Chowka Bara: a rangoli and cowry shells',
+      'Snake: the snake crumbles, with fireworks for a new best; trainers: stars for a pass, fireworks for mastery',
+    ] },
     { v: '1.0.1', date: '2026-10-23', notes: [
       'About is now a button above the game tabs, next to the time played',
     ] },

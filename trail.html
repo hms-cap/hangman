@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 .app{gap:9px}
 .icons{display:flex;gap:2px;justify-self:end}
@@ -450,7 +451,12 @@ function complete(){
   if (s.best == null || S.elapsed < s.best) s.best = S.elapsed;
   store.set('trail-stats', stats);
   if (!reduced) tiles.forEach((t, i) => t.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 380, delay: i * 30 }));
-  setTimeout(openStats, 1200);
+  if (window.FX){
+    FX.vines({ color: FX.css('--em-tendril', '#3f8f4f'), leaf: FX.css('--em-leaf', '#8fcf86') });
+    FX.burst({ el: '#grid', shapes: ['leaf', 'leaf', 'confetti'], colors: [FX.css('--em-leaf', '#8fcf86'), FX.css('--em-tendril', '#3f8f4f'), FX.css('--hit')], count: 80, gravity: 420, sway: 50, speed: 900, delay: .3 });
+    FX.stamp(S.hints && S.hints.length ? 'All found!' : 'Every word!', { color: FX.css('--em-tendril', '#3f8f4f') });
+  }
+  setTimeout(openStats, 1700);
 }
 function shareText(){
   const head = mode === 'daily' ? `Tendril No. ${S.day + 1}` : `Tendril practice ${P.size}×${P.size}`;

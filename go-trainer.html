@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 /* Board colours match Go and Go Problems */
 :root{
@@ -236,6 +237,16 @@ const mastered_ = (tk, i) => ((lvState(tk, i) || {}).stars || 0) >= 3;
 const masteryNote = (tk, i) => { const st = lvState(tk, i), n = levelsOf(tk)[i].count;
   return mastered_(tk, i) ? '<b>Mastered.</b> Replay it any time to stay sharp.' : st && st.stars ? `Passed. <b>Master it</b> by getting all ${n} right first time.` : `Get all ${n} right first time to <b>master</b> it.`; };
 // What "next" means at the end of a level: the next level in the group, or the first level of the next group
+// end of a level (celebrate.js): stars burst for a pass, fireworks for mastery
+function cheerLevel(stars, label){
+  if (!window.FX || !stars) return;
+  const gold = '#f0c24a', hit = FX.css('--hit');
+  FX.burst({ el: '#resStars', shapes: ['star'], colors: [gold, '#e3a93b', hit], count: 40 + stars * 25, size: 10, speed: 900, delay: .25 });
+  if (stars >= 3) FX.fireworks({ colors: [gold, hit, FX.css('--miss')], shells: 6, delay: .5 });
+  else FX.rain({ shapes: ['confetti', 'star'], colors: [gold, hit], count: 50, delay: .3 });
+  FX.stamp(label || (stars >= 3 ? 'Mastered!' : 'Passed!'), { color: hit, top: 22 });
+}
+
 function nextAfter(tk, li){
   const ti = T.TRACKS.findIndex(x => x.key === tk), t = T.TRACKS[ti];
   if (li + 1 < t.levels.length) return unlocked(tk, li + 1) ? { tk, li: li + 1, label: `Next level: ${t.levels[li + 1].name}` } : null;
@@ -379,7 +390,7 @@ function finishLevel(){
   $('resRow').innerHTML = btns.join('');
   { const r = $('resSub'), x = r.textContent.trim(); r.textContent = x.charAt(0).toUpperCase() + x.slice(1); }
   if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'gtrainer');
-  open('resSheet');
+  open('resSheet'); cheerLevel(stars);
 }
 $('resRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;

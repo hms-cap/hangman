@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 :root{
   --gb:#e9dcb8; --gb-line:#5b4a2c; --st-b:#1f2a33; --st-b-edge:#0d1419; --st-w:#fbfbf6; --st-w-edge:#3a4650;
@@ -392,6 +393,11 @@ function finish(won, how){
   }
   remember(); render();
   if (won && !reduced) try{ navigator.vibrate && navigator.vibrate(20); }catch(_){}
+  if (won && window.FX){ // ripples from the board and a scatter of stones
+    FX.ripples({ el: '#board', color: FX.css('--ink'), rings: 4 });
+    FX.burst({ el: '#board', shapes: ['stone', 'stone', 'star'], colors: ['b', 'w', '#f0c24a'], count: Z.mistakes || Z.hinted ? 34 : 60, size: 8, speed: 760, gravity: 700, delay: .2 });
+    FX.stamp(Z.mistakes || Z.hinted ? 'Solved!' : 'First try!', { color: FX.css('--hit') });
+  }
   if (mode === 'daily') setTimeout(openDaily, 900);
 }
 // rating: one result per practice problem; a mistake or a hint counts as a miss

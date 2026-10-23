@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 :root{
   --gb:#e9dcb8; --gb-line:#5b4a2c; --st-b:#1f2a33; --st-b-edge:#0d1419; --st-w:#fbfbf6; --st-w-edge:#3a4650;
@@ -395,7 +396,17 @@ function finish(over){
   G.over = over; G.phase = 'over'; thinking = false;
   const counted = G.mode === 'ai' && !G.tutored && !G.assisted;
   if (counted){ const k = `${G.N}-${G.level}`, r = (stats[k] ||= { w: 0, l: 0 }); over.winner === G.human ? r.w++ : r.l++; store.set('go-stats', stats); }
-  save(); render(); showOver(counted);
+  save(); render(); cheer(over); showOver(counted);
+}
+function cheer(o){
+  if (!window.FX) return;
+  const mine = G.mode !== 'ai' || o.winner === G.human;
+  if (mine){
+    FX.ripples({ el: '#board', color: FX.css('--ink'), rings: 5, width: 3.5 });
+    FX.burst({ el: '#board', shapes: ['stone'], colors: o.winner === BLACK ? ['b', 'b', 'w'] : ['w', 'w', 'b'], count: 46, size: 9, speed: 820, gravity: 700, delay: .3 });
+    FX.burst({ el: '#board', shapes: ['star', 'spark'], colors: ['#f0c24a', FX.css('--hit')], count: 50, size: 7, speed: 700, delay: .45 });
+    FX.stamp(G.mode === 'ai' ? 'You win!' : `${NAME(o.winner)} wins!`, { color: FX.css('--hit') });
+  } else FX.ripples({ el: '#board', color: FX.css('--muted'), rings: 3, width: 2 });
 }
 function showOver(counted){
   const o = G.over, youWon = G.mode === 'ai' && o.winner === G.human;

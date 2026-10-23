@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 /* Snake on graph paper: the snake is a thick blue-pencil line through the squares, apples are red-pencil dots.
    Layout: header with menu, score line, square board that flexes, message, arrow pad at thumb height. */
@@ -188,6 +189,14 @@ function finish(why){
   if (S.score > prev) stats.best[bestKey()] = S.score;
   store.set('snake-stats', stats); store.set('snake-game', null);
   refresh();
+  if (window.FX){
+    const hit = FX.css('--hit'), miss = FX.css('--miss'), green = '#4f7f2a';
+    FX.burst({ el: '#cv', shapes: ['pixel'], colors: [hit, green, hit], count: Math.min(160, 40 + S.snake.length * 3), size: 9, speed: 520, gravity: 1100, spread: Math.PI * 1.6 });
+    if (S.won || S.score > prev && S.score > 0){
+      FX.fireworks({ el: '#cv', colors: [miss, green, '#f0c24a', hit], shells: S.won ? 8 : 5, shapes: ['pixel', 'star'], delay: .3 });
+      FX.stamp(S.won ? 'You win!' : 'New best!', { color: miss });
+    }
+  }
   setTimeout(() => {
     if (!S.over) return;
     $('endTitle').textContent = S.won ? 'You win!' : 'Game over';

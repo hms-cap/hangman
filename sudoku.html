@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 .status{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .status b{color:var(--ink);font-weight:600}
@@ -486,7 +487,7 @@ function restart(){
 }
 function after(){
   if (S.values.every((v,i) => v === S.solution[i])) return win();
-  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); return (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); }
+  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); cheer(false); return (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); }
   save(); render();
 }
 function win(){
@@ -500,7 +501,7 @@ function win(){
   $('winResult').innerHTML = `<div><span class="label">Time</span><b>${fmt(t)}</b>${newBest ? '<span class="newbest">new best</span>' : ''}</div>`
     + `<div><span class="label">Mistakes</span><b>${S.mistakes}</b></div><div><span class="label">Hints</span><b>${S.hints}</b></div>`;
   $('winNext').textContent = `Next ${name} puzzle`;
-  wave(); setTimeout(() => (GameNav.fillEnd('winNav', 'sudoku'), open('winSheet')), reduced ? 0 : 900);
+  wave(); cheer(true); setTimeout(() => (GameNav.fillEnd('winNav', 'sudoku'), open('winSheet')), reduced ? 0 : 1100);
 }
 
 // ---- motion & feedback ----
@@ -510,6 +511,20 @@ function celebrateUnits(i){
   for (const u of UNITS) if (u.includes(i) && u.every(j => S.values[j] === S.solution[j])) u.forEach((j,k) => pulse(j, k*35));
 }
 function wave(){ for (let i=0;i<81;i++) pulse(i, (ROW(i)+COL(i))*40); }
+// end of a puzzle (celebrate.js)
+function cheer(won){
+  if (!window.FX || S.demo) return;
+  const hit = FX.css('--hit'), ink = FX.css('--ink'), D = '123456789'.split('');
+  if (won){
+    FX.wave({ el: '#board', cols: 9, color: '#f0c24a', ttl: 1.2 });
+    FX.burst({ el: '#board', shapes: ['digit'], chars: D, colors: [hit, ink, hit, '#e0763a'], count: 80, size: 12, speed: 1000, delay: .25 });
+    FX.rain({ shapes: ['confetti'], colors: [hit, '#f0c24a', '#e07a6b', '#7bb08a', '#7fa2d6'], count: 110, delay: .35 });
+    FX.stamp(S.mistakes || S.hints ? 'Solved!' : 'Flawless!', { color: hit });
+  } else {
+    FX.rain({ shapes: ['digit'], chars: D, colors: [FX.css('--miss')], count: 34, size: 13, gravity: 260, speed: .8, over: .8 });
+    FX.stamp('Out of mistakes', { color: FX.css('--miss'), size: 'clamp(2rem,9vw,3.2rem)', tilt: -3 });
+  }
+}
 function buzz(){ try{ navigator.vibrate && navigator.vibrate(40); }catch(e){} }
 
 // ---- timer ----

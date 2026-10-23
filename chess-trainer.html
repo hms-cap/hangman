@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 /* Board colours match Chess and Chess Puzzles */
 :root{
@@ -335,6 +336,17 @@ let path = store.get('trainer-path', null);
 const savePath = () => store.set('trainer-path', path);
 const onPath = () => !!(path && path.key && T.PATHS.some(p => p.key === path.key)); // a placement result alone doesn't start a path
 const stepDone = ([tk, i]) => !!((lvState(tk, i) || {}).stars > 0);
+// end of a level (celebrate.js): stars burst for a pass, fireworks for mastery
+let cheerPath = false;
+function cheerLevel(stars, label){
+  if (!window.FX || !stars) return;
+  const gold = '#f0c24a', hit = FX.css('--hit');
+  FX.burst({ el: '#resStars', shapes: ['star'], colors: [gold, '#e3a93b', hit], count: 40 + stars * 25, size: 10, speed: 900, delay: .25 });
+  if (stars >= 3) FX.fireworks({ colors: [gold, hit, FX.css('--miss')], shells: 6, delay: .5 });
+  else FX.rain({ shapes: ['confetti', 'star'], colors: [gold, hit], count: 50, delay: .3 });
+  FX.stamp(label || (stars >= 3 ? 'Mastered!' : 'Passed!'), { color: hit, top: 22 });
+}
+
 function pathInfo(key){
   const P = T.PATHS.find(p => p.key === key), steps = T.pathSteps(key), done = steps.filter(stepDone).length;
   const cur = steps.findIndex(st => !stepDone(st)), cp = ((path && path.checkpoints) || {})[key] || null;
@@ -563,6 +575,7 @@ function startPlacement(){ close(); startMixed({ kind: 'placement', name: 'Place
 function startCheckpoint(key){ close(); const P = T.PATHS.find(p => p.key === key);
   startMixed({ kind: 'checkpoint', path: key, name: `${P.name} checkpoint`, make: () => T.mixedSet(T.checkpointSpec(key), (Date.now() ^ (Math.random() * 1e9)) >>> 0), pass: n => Math.ceil(n * 0.75) }); }
 function finishMixed(){
+  cheerPath = false;
   const m = D.custom, score = D.results.filter(r => r === 'ok' || r === 'retry').length, n = D.items.length;
   const secs = Math.round((Date.now() - D.t0) / 1000), time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
   const btns = [];
@@ -578,6 +591,7 @@ function finishMixed(){
   } else {
     const cps = (path.checkpoints ||= {}), prev = cps[m.path] || { best: 0, passed: false }, passed = score >= D.L.pass;
     cps[m.path] = { best: Math.max(prev.best, score), passed: prev.passed || passed }; savePath();
+    cheerPath = passed;
     const idx = T.PATHS.findIndex(p => p.key === m.path), nextP = T.PATHS[idx + 1];
     $('resTitle').textContent = passed ? `${T.PATHS[idx].name} path complete!` : 'Not this time';
     $('resSub').textContent = passed ? (nextP ? `Ready for the ${nextP.name} path.` : 'That\'s the whole course. Keep any level sharp by replaying it.') : `You need ${D.L.pass} of ${n}. The drills that went wrong point to the steps worth replaying.`;
@@ -589,7 +603,7 @@ function finishMixed(){
   btns.push(`<button class="btn" type="button" data-a="map">All drills</button>`);
   $('resRow').innerHTML = btns.join('');
   $('resNav').innerHTML = '';
-  open('resSheet');
+  open('resSheet'); if (cheerPath) cheerLevel(3, 'Path complete!');
 }
 function showBusy(text){ $('busy').hidden = !text; if (text) $('busyText').textContent = text; }
 function backToMap(){
@@ -667,7 +681,7 @@ function finishLesson(){
   const mv = move ? `<button class="btn${mast ? ' primary' : ''}" type="button" ${move}</button>` : '';
   $('resRow').innerHTML = (mast ? [mv, again] : [again, mv]).join('') + `<button class="btn" type="button" data-a="map">All drills</button>`;
   if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'trainer');
-  open('resSheet');
+  open('resSheet'); cheerLevel(stars);
 }
 function finishLevel(){
   if (D.custom) return finishMixed();
@@ -708,7 +722,7 @@ function finishLevel(){
   $('resRow').innerHTML = btns.join('');
   { const r = $('resSub'), x = r.textContent.trim(); r.textContent = x.charAt(0).toUpperCase() + x.slice(1); }
   if (window.GameNav && GameNav.fillEnd) GameNav.fillEnd('resNav', 'trainer');
-  open('resSheet');
+  open('resSheet'); cheerLevel(stars);
 }
 $('resRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;

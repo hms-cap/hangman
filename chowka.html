@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 /* Chowka Bara on graph paper: a printed 5×5 board with pencil crosses on the safe squares, blue and red pencil pawns,
    and four real-looking cowry shells you tap to throw. Layout: header, the two players, the board, the shell tray. */
@@ -460,6 +461,15 @@ function win(p){
   if (S.cpu){ const r = stats.cpu[S.cpu] || (stats.cpu[S.cpu] = [0, 0]); r[p === 0 ? 0 : 1]++; } else { stats.games++; stats.wins[p]++; }
   store.set('chowka-stats', stats); store.set('chowka-game', null);
   say(`${name(p)} wins!`, p); render();
+  if (window.FX){
+    const c = FX.css(p ? '--p1' : '--p0'), o = FX.css(p ? '--p0' : '--p1'), human = !S.cpu || p === 0;
+    if (human){
+      FX.rangoli({ el: '#board', colors: [c, '#f0c24a', '#2fa36b', c] });
+      FX.burst({ el: '#board', shapes: ['shell'], count: 36, size: 9, speed: 900, gravity: 900, delay: .4 });
+      FX.rain({ shapes: ['petal', 'confetti', 'shell'], colors: [c, '#f0c24a', '#e0763a', '#2fa36b'], count: 80, delay: .5, sway: 70 });
+      FX.stamp(S.cpu ? 'You win!' : `${name(p)} wins!`, { color: c });
+    } else FX.burst({ el: '#board', shapes: ['shell'], count: 14, size: 9, speed: 500, gravity: 900 });
+  }
   const times = `Game time ${fmt(S.time[0] + S.time[1])} (${name(0)} ${fmt(S.time[0])}, ${name(1)} ${fmt(S.time[1])}).`;
   setTimeout(() => {
     const left = S.pawns[1 - p].filter(x => x === K.HOME).length;

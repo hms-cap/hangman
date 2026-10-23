@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 :root{
   --sq-l:#f4f6f1; --sq-d:#b6c6d3; --sq-last:rgba(214,150,26,.40); --sq-sel:rgba(46,94,166,.42);
@@ -472,7 +473,23 @@ function finish(){
   $('overPgnText').hidden = true;
   $('overAna').hidden = !G.moves.length;
   $('overAna').textContent = G.analysis && Object.keys(G.analysis.r).length >= G.moves.length ? 'See analysis' : 'Analyze game';
-  setTimeout(() => { GameNav.fillEnd('overNav', 'chess'); open('overSheet'); }, 500);
+  if (!G.cheered){ G.cheered = true; save(); cheer(o); } // only the first time: reopening a finished game just shows the sheet
+  setTimeout(() => { GameNav.fillEnd('overNav', 'chess'); open('overSheet'); }, 900);
+}
+function cheer(o){
+  if (!window.FX) return;
+  const draw = o.result === '1/2-1/2', winner = draw ? null : o.result === '1-0' ? WHITE : BLACK, mine = G.mode !== 'ai' || winner === G.human;
+  const L = FX.css('--sq-l', '#f4f6f1'), Dk = FX.css('--sq-d', '#b6c6d3');
+  if (draw){ FX.burst({ el: '#board', shapes: ['pixel', 'confetti'], colors: [L, Dk, FX.css('--ink')], count: 60, speed: 650, gravity: 600 }); FX.stamp('Draw', { color: FX.css('--ink') }); return; }
+  if (mine){
+    FX.wave({ el: '#board', cols: 8, color: '#f0c24a', from: G.flipped ? [7, 0] : [0, 7] });
+    FX.burst({ el: '#board', shapes: ['crown', 'star', 'confetti', 'confetti'], colors: ['#f0c24a', '#e3a93b', FX.css('--hit'), L, Dk], count: 120, size: 11, speed: 1050, delay: .2 });
+    FX.fireworks({ el: '#board', colors: ['#f0c24a', FX.css('--hit')], shells: 3, delay: .6 });
+    FX.stamp(o.reason === 'checkmate' ? 'Checkmate!' : G.mode === 'ai' ? 'You won!' : `${winner === WHITE ? 'White' : 'Black'} wins!`, { color: FX.css('--hit') });
+  } else {
+    FX.rain({ shapes: ['pixel'], colors: [Dk, FX.css('--muted')], count: 40, size: 10, gravity: 220, speed: .8, over: 1 });
+    if (o.reason === 'checkmate') FX.stamp('Checkmate', { color: FX.css('--muted'), tilt: 4 });
+  }
 }
 
 // ---- engine ----

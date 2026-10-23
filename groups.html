@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 /* Four group colors, easiest to trickiest */
 :root{ --g1:#e3a93b; --g2:#7bb08a; --g3:#7fa2d6; --g4:#e07a6b; --g-ink:#1d262d }
@@ -337,7 +338,7 @@ function submit(){
       if (G.hint && G.hint.g === g) G.hint = null;
       if (G.solved.length === 4){ G.done = true; G.won = true; record(); }
       save(); render(g);
-      if (G.done) setTimeout(openStats, 1300);
+      if (G.done){ cheer(true); setTimeout(openStats, 1700); }
     };
     if (reduced) return finishCorrect();
     document.querySelectorAll('.tile').forEach(t => { if (sel.includes(t.dataset.w)) t.classList.add('jump'); });
@@ -347,9 +348,20 @@ function submit(){
     toast(best === 3 ? 'One away…' : G.mistakes >= 4 ? 'Out of mistakes' : 'Not a group', 1600);
     const tiles = $('tiles'); tiles.classList.remove('shake'); void tiles.offsetWidth; tiles.classList.add('shake');
     try{ navigator.vibrate && navigator.vibrate(40); }catch(_){}
-    if (G.mistakes >= 4){ G.done = true; G.won = false; selected = []; record(); save(); setTimeout(() => { render(); setTimeout(openStats, 1600); }, 500); return; }
+    if (G.mistakes >= 4){ G.done = true; G.won = false; selected = []; record(); save(); setTimeout(() => { render(); cheer(false); setTimeout(openStats, 1600); }, 500); return; }
     save(); render();
   }
+}
+// end of a puzzle (celebrate.js)
+function cheer(won){
+  if (!window.FX) return;
+  const G4 = ['--g1', '--g2', '--g3', '--g4'].map(v => FX.css(v)), green = FX.css('--em-clover', '#2e8b57');
+  if (won){
+    FX.burst({ el: '#tiles', shapes: ['clover'], colors: [green, ...G4], count: 46, size: 14, speed: 950, gravity: 500 });
+    FX.rain({ shapes: ['clover', 'leaf', 'clover'], colors: [green, green, ...G4], count: 70, size: 13, sway: 90, delay: .2 });
+    if (!G.mistakes && !G.hints) FX.fireworks({ el: '#tiles', colors: ['#f0c24a', green], shells: 3, delay: .4, shapes: ['star', 'spark'] });
+    FX.stamp(!G.mistakes && !G.hints ? 'Perfect!' : 'Lucky you!', { color: green });
+  } else FX.rain({ shapes: ['leaf'], colors: ['#b58b55', '#9c7a4a', '#c9a46c'], count: 22, size: 13, gravity: 50, sway: 70, over: 1.4, ttl: 4.5 });
 }
 function record(){
   const s = st(mode); s.played++;

@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 :root{--em:var(--em-star)}
 /* Tide pool: deep-sea blue for the right spot, coral for the wrong spot, wet sand for not in the word.
@@ -307,6 +308,10 @@ function drawLive(pop){
 function celebrate(){
   if (reduced) return;
   const L = $('live'); L.classList.remove('spin'); void L.offsetWidth; L.classList.add('spin');
+  if (window.FX){
+    FX.burst({ el: '#board', shapes: ['star', 'star', 'bubble'], colors: [FX.css('--correct'), FX.css('--present'), '#f0c24a'], count: 90, size: 9, speed: 950, delay: .25 });
+    FX.burst({ x: innerWidth / 2, y: innerHeight + 10, shapes: ['bubble'], colors: [FX.css('--sea', '#2f7fa8')], count: 40, size: 7, speed: 700, gravity: -60, spread: 1.2, ttl: 2.6, delay: .3, stagger: .6 });
+  }
   for (let i = 0; i < 9; i++){
     const sp = document.createElement('span'), a = (i / 9) * Math.PI * 2 + Math.random() * .4, d = 42 + Math.random() * 30;
     sp.className = 'spark'; sp.style.setProperty('--dx', `${Math.cos(a) * d}px`); sp.style.setProperty('--dy', `${Math.sin(a) * d}px`); sp.style.animationDelay = `${200 + i * 40}ms`;
