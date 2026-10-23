@@ -60,8 +60,10 @@ A five-letter word-guessing game in the style of Wordle. The name comes from *st
 - 6,486 accepted guesses, from the Hunspell en_US dictionary plus the answer list
 - Correct scoring for repeated letters
 - Hard mode
-- High-contrast colors
-- Stats with guess distribution and streaks
+- **Tide-pool look**: deep-sea blue for the right spot, coral for the wrong spot, wet sand for letters not in the word, pebble keys on a sand bank, and the sea at night in dark mode. High-contrast colors (orange and blue) is still a setting
+- **Live starfish** above the board: an arm turns blue the moment you find that letter's spot ("3 of 5 arms found")
+- **Win**: the starfish spins and sparkles. **Loss**: the tide washes over the board and leaves the word written on the sand (tap it for the stats)
+- **Stats as a night sky**: every win is a star in its 1–6 guess column, this game's win shines gold, and your current streak is joined up as a constellation (streaks started before this version join up from here on)
 - Share your result as an emoji grid
 - Countdown to the next daily word
 - Saves progress

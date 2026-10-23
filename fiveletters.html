@@ -18,6 +18,54 @@
 <script src="playtime.js"></script>
 <style>
 :root{--em:var(--em-star)}
+/* Tide pool: deep-sea blue for the right spot, coral for the wrong spot, wet sand for not in the word.
+   The page gets a faint sea at the top and a sand bank under the keyboard; keys are pebbles. High contrast keeps its own colors. */
+:root{--sea:#2f7fa8;--sand:#e9dcbf;--sand-edge:#d6c6a1;--pebble:#f6f0e2;--pebble-edge:#d9ccae;--on-absent:#5f5540;--star-gold:#f0c24a}
+:root:not(.hc){--correct:#1f5f8b;--present:#e0763a;--absent:#d3c6a6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--sea:#4f9fd0;--sand:#1d3a54;--sand-edge:#28506f;--pebble:#21456a;--pebble-edge:#2d5a82;--on-absent:#c3d3e2}
+  :root:not([data-theme="light"]):not(.hc){--correct:#3f8fc8;--present:#f08c5a;--absent:#34506a}}
+:root[data-theme="dark"]{--sea:#4f9fd0;--sand:#1d3a54;--sand-edge:#28506f;--pebble:#21456a;--pebble-edge:#2d5a82;--on-absent:#c3d3e2}
+:root[data-theme="dark"]:not(.hc){--correct:#3f8fc8;--present:#f08c5a;--absent:#34506a}
+:root.hc{--on-absent:var(--on-tile)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:55vh;pointer-events:none;z-index:-1;background:linear-gradient(to bottom,color-mix(in srgb,var(--sea) 13%,transparent),transparent)}
+body::after{content:"";position:fixed;left:-25%;right:-25%;bottom:0;height:calc(205px + env(safe-area-inset-bottom,0px));pointer-events:none;z-index:-1;
+  background:var(--sand);border-top:2px solid var(--sand-edge);border-radius:50% 50% 0 0 / 40px 40px 0 0}
+@media (max-height:640px){body::after{height:calc(180px + env(safe-area-inset-bottom,0px))}}
+
+/* the live starfish: an arm turns blue as soon as you find that letter's spot */
+.reef{display:flex;align-items:center;justify-content:center;gap:12px;position:relative;min-height:56px}
+.live{width:56px;height:56px;flex:none;position:relative}
+.live svg{width:100%;height:100%;display:block;overflow:visible}
+.live .arm-c{fill:var(--correct)}
+.live path{transform-box:view-box;transform-origin:50% 50%}
+.live path.pop{animation:armPop .45s ease-out}
+.live.spin svg{animation:starSpin 1.15s cubic-bezier(.3,.7,.3,1)}
+@keyframes armPop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:none}}
+@keyframes starSpin{0%{transform:none}45%{transform:scale(1.55) rotate(200deg)}100%{transform:rotate(360deg)}}
+.reef .lt{font-size:.85rem;color:var(--muted);line-height:1.25;min-width:7.5em}
+.reef .lt b{color:var(--ink);font-weight:600;display:block;font-size:.92rem}
+.spark{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px;pointer-events:none;animation:spark .9s ease-out forwards}
+.spark svg{width:100%;height:100%;display:block;fill:var(--star-gold)}
+@keyframes spark{0%{transform:translate(0,0) scale(.3);opacity:0}25%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1) rotate(140deg);opacity:0}}
+@media (max-height:640px){.reef{min-height:44px}.live{width:44px;height:44px}}
+
+/* losing: the tide washes over the board, then the word is left written on the sand */
+.tide{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden;border-radius:12px}
+.tide i{position:absolute;left:-10%;right:-10%;bottom:0;height:120%;background:color-mix(in srgb,var(--sea) 55%,transparent);border-radius:45% 55% 0 0 / 30px 26px 0 0;transform:translateY(100%);animation:tide 1.7s ease-in-out forwards}
+@keyframes tide{0%{transform:translateY(100%)}45%{transform:translateY(8%)}100%{transform:translateY(100%)}}
+.sandword{position:absolute;top:4px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:baseline;gap:10px;padding:7px 16px 6px;border-radius:999px;
+  background:var(--sand);border:2px solid var(--sand-edge);color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.15);cursor:pointer;white-space:nowrap}
+.sandword small{font-size:.75rem;color:var(--muted)}
+.sandword b{font-family:var(--hand);font-weight:400;font-size:1.7rem;letter-spacing:.14em;line-height:1}
+.sandword b span{display:inline-block;opacity:0;animation:write .3s ease-out forwards}
+@keyframes write{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* stats: wins as stars in a night sky, today's streak joined up as a constellation */
+.sky{border-radius:14px;background:radial-gradient(120% 90% at 30% 0%,#1d4166,#0c2238 70%);padding:12px 10px 6px;color:#cfe3f5}
+.sky svg{display:block;width:100%;height:auto}
+.sky .cap{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:#93a9bd;padding:0 4px 4px}
+.sky .cap b{color:var(--star-gold);font-weight:600}
+
 .hero .arm-c{fill:var(--correct)} .hero .arm-p{fill:var(--present)} .hero .arm-a{fill:var(--absent)}
 .icons{display:flex;gap:2px;justify-self:end}
 .icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
@@ -38,14 +86,14 @@
 }
 .row{display:grid;grid-template-columns:repeat(5,1fr);gap:1.6cqw}
 .tile{
-  display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:6px;background:var(--paper);
+  display:flex;align-items:center;justify-content:center;border:2px solid var(--line);border-radius:9px;background:var(--paper);
   font-family:var(--mono);font-weight:700;font-size:10.5cqw;line-height:1;text-transform:uppercase;color:var(--ink);
 }
 .tile.filled{border-color:var(--ink);animation:tap .1s ease-out}
 .tile.correct,.tile.present,.tile.absent{color:var(--on-tile);border-color:transparent}
 .tile.correct{background:var(--correct)}
 .tile.present{background:var(--present)}
-.tile.absent{background:var(--absent)}
+.tile.absent{background:var(--absent);color:var(--on-absent)}
 .tile.flip{animation:flip .5s ease-in-out both}
 .tile.bounce{animation:bounce .5s ease-out both}
 .row.shake{animation:shake .45s}
@@ -59,15 +107,18 @@
 .kb{display:flex;flex-direction:column;gap:7px}
 .kb .r{display:flex;gap:5px;justify-content:center}
 .key{
-  flex:1 1 0;max-width:44px;height:54px;min-width:0;border:0;border-radius:7px;background:var(--line);color:var(--ink);
+  flex:1 1 0;max-width:44px;height:54px;min-width:0;border:1px solid var(--pebble-edge);border-radius:46% 54% 50% 50% / 40% 44% 56% 60%;background:var(--pebble);color:var(--ink);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.08);
   font-family:var(--mono);font-weight:600;font-size:1.02rem;padding:0;cursor:pointer;text-transform:uppercase;transition:background .2s,transform .06s;
 }
 .key:active{transform:translateY(1px)}
-.key.wide{flex:1.55 1 0;max-width:68px;font-size:.72rem;letter-spacing:.04em}
+.key:nth-child(3n+2){border-radius:54% 46% 52% 48% / 46% 40% 60% 54%}
+.key:nth-child(3n){border-radius:50% 50% 46% 54% / 42% 48% 52% 58%}
+.key.wide{border-radius:999px;flex:1.55 1 0;max-width:68px;font-size:.72rem;letter-spacing:.04em}
 .key.wide svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.key.correct{background:var(--correct);color:var(--on-tile)}
-.key.present{background:var(--present);color:var(--on-tile)}
-.key.absent{background:var(--absent);color:var(--on-tile);opacity:.75}
+.key.correct{background:var(--correct);color:var(--on-tile);border-color:transparent}
+.key.present{background:var(--present);color:var(--on-tile);border-color:transparent}
+.key.absent{background:var(--absent);color:var(--on-absent);border-color:transparent;opacity:.6}
 
 .example{display:flex;gap:5px;width:min(100%,230px)}
 .example .tile{flex:1;aspect-ratio:1;font-size:1.25rem;border-radius:5px}
@@ -76,10 +127,6 @@
 .stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
 .stats4 b{display:block;font-family:var(--mono);font-size:1.5rem;font-weight:500;font-variant-numeric:tabular-nums}
 .stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
-.dist{display:flex;flex-direction:column;gap:4px}
-.dist div{display:grid;grid-template-columns:14px 1fr;gap:6px;align-items:center;font-family:var(--mono);font-size:.82rem}
-.dist i{display:block;font-style:normal;background:var(--absent);color:var(--on-tile);text-align:right;padding:2px 6px;border-radius:4px;min-width:22px;font-variant-numeric:tabular-nums}
-.dist i.now{background:var(--correct)}
 .answer{font-family:var(--mono);font-weight:700;letter-spacing:.3em;font-size:1.4rem;color:var(--ink)}
 .next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .next b{font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
@@ -104,8 +151,12 @@
     <button type="button" data-m="practice" aria-pressed="false">Practice</button>
   </div>
 
+  <div class="reef" id="reef" aria-live="polite"><div class="live" id="live"></div><div class="lt" id="liveTxt"></div></div>
+
   <div class="boardWrap">
     <div class="toast" id="toast" hidden></div>
+    <button class="sandword" id="sandword" type="button" hidden aria-label="The word. Open statistics"><small>The word was</small><b id="sandTxt"></b></button>
+    <div class="tide" id="tide" hidden><i></i></div>
     <div class="board" id="board" aria-label="Guesses"></div>
   </div>
 
@@ -126,7 +177,7 @@
       <li><b>Daily</b>: one word a day, the same for everyone. A new one starts at midnight.</li>
       <li><b>Practice</b>: as many random words as you like, with separate stats.</li>
     </ul>
-    <p class="why" id="whyName"><span>Stelium, after <i>stellium</i>, a cluster of stars. Five letters, five points: each guess colours your star.</span></p>
+    <p class="why" id="whyName"><span>Stelium, after <i>stellium</i>, a cluster of stars. Five letters, five arms: every letter you put in its right spot colours an arm of your starfish.</span></p>
     <button class="btn primary" id="helpClose" type="button">Got it</button>
   </div>
 </div>
@@ -148,8 +199,7 @@
     <h2 id="statsTitle">Statistics</h2>
     <div id="result"></div>
     <div class="stats4" id="stats4"></div>
-    <div class="label">Guess distribution</div>
-    <div class="dist" id="dist"></div>
+    <div class="sky" id="sky"></div>
     <div id="after"></div>
     <button class="btn" id="statsClose" type="button">Close</button>
   </div>
@@ -243,7 +293,40 @@ const rows = [];
 })();
 const keyEl = {}; document.querySelectorAll('.key').forEach(b => keyEl[b.dataset.k] = b);
 
+// ---- the live starfish above the board ----
+const foundIn = guesses => { const f = [false, false, false, false, false]; guesses.forEach(g => score(g, G.answer).forEach((r, i) => { if (r === 'correct') f[i] = true; })); return f; };
+let found = [false, false, false, false, false];
+function drawLive(pop){
+  $('live').innerHTML = Emblems.starfish(found.map(x => x ? 'arm-c' : null), { line: 'var(--muted)', dots: 'rgba(255,255,255,.4)' });
+  if (pop != null){ const a = $('live').querySelectorAll('path')[pop]; if (a) a.classList.add('pop'); }
+  const n = found.filter(Boolean).length;
+  $('liveTxt').innerHTML = n === 5 ? '<b>All five arms!</b>Solved' : !G.guesses.length ? '<b>Find the five arms</b>Right letter, right spot'
+    : `<b>${n} of 5 arms</b>${G.done ? 'this time' : 'found'}`;
+  $('live').setAttribute('aria-label', `Starfish: ${n} of 5 letters in the right spot`);
+}
+function celebrate(){
+  if (reduced) return;
+  const L = $('live'); L.classList.remove('spin'); void L.offsetWidth; L.classList.add('spin');
+  for (let i = 0; i < 9; i++){
+    const sp = document.createElement('span'), a = (i / 9) * Math.PI * 2 + Math.random() * .4, d = 42 + Math.random() * 30;
+    sp.className = 'spark'; sp.style.setProperty('--dx', `${Math.cos(a) * d}px`); sp.style.setProperty('--dy', `${Math.sin(a) * d}px`); sp.style.animationDelay = `${200 + i * 40}ms`;
+    sp.innerHTML = Emblems.icon('starfish').replace(/stroke="currentColor"/, 'stroke="none"').replace('fill-opacity=".22"', '');
+    L.appendChild(sp); setTimeout(() => sp.remove(), 1500);
+  }
+}
+// after a loss: the tide washes over the board and leaves the word on the sand (tap it for the stats)
+function showWord(animate){
+  const w = G.answer.toUpperCase();
+  $('sandTxt').innerHTML = [...w].map((c, i) => `<span style="animation-delay:${animate && !reduced ? 900 + i * 110 : 0}ms">${c}</span>`).join('');
+  $('sandword').hidden = false;
+  if (animate && !reduced){ const t = $('tide'); t.hidden = false; const i = t.firstChild; i.style.animation = 'none'; void i.offsetWidth; i.style.animation = ''; setTimeout(() => { t.hidden = true; }, 1800); }
+}
+$('sandword').addEventListener('click', () => openStats());
+
 function drawAll(){
+  found = foundIn(G.guesses); drawLive();
+  $('sandword').hidden = !(G.done && !G.won); $('tide').hidden = true;
+  if (G.done && !G.won) showWord(false);
   rows.forEach((row, r) => {
     const g = G.guesses[r], res = g ? score(g, G.answer) : null;
     [...row.children].forEach((t, c) => {
@@ -293,23 +376,25 @@ function submit(){
   tiles.forEach((t, i) => {
     setTimeout(() => {
       if (!reduced){ t.classList.add('flip'); }
-      setTimeout(() => { t.className = 'tile ' + res[i] + (reduced ? '' : ' flip'); }, reduced ? 0 : 250);
+      setTimeout(() => { t.className = 'tile ' + res[i] + (reduced ? '' : ' flip'); if (res[i] === 'correct' && !found[i]){ found[i] = true; drawLive(reduced ? null : i); } }, reduced ? 0 : 250);
     }, i * step);
   });
   setTimeout(() => {
-    busy = false; drawKeys();
+    busy = false; drawKeys(); drawLive();
     if (won){
       toast(PRAISE[r], 1800);
       if (!reduced) tiles.forEach((t, i) => setTimeout(() => { t.classList.remove('flip'); t.classList.add('bounce'); }, i * 90));
-      setTimeout(openStats, 1900);
+      setTimeout(celebrate, 450);
+      setTimeout(openStats, 2200);
     } else if (lost){
-      toast(G.answer.toUpperCase(), 0);
-      setTimeout(openStats, 1900);
+      showWord(true);
+      setTimeout(openStats, 2600);
     }
   }, 4 * step + 520);
 }
 function record(won){
   const s = st(mode); s.played++;
+  s.hist = (s.hist || []).concat(won ? G.guesses.length : 0).slice(-300); // guesses per game in order (0 = not solved), for the streak constellation
   if (won){ s.won++; s.dist[G.guesses.length - 1]++; }
   if (mode === 'daily'){
     // A daily streak only continues if yesterday's word was also solved.
@@ -327,7 +412,7 @@ function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden =
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
 
 function shareText(){
-  const emoji = { correct: settings.hc ? '🟧' : '🟦', present: settings.hc ? '🟦' : '🟨', absent: '⬜' };
+  const emoji = { correct: settings.hc ? '🟧' : '🟦', present: settings.hc ? '🟦' : '🟧', absent: '⬜' };
   const head = (mode === 'daily' ? `Stelium No. ${G.day + 1}` : 'Stelium practice') + ` ${G.won ? G.guesses.length : 'X'}/6${G.hard ? '*' : ''}`;
   return head + '\n\n' + G.guesses.map(g => score(g, G.answer).map(s => emoji[s]).join('')).join('\n');
 }
@@ -342,8 +427,7 @@ function openStats(){
   $('result').innerHTML = G.done ? `<p>${G.won ? `Solved in ${G.guesses.length} of 6.` : 'Not this time. The word was'}</p><div class="answer">${G.answer.toUpperCase()}</div>` : '';
   $('stats4').innerHTML = [[s.played, 'Played'], [s.played ? Math.round(100 * s.won / s.played) : 0, 'Win %'], [s.cur, 'Current streak'], [s.max, 'Best streak']]
     .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
-  const max = Math.max(1, ...s.dist);
-  $('dist').innerHTML = s.dist.map((n, i) => `<div><span>${i + 1}</span><i class="${G.done && G.won && G.guesses.length === i + 1 ? 'now' : ''}" style="width:${Math.max(8, 100 * n / max)}%">${n}</i></div>`).join('');
+  $('sky').innerHTML = skyHTML(s);
   let after = '';
   if (G.done){
     after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button>`
@@ -364,6 +448,29 @@ function openStats(){
     if (m < 1000 && mode === 'daily'){ closeAll(); switchMode('daily'); } };
   cd(); tick = setInterval(cd, 1000);
   open('statsSheet');
+}
+// Wins by number of guesses as a night sky: one star per win, stacked up its column (1–6 guesses).
+// The wins of the current streak are joined in order by a dotted gold line; this game's win is the bright star.
+function skyHTML(s){
+  const W = 300, H = 150, top = 12, colW = W / 6, wins = s.dist.reduce((a, b) => a + b, 0), most = Math.max(1, ...s.dist);
+  const sp = Math.min(17, (H - top) / most), size = Math.max(2.2, Math.min(4.6, sp * .32));
+  const rnd = (c, i, k) => { const x = Math.sin(c * 97.1 + i * 13.7 + k * 7.3) * 43758.5453; return x - Math.floor(x); };
+  const pos = (c, i) => [colW * c + colW / 2 + (rnd(c, i, 1) - .5) * Math.min(colW * .55, 30), H - 4 - i * sp - rnd(c, i, 2) * Math.min(sp * .5, 6)];
+  const star = (x, y, R, cls) => { let d = ''; for (let k = 0; k < 10; k++){ const a = (-90 + k * 36) * Math.PI / 180, r = k % 2 ? R * .45 : R; d += (k ? 'L' : 'M') + (x + r * Math.cos(a)).toFixed(1) + ' ' + (y + r * Math.sin(a)).toFixed(1); } return `<path class="${cls}" d="${d}Z"/>`; };
+  // the streak: walk the history backwards while it keeps winning, matching each win to its star (latest win = top star in its column)
+  const hist = s.hist || [], used = [0, 0, 0, 0, 0, 0], streak = [];
+  for (let j = hist.length - 1; j >= 0 && hist[j] > 0 && streak.length < s.cur; j--){ const c = hist[j] - 1, i = s.dist[c] - 1 - used[c]++; if (i >= 0) streak.unshift(pos(c, i)); }
+  const nowCol = G.done && G.won && hist.length && hist[hist.length - 1] === G.guesses.length ? G.guesses.length - 1 : -1;
+  let out = '';
+  s.dist.forEach((n, c) => {
+    for (let i = 0; i < n; i++){ const [x, y] = pos(c, i), now = c === nowCol && i === n - 1; out += star(x, y, now ? size * 2 : size * (.75 + rnd(c, i, 3) * .5), now ? 'now' : 'st'); }
+    out += `<text x="${colW * c + colW / 2}" y="${H + 16}" text-anchor="middle" class="col${c === nowCol ? ' on' : ''}">${c + 1}</text><text x="${colW * c + colW / 2}" y="${H + 29}" text-anchor="middle" class="cnt">${n}</text>`;
+  });
+  const line = streak.length > 1 ? `<polyline points="${streak.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#f0c24a" stroke-width="1" stroke-dasharray="3 3" opacity=".75"/>` : '';
+  const label = `Wins by number of guesses: ${s.dist.map((n, i) => `${n} in ${i + 1}`).join(', ')}`;
+  return `<div class="cap"><span>Wins by number of guesses</span>${s.cur > 1 ? `<span>Streak of <b>${s.cur}</b> joined up</span>` : ''}</div>
+    <svg viewBox="0 0 ${W} ${H + 34}" role="img" aria-label="${label}"><style>.st{fill:#cfe3f5;opacity:.85}.now{fill:#f0c24a;filter:drop-shadow(0 0 4px #f0c24a)}.col{fill:#93a9bd;font:600 11px var(--ui)}.col.on{fill:#f0c24a}.cnt{fill:#5f7a93;font:500 9px var(--mono)}</style>
+    ${line}${out}${wins ? '' : `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="#93a9bd" style="font:13px var(--ui)">Each win becomes a star here</text>`}</svg>`;
 }
 async function share(){
   const text = shareText();
@@ -401,12 +508,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && mo
 applyHc();
 switchMode(mode);
 if (!store.get('five-seen-help', false)){ store.set('five-seen-help', true); open('helpSheet'); }
-else if (G.done && G.guesses.length) { if (!G.won) toast(G.answer.toUpperCase(), 0); }
+
 // ---- game menu (tap the title) ----
 function giveUp(){
   if (!G || G.done || busy) return;
   G.done = true; G.won = false; record(false); save(); cur = ''; drawAll();
-  toast(G.answer.toUpperCase(), 0); setTimeout(openStats, 1400);
+  showWord(true); setTimeout(openStats, 2600);
 }
 function newPracticeWord(){ if (G && !G.done && G.guesses.length) record(false); store.set('five-practice', null); G = load('practice'); cur = ''; drawAll(); $('toast').hidden = true; }
 GameNav.init({ id: 'five', note: () => G && !G.done ? 'Your guesses are saved.' : '',
