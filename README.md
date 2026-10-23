@@ -4,7 +4,7 @@ Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Ten
 
 **Play:** https://hms-cap.github.io/hangman/
 
-The home page has three tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) and **Go** (Go Problems daily, Go, Go Trainer). `#chess` or `#go` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting. Swipe left or right anywhere on the page to move between tabs; the page follows your finger and goes round and round (Go → Casual and back).
+The home page has four tabs: **Casual** (the word dailies, Sudoku, Hangman, Snake, Chowka Bara), where it always opens, then **Chess** (Chess Puzzles daily, Chess, Chess Trainer) **Go** (Go Problems daily, Go, Go Trainer) and **About** (what the app is, its version and what's new). `#chess`, `#go` or `#about` in the address opens those tabs, and a dot marks a tab whose daily puzzle is still waiting. Swipe left or right anywhere on the page to move between tabs; the page follows your finger and goes round and round (About → Casual and back).
 
 ## Install
 **iPhone and iPad**
@@ -222,10 +222,14 @@ The app keeps a simple record of how long each player spends in it.
 - The clock runs only while the app is on screen and in use: it stops when you leave the app or after 5 minutes without a tap. A new visit starts after a 30-minute break
 - It's kept per player, like the other saves, under `playtime` (a year of days, each with the total and the time per game and per hour). `PlayTime.day()` and `PlayTime.days()` read it for anything else in the app that wants to use it
 
+## Version
+The version is in `version.js` and shows on the About tab with a short list of what changed in each version. Every change bumps it (fixes 1.0.x, features 1.x.0) and sets the same number in `sw.js`'s cache name, so installed copies update; `node tools/check-version.js` checks they match. See `CLAUDE.md`.
+
 ## Files
 | File | What it is |
 | --- | --- |
 | `index.html` | Home screen |
+| `version.js` | App version and the What's new list for the About tab |
 | `playtime.js` | Time played: the clock, the per-player daily record, the today displays and the Time played sheet |
 | `profiles.js` | Players: the player list, switch/confirm/edit screens, each player's color theme, and keeping each player's saves apart (loaded first on every page; prefixes every saved key with the player, except the first player's) |
 | `hangman.html`, `words.js` | Hangman game and word list |
