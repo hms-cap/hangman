@@ -183,6 +183,7 @@
     <span class="label">On this phone</span>
     <div class="statrow"><span>Two players: <b id="stGames">0</b> games</span><span id="stW0"></span><span id="stW1"></span></div>
     <div class="statrow" id="stCpu"></div>
+    <p class="note" id="stThrows" hidden></p>
   </div>
 </div>
 
@@ -374,10 +375,13 @@ function prompt(){
 }
 const save = () => store.set('chowka-game', S && S.phase !== 'over' ? S : null);
 
-async function doThrow(auto, rand){
+async function doThrow(auto, mix){
   if (!S || S.phase !== 'throw' || busy || (cpuTurn() && auto !== true)) return;
   busy = true; render();
-  const res = K.roll(rand || freshRand()), p = S.turn;
+  const res = K.throwShells(mix), p = S.turn, up = res.filter(Boolean).length;
+  // count every throw by who made it, this game and (against the computer) on this phone
+  (S.tally ||= [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])[p][up]++;
+  if (S.cpu){ const t = (stats.throws ||= { you: [0, 0, 0, 0, 0], cpu: [0, 0, 0, 0, 0] }); t[p === 1 ? 'cpu' : 'you'][up]++; store.set('chowka-stats', stats); }
   await tossAnim(res);
   const out = K.applyThrow(S, res), v = out.v;
   const label = v === 8 ? 'Bara! 8' : v === 4 ? 'Chowka! 4' : `${v}`;
@@ -457,6 +461,9 @@ async function move(i, k, pair){
   else { prompt(); render(); }
   if (cpuTurn()){ clearTimeout(cpuTimer); cpuTimer = setTimeout(kick, bits.length ? 1000 : 0); }
 }
+// "41 throws: 3 bara, 2 chowka" for one side's counts by number of shells up
+const tallyText = c => { const n = c.reduce((a, b) => a + b, 0); return `${n} throw${n === 1 ? '' : 's'}: ${c[0]} bara, ${c[4]} chowka`; };
+const pct = (x, n) => n ? (100 * x / n).toFixed(1) + '%' : '–';
 function win(p){
   if (S.cpu){ const r = stats.cpu[S.cpu] || (stats.cpu[S.cpu] = [0, 0]); r[p === 0 ? 0 : 1]++; } else { stats.games++; stats.wins[p]++; }
   store.set('chowka-stats', stats); store.set('chowka-game', null);
@@ -476,10 +483,10 @@ function win(p){
     if (S.cpu){
       const r = stats.cpu[S.cpu], lv = LEVEL_NAMES[S.cpu];
       $('endTitle').textContent = p === 0 ? `You beat the computer!` : 'The computer wins';
-      $('endNote').textContent = `${p === 0 ? `All four pawns home on ${lv}.` : `It got all four home${left ? `; you had ${left} in the centre` : ''}.`} Your record on ${lv}: ${r[0]} won, ${r[1]} lost. ${p === 0 ? 'The computer' : 'You'} start${p === 0 ? 's' : ''} the next game. ${times}`;
+      $('endNote').textContent = `${p === 0 ? `All four pawns home on ${lv}.` : `It got all four home${left ? `; you had ${left} in the centre` : ''}.`} Your record on ${lv}: ${r[0]} won, ${r[1]} lost. ${p === 0 ? 'The computer' : 'You'} start${p === 0 ? 's' : ''} the next game. ${times}` + (S.tally ? ` Throws this game: you ${tallyText(S.tally[0])}; the computer ${tallyText(S.tally[1])}.` : '');
     } else {
       $('endTitle').textContent = `${name(p)} wins!`;
-      $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game. ${times}`;
+      $('endNote').textContent = `All four pawns home. ${name(1 - p)} had ${left ? left + ' in the centre' : 'none in the centre yet'}. ${name(1 - p)} starts the next game. ${times}` + (S.tally ? ` Throws this game: ${name(0)} ${tallyText(S.tally[0])}; ${name(1)} ${tallyText(S.tally[1])}.` : '');
     }
     GameNav.fillEnd('endNav', 'chowka');
     $('endSheet').hidden = false;
@@ -507,6 +514,10 @@ function openMenu(){
   $('optRoute').checked = set.route; $('optFace').checked = set.face;
   $('stGames').textContent = stats.games;
   $('stW0').innerHTML = `${name(0)} <b>${stats.wins[0]}</b>`; $('stW1').innerHTML = `${(set.names[1] || '').trim() || 'Red'} <b>${stats.wins[1]}</b>`;
+  { const t = stats.throws, el = $('stThrows');
+    if (t){ const row = (who, c) => { const n = c.reduce((a, b) => a + b, 0); return `${who}: <b>${n}</b> throws, bara <b>${pct(c[0], n)}</b>, chowka <b>${pct(c[4], n)}</b>`; };
+      el.innerHTML = `Shell throws against the computer on this phone. ${row('You', t.you)} · ${row('Computer', t.cpu)}. A fair throw gives each about 6.3% (1 in 16): both sides use exactly the same throw.`; el.hidden = false; }
+    else el.hidden = true; }
   $('stCpu').innerHTML = 'Vs computer (won–lost): ' + Object.entries(LEVEL_NAMES).map(([k, t]) => `${t} <b>${(stats.cpu[k] || [0, 0]).join('–')}</b>`).join(' · ');
   confirmNew = 0; $('newBtn').textContent = 'New game';
   $('endSheet').hidden = true; $('menuSheet').hidden = false;
@@ -542,8 +553,6 @@ $('mat').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === '
 // lands either way up with an even chance but the result is set by your hand. A quick tap gives a short shake.
 const cryptoU32 = () => { try{ return crypto.getRandomValues(new Uint32Array(1))[0]; }catch(e){ return (Math.random() * 4294967296) >>> 0; } };
 const stir = (h, v) => { h = (h ^ (v >>> 0)) >>> 0; h = Math.imul(h ^ (h >>> 16), 0x45d9f3b); h = Math.imul(h ^ (h >>> 13), 0x45d9f3b); return (h ^ (h >>> 16)) >>> 0; };
-const fromSeed = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const freshRand = () => fromSeed(cryptoU32());
 let shaking = null, shakeRaf = 0;
 // ---------- shell physics ----------
 // One animation loop moves the shells. While shaking they're kicked about inside the mat, spin, hop and flip over,
@@ -636,7 +645,7 @@ async function endShake(){
   if (held < 450){ await sleep(450 - held); s.h = stir(s.h, (performance.now() * 1000) | 0); } // a quick tap still gets a short rattle
   shaking = null; cancelAnimationFrame(shakeRaf);
   shakeAnim(false); $('shakeBtn').classList.remove('on'); $('shakeTxt').textContent = 'Hold to shake';
-  doThrow(false, fromSeed(stir(stir(s.h, (performance.now() * 1000) | 0), cryptoU32())));
+  doThrow(false, stir(s.h, (performance.now() * 1000) | 0)); // the shake's randomness is mixed in; the throw stays a fair 50/50 per shell
 }
 const sb = $('shakeBtn');
 sb.addEventListener('pointerdown', e => { sb.setPointerCapture && sb.setPointerCapture(e.pointerId); startShake(e); });

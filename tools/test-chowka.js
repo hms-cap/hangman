@@ -104,6 +104,33 @@ for (let g = 0; g < 3000; g++){
 }
 console.log(`3000 random games: avg ${Math.round(total / 3000)} actions, wins ${wins.join(' / ')}`);
 
+// The throw used in play (you and the computer): exact cowry odds, independent shells, and a shake can't bias it
+{
+  const N = 400000, fair = { 0: 1 / 16, 1: 4 / 16, 2: 6 / 16, 3: 4 / 16, 4: 1 / 16 };
+  const run = mixOf => { const c = [0, 0, 0, 0, 0], perShell = [0, 0, 0, 0], pair = [0, 0, 0, 0];
+    for (let i = 0; i < N; i++){ const sh = C.throwShells(mixOf(i)); c[sh.filter(Boolean).length]++; sh.forEach((x, k) => { if (x) perShell[k]++; }); pair[(sh[0] ? 2 : 0) + (sh[1] ? 1 : 0)]++; }
+    return { c, perShell, pair }; };
+  for (const [label, mixOf] of [['no shake', () => undefined], ['a shake', i => (i * 2654435761) >>> 0], ['the worst shake (all bits set)', () => 0xffffffff], ['a constant shake', () => 12345]]){
+    const { c, perShell, pair } = run(mixOf);
+    let worst = 0; for (let k = 0; k <= 4; k++){ const sd = Math.sqrt(N * fair[k] * (1 - fair[k])); worst = Math.max(worst, Math.abs(c[k] - N * fair[k]) / sd); }
+    const shellDev = Math.max(...perShell.map(x => Math.abs(x - N / 2) / Math.sqrt(N / 4))), pairDev = Math.max(...pair.map(x => Math.abs(x - N / 4) / Math.sqrt(N * 3 / 16)));
+    ok(worst < 4.5 && shellDev < 4.5 && pairDev < 4.5, `throw odds with ${label} (worst deviation ${worst.toFixed(1)} sd)`);
+    if (label === 'no shake') console.log(`Throw odds over ${N}: ` + [0, 1, 2, 3, 4].map(k => `${k === 0 ? 'bara' : k === 4 ? 'chowka' : k + ' up'} ${(100 * c[k] / N).toFixed(2)}%`).join(', ') + ' (fair: 6.25, 25, 37.5, 25, 6.25)');
+  }
+  // full games against Hard: the computer gets no more bara/chowka per throw than you
+  const t = [[0, 0], [0, 0]];
+  for (let g = 0; g < 300; g++){
+    const G = C.newGame(); G.turn = g % 2; let n = 0;
+    while (G.phase !== 'over' && n++ < 20000){
+      if (G.phase === 'throw'){ const who = G.turn, sh = C.throwShells(); C.applyThrow(G, sh); t[who][0]++; if (C.isBonus(C.score(sh))) t[who][1]++; }
+      else { const mv = C.chooseMove(G, G.turn === 1 ? 'hard' : 'medium'); C.applyMove(G, mv.pawn, mv.k, mv.pair); }
+    }
+  }
+  const r0 = t[0][1] / t[0][0], r1 = t[1][1] / t[1][0], se = Math.sqrt(0.125 * 0.875 * (1 / t[0][0] + 1 / t[1][0]));
+  ok(Math.abs(r0 - r1) < 4 * se, `same bara/chowka rate for both sides in play (you ${(100 * r0).toFixed(2)}%, computer ${(100 * r1).toFixed(2)}%)`);
+  console.log(`In 300 games vs Hard: you ${t[0][0]} throws, ${(100 * r0).toFixed(2)}% bara/chowka; computer ${t[1][0]} throws, ${(100 * r1).toFixed(2)}% (fair 12.5%)`);
+}
+
 // Computer player
 for (const lv of ['easy', 'medium', 'hard']){
   // takes a capture when it's the obvious move (Easy picks at random half the time, so only Medium and Hard are held to it)

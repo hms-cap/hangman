@@ -28,6 +28,15 @@ const DEFAULTS = { killToEnter: true, pairs: true, threeOut: false, pairMoves: t
 const score = shells => { const up = shells.filter(Boolean).length; return up === 0 ? 8 : up; };
 const isBonus = v => v === 4 || v === 8;
 const roll = (rand = Math.random) => [0, 1, 2, 3].map(() => rand() < 0.5);
+// The throw used in play, for you and the computer alike: four independent even chances (one bit each) from the
+// platform's secure random numbers. `mix` is optional extra randomness from a shake; XOR with a secure random number
+// keeps every bit an exact 50/50, so a shake changes which way the shells land but can't make bara or chowka likelier.
+function secureU32(){
+  const c = typeof crypto !== 'undefined' && crypto.getRandomValues ? crypto : (typeof require !== 'undefined' ? require('crypto').webcrypto : null);
+  if (c) return c.getRandomValues(new Uint32Array(1))[0];
+  return (Math.random() * 4294967296) >>> 0;
+}
+function throwShells(mix){ const b = (secureU32() ^ ((mix >>> 0) || 0)) >>> 0; return [0, 1, 2, 3].map(i => ((b >>> i) & 1) === 1); }
 
 function newGame(opts){
   return { pawns: [Array(PAWNS).fill(0), Array(PAWNS).fill(0)], killed: [false, false], turn: 0,
@@ -292,7 +301,7 @@ function chooseMove(S, level, rand = Math.random){
   return scored[0].c;
 }
 
-const api = { N, HOME, PAWNS, PATHS, SAFE, isSafe, cellOf, score, isBonus, roll, newGame, route, destination, movesFor, anyMove,
+const api = { N, HOME, PAWNS, PATHS, SAFE, isSafe, cellOf, score, isBonus, roll, throwShells, secureU32, newGame, route, destination, movesFor, anyMove,
               opponentsAt, applyThrow, applyMove, DEFAULTS, chooseMove, pairMovesFor, pairDestination, partnerOf, canUse, evaluate, danger, LEVELS, HIT };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Chowka = api;
 })(typeof self !== 'undefined' ? self : this);
