@@ -225,7 +225,7 @@ The app keeps a simple record of how long each player spends in it.
 
 ## End-of-game moments
 Every game ends with a short animation in its own theme (`celebrate.js`, drawn on one full-screen layer that never blocks taps):
-- **Hangman**: solve the word and the figure is freed: the rope snaps up, the figure (in your pencil colour) drops to the ground, hops, waves and walks off the page whistling. Run out of guesses and a pink eraser scrubs the figure out, leaving crumbs
+- **Hangman**: one of several endings, picked at random (never the same twice running). Solve the word and the figure is freed, in your pencil colour: it hops, waves and walks off the page whistling; floats away on balloons spelling the word; or the gallows becomes a swing and it swings. Run out of guesses and a pink eraser scrubs the figure out, or the page becomes a chalkboard and a duster wipes it away
 - **Sudoku**: a gold wave across the grid and pencil digits flying off it ("Flawless!" with no mistakes or hints); out of mistakes, red digits drop
 - **Stelium**: the starfish spins, with stars and rising bubbles; a loss brings the tide in
 - **Tendril**: vines climb up the screen and leaves burst from the grid

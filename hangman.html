@@ -32,7 +32,12 @@
 .stage svg *{transform-box:view-box}
 .stage .walker path,.stage .walker circle{stroke:var(--hit)}
 .stage .walker .note{fill:var(--hit);stroke:none;font:600 14px var(--ui)}
-.stage .eraser rect{stroke:none}
+.stage .eraser rect,.stage .duster rect,.stage .balloons ellipse{stroke:none}
+.stage .balloons text{font:700 12px var(--mono);fill:#fff;stroke:none;text-anchor:middle;dominant-baseline:central}
+.stage .balloons path.str{stroke:var(--muted);stroke-width:.8}
+.stage .chalk{fill:#2f4a3c;stroke:#7a5a35;stroke-width:5}
+.stage svg.chalky path,.stage svg.chalky circle{transition:stroke .5s}
+.stage svg.chalky > path{stroke:#ecebe2} .stage svg.chalky .part{stroke:#f2b8b8}
 .stage .rope{transform-origin:139px 23px}
 .cat{position:absolute;left:0;top:2px;display:flex;flex-direction:column;align-items:flex-start;gap:0;border:0;background:transparent;padding:0;cursor:pointer;text-align:left;max-width:48%}
 .cat .label{font-size:.62rem}
@@ -255,16 +260,107 @@ function check(silent){
   }
   store.set('hangman-stats', stats); renderStats(); render();
   $('newBtn').className = 'btn primary'; $('newBtn').textContent = 'Next word';
-  if (!silent){ const t = won ? walkAway() : eraseOut(); setTimeout(() => showEnd(won), t); }
+  if (!silent){ const t = endMoment(won); setTimeout(() => showEnd(won), t); }
 }
 // ---- end-of-word moments ----
 const SVGNS = 'http://www.w3.org/2000/svg', stage = document.querySelector('.stage svg[role=img]');
 const motionOff = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const el = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || stage).appendChild(e); return e; };
 function resetStage(){
-  stage.querySelectorAll('.walker,.eraser').forEach(e => e.remove());
+  stage.querySelectorAll('.walker,.eraser,.duster,.balloons,.swing,.chalk').forEach(e => e.remove());
+  stage.classList.remove('chalky'); stage.querySelectorAll('path,circle').forEach(e => { e.style.filter = ''; });
   parts.forEach(p => { p.getAnimations().forEach(a => a.cancel()); p.style.opacity = ''; });
-  const rope = stage.querySelector('.rope'); rope.getAnimations().forEach(a => a.cancel());
+  const rope = stage.querySelector('.rope'); rope.getAnimations().forEach(a => a.cancel()); rope.style.opacity = '';
+}
+// Pick one of the endings at random, never the same one twice in a row. Returns ms to wait before the result sheet.
+const ENDINGS = { win: { walk: () => walkAway(), balloons: () => balloons(), swing: () => swing() }, loss: { erase: () => eraseOut(), chalk: () => chalkWipe() } };
+function endMoment(won){
+  const set = ENDINGS[won ? 'win' : 'loss'], key = 'hangman-last-end-' + (won ? 'w' : 'l'), last = store.get(key, '');
+  const options = Object.keys(set).filter(k => k !== last), pickK = options[(Math.random() * options.length) | 0];
+  store.set(key, pickK); stage.dataset.ending = pickK;
+  return set[pickK]();
+}
+// the freed figure in the player's pencil colour, standing on the ground (or drawn at another spot by the caller's transform)
+function figure(parent, { seated = false, armUp = false } = {}){
+  const fig = el('g', {}, parent);
+  el('circle', { cx: 139, cy: 140, r: 14 }, fig);
+  el('path', { d: 'M133 143 Q139 149 145 143', 'stroke-width': 2 }, fig);
+  el('circle', { cx: 134, cy: 136, r: 1.4, style: 'fill:var(--hit)', 'stroke-width': 1.5 }, fig); el('circle', { cx: 144, cy: 136, r: 1.4, style: 'fill:var(--hit)', 'stroke-width': 1.5 }, fig);
+  el('path', { d: 'M139 154 Q140 170 139 186' }, fig);
+  const armL = el('path', { d: armUp ? 'M139 162 Q132 150 128 132' : 'M139 162 Q128 170 120 180' }, fig);
+  const armR = el('path', { d: seated ? 'M139 162 Q132 150 128 132' : 'M139 162 Q150 170 158 180' }, fig);
+  const legL = el('path', { d: seated ? 'M139 186 Q152 188 162 190 L164 208' : 'M139 186 Q133 200 128 216' }, fig);
+  const legR = el('path', { d: seated ? 'M139 186 Q154 186 166 186 L170 203' : 'M139 186 Q145 200 150 216' }, fig);
+  [armL, armR].forEach(a => a.style.transformOrigin = '139px 162px'); [legL, legR].forEach(l => l.style.transformOrigin = '139px 186px');
+  return { fig, armL, armR, legL, legR };
+}
+const freeRope = () => { parts.forEach(p => p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' })); };
+const stampWin = (delay = 700) => { if (window.FX) setTimeout(() => FX.stamp(S.wrong ? 'Free!' : 'Flawless!', { color: FX.css('--hit'), top: 24 }), delay); };
+const screenPt = (x, y) => new DOMPoint(x, y).matrixTransform(stage.getScreenCTM());
+
+// Win, balloons: one balloon per letter of the word inflates above the figure's raised hand, then they carry it up and away.
+function balloons(){
+  if (motionOff){ stampWin(0); return 900; }
+  freeRope(); stage.querySelector('.rope').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+  const G = el('g', { class: 'walker balloons' }), sway = el('g', {}, G);
+  const word = [...new Set(S.word.replace(/[^A-Z]/g, ''))].slice(0, 7), n = word.length, cols = ['#e2463b', '#f28c1e', '#f6c21b', '#3fa35b', '#2f7fd0', '#8a5bd1', '#e05aa0'];
+  const hand = [128, 132];
+  word.forEach((ch, k) => {
+    const x = 128 + (k - (n - 1) / 2) * 21, y = 58 - Math.abs(k - (n - 1) / 2) * 7 + (k % 2) * 10;
+    el('path', { class: 'str', d: `M${hand[0]} ${hand[1]} Q${(hand[0] + x) / 2 + 4} ${(hand[1] + y) / 2} ${x} ${y + 14}` }, sway);
+    const b = el('g', {}, sway); b.style.transformOrigin = `${x}px ${y + 14}px`;
+    el('ellipse', { cx: x, cy: y, rx: 11.5, ry: 14, fill: cols[k % cols.length] }, b);
+    el('path', { d: `M${x - 2} ${y + 16} L${x} ${y + 13.5} L${x + 2} ${y + 16}Z`, style: `fill:${cols[k % cols.length]};stroke:none` }, b);
+    el('ellipse', { cx: x - 4, cy: y - 5, rx: 2.5, ry: 4, fill: '#fff', opacity: .45 }, b);
+    const t = el('text', { x, y }, b); t.textContent = ch;
+    b.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.15)', offset: .7 }, { transform: 'scale(1)' }], { duration: 380, delay: 350 + k * 140, easing: 'ease-out', fill: 'backwards' });
+  });
+  const { fig, legL, legR } = figure(sway, { armUp: true });
+  fig.animate([{ opacity: 0, transform: 'translateY(-20px)' }, { opacity: 1, transform: 'none' }], { duration: 350, delay: 200, fill: 'backwards' });
+  const T0 = 500 + n * 140 + 300;
+  // lift off: up and out of the top, drifting and swaying; legs dangle
+  G.animate([{ transform: 'none' }, { transform: 'translate(0,-10px)', offset: .15 }, { transform: 'translate(30px,-300px)' }], { duration: 2300, delay: T0, easing: 'cubic-bezier(.5,0,.8,.6)', fill: 'forwards' });
+  sway.style.transformOrigin = '139px 70px';
+  sway.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(6deg)' }, { transform: 'rotate(-6deg)' }, { transform: 'rotate(0)' }], { duration: 1400, delay: T0, iterations: 2, easing: 'ease-in-out' });
+  legL.animate([{ transform: 'rotate(10deg)' }, { transform: 'rotate(-10deg)' }], { duration: 400, delay: T0, iterations: 6, direction: 'alternate' });
+  legR.animate([{ transform: 'rotate(-12deg)' }, { transform: 'rotate(12deg)' }], { duration: 400, delay: T0, iterations: 6, direction: 'alternate' });
+  stampWin(T0);
+  return T0 + 1900;
+}
+// Win, swing: the noose rope turns into a swing with a seat, the figure sits on it and swings, slowing down.
+function swing(){
+  if (motionOff){ stampWin(0); return 900; }
+  freeRope(); stage.querySelector('.rope').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+  const W = el('g', { class: 'walker swing' }); W.style.transformOrigin = '123px 23px';
+  const ropes = [el('path', { d: 'M108 23 L108 186', pathLength: 1 }, W), el('path', { d: 'M138 23 L138 186', pathLength: 1 }, W)];
+  const seat = el('path', { d: 'M102 186 L144 186', 'stroke-width': 5, pathLength: 1 }, W);
+  [...ropes, seat].forEach((r, k) => { r.style.strokeDasharray = 1; r.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 420, delay: 250 + k * 140, fill: 'backwards' }); });
+  const { fig } = figure(W, { seated: true });
+  fig.setAttribute('transform', 'translate(-18 0)');
+  fig.animate([{ opacity: 0, transform: 'translateY(-24px)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: 760, fill: 'backwards', easing: 'ease-in' });
+  const T0 = 1150, amps = [24, -20, 16, -12, 8, -4, 0];
+  W.animate(amps.map(a => ({ transform: `rotate(${a}deg)` })).reduce((acc, f, i) => (acc.push(Object.assign({}, f, { offset: (i + 1) / (amps.length + 1) })), acc), [{ transform: 'rotate(0)', offset: 0 }]).concat([{ transform: 'rotate(0)', offset: 1 }]),
+    { duration: 2600, delay: T0, easing: 'ease-in-out', fill: 'forwards' });
+  stampWin(T0 - 200);
+  return T0 + 1700;
+}
+// Loss, chalkboard: the paper turns into a chalkboard, then a felt duster wipes the drawing away in clouds of chalk dust.
+function chalkWipe(){
+  if (motionOff) return 1300;
+  const board = el('rect', { class: 'chalk', x: 2, y: 2, width: 196, height: 226, rx: 8 }); stage.insertBefore(board, stage.firstChild);
+  board.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, fill: 'forwards' });
+  stage.classList.add('chalky');
+  const D = el('g', { class: 'duster' }), body = el('g', {}, D);
+  el('rect', { x: -20, y: -9, width: 40, height: 12, rx: 3, fill: '#8a5a32' }, body);
+  el('rect', { x: -20, y: 2, width: 40, height: 7, rx: 2, fill: '#dcd6c8' }, body);
+  const sweeps = [[230, 40], [100, 64], [190, 92], [96, 120], [190, 148], [100, 176], [190, 200], [230, 240]];
+  D.animate(sweeps.map(([x, y]) => ({ transform: `translate(${x}px,${y}px)` })), { duration: 1600, delay: 650, easing: 'ease-in-out', fill: 'both' });
+  const all = [...stage.querySelectorAll(':scope > path, :scope > circle')];
+  parts.forEach((p, i) => p.animate([{ opacity: 1, filter: 'blur(0)' }, { opacity: .15, filter: 'blur(1.5px)' }], { duration: 420, delay: 800 + i * 180, fill: 'forwards' }));
+  if (window.FX) [[139, 70], [139, 110], [139, 150], [139, 185]].forEach(([x, y], k) => setTimeout(() => {
+    const pt = screenPt(x, y); FX.burst({ x: pt.x, y: pt.y, shapes: ['pixel'], colors: ['#f4f1e8', '#dcd6c8', '#bfc9c2'], count: 26, size: 2.6, speed: 160, gravity: 120, ttl: 1.3, drag: .94 });
+  }, 820 + k * 330));
+  return 2500;
 }
 // Win: the rope snaps up, the figure (in your pencil colour) stands free on the ground, hops, waves, and walks off whistling.
 // Returns how long to wait before the result sheet.
