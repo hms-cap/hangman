@@ -375,6 +375,7 @@ function prompt(){
 }
 const save = () => store.set('chowka-game', S && S.phase !== 'over' ? S : null);
 
+let gen = 0; // bumps with every new game; anything still animating from an older game stops when it sees the change
 async function doThrow(auto, mix){
   if (!S || S.phase !== 'throw' || busy || (cpuTurn() && auto !== true)) return;
   busy = true; render();
@@ -382,7 +383,8 @@ async function doThrow(auto, mix){
   // count every throw by who made it, this game and (against the computer) on this phone
   (S.tally ||= [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])[p][up]++;
   if (S.cpu){ const t = (stats.throws ||= { you: [0, 0, 0, 0, 0], cpu: [0, 0, 0, 0, 0] }); t[p === 1 ? 'cpu' : 'you'][up]++; store.set('chowka-stats', stats); }
-  await tossAnim(res);
+  const g0 = gen; await tossAnim(res);
+  if (g0 !== gen) return; // the game was restarted while the shells were in the air
   const out = K.applyThrow(S, res), v = out.v;
   const label = v === 8 ? 'Bara! 8' : v === 4 ? 'Chowka! 4' : `${v}`;
   busy = false;
@@ -392,7 +394,7 @@ async function doThrow(auto, mix){
   else { sel = S.pool.findIndex(x => K.canUse(S, x)); if (sel < 0) sel = 0; pairMode = false; render(); prompt(); }
   save(); render(); kick();
 }
-async function handoff(){ busy = true; render(); await sleep(1100); busy = false; prompt(); render(); kick(); }
+async function handoff(){ const g0 = gen; busy = true; render(); await sleep(1100); if (g0 !== gen) return; busy = false; prompt(); render(); kick(); }
 
 // ---------- computer ----------
 // The computer takes its turn one step at a time with short pauses, so you can follow what it does.
@@ -406,7 +408,8 @@ async function cpuStep(){
   if (!cpuTurn() || busy || !$('menuSheet').hidden || !$('endSheet').hidden || (window.GameNav && GameNav.isOpen)) return;
   if (S.phase === 'throw'){
     say(S.pool.length ? 'Computer shakes again…' : 'Computer shakes the shells…', 1);
-    shakeAnim(true); await sleep(750); shakeAnim(false);
+    const g0 = gen; shakeAnim(true); await sleep(750); shakeAnim(false);
+    if (g0 !== gen || !cpuTurn()) return;
     return doThrow(true);
   }
   if (S.phase !== 'move') return;
@@ -414,8 +417,8 @@ async function cpuStep(){
   if (!m) return;
   sel = m.k; pairMode = !!m.pair; render(); // show the throw it picked and where its pawns can go
   say(m.pair ? `Computer moves a pair ${S.pool[m.k] / 2} each` : `Computer moves ${S.pool[m.k]}`, 1);
-  await sleep(650);
-  if (cpuTurn() && S.phase === 'move') await move(m.pawn, m.k, m.pair);
+  const g1 = gen; await sleep(650);
+  if (g1 === gen && cpuTurn() && S.phase === 'move') await move(m.pawn, m.k, m.pair);
 }
 
 function tapCell(r, c){
@@ -438,12 +441,14 @@ async function move(i, k, pair){
   if (!res){ busy = false; return; }
   pairMode = false;
   // walk the pawn (or the pair, side by side) square by square, then let any captured pawn slide home
-  view = before; view.pool = S.pool;
-  for (const step of res.steps){ view.pawns[p][i] = step; if (res.pair) view.pawns[p][res.partner] = step; drawPawns(view); buzz(4); await sleep(res.pair ? 190 : 150); }
+  const g0 = gen; view = before; view.pool = S.pool;
+  for (const step of res.steps){ if (g0 !== gen) return; view.pawns[p][i] = step; if (res.pair) view.pawns[p][res.partner] = step; drawPawns(view); buzz(4); await sleep(res.pair ? 190 : 150); }
+  if (g0 !== gen) return; // the game was restarted mid-move
   view = null;
   if (res.captured.length){ buzz([20, 30, 40]); }
   render();
   await sleep(res.captured.length ? 380 : 60);
+  if (g0 !== gen) return;
   busy = false;
   if (res.won) return win(p);
   const them = name(1 - p), bits = [];
@@ -493,6 +498,7 @@ function win(p){
   }, 900);
 }
 function newGame(starter){
+  gen++;
   S = K.newGame(rulesFromSet()); S.turn = starter == null ? 0 : starter; S.cpu = set.mode === 'cpu' ? set.level : null; S.time = [0, 0];
   sel = 0; busy = false; view = null; pairMode = false; lay = rest(); drawShells(); clearTimeout(cpuTimer); clockSig = '';
   $('endSheet').hidden = true; $('menuSheet').hidden = true;

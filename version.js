@@ -3,9 +3,12 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.5.1',
+  version: '1.5.2',
   date: '2026-10-24',
   changes: [
+    { v: '1.5.2', date: '2026-10-24', notes: [
+      'Chowka Bara: restarting during the computer\'s turn no longer carries its throw or move into the new game',
+    ] },
     { v: '1.5.1', date: '2026-10-24', notes: [
       'Chowka Bara: you and the computer now throw with exactly the same single, tested throw (four fair 50/50 shells), and a shake can never change the odds',
       'Chowka Bara: see the throws for yourself: the end of each game shows how many bara and chowka each side threw, and the menu keeps a running tally against the computer',
