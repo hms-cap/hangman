@@ -357,11 +357,13 @@ function cheer(won){
   if (!window.FX) return;
   const G4 = ['--g1', '--g2', '--g3', '--g4'].map(v => FX.css(v)), green = FX.css('--em-clover', '#2e8b57');
   if (won){
-    FX.burst({ el: '#tiles', shapes: ['clover'], colors: [green, ...G4], count: 46, size: 14, speed: 950, gravity: 500 });
-    FX.rain({ shapes: ['clover', 'leaf', 'clover'], colors: [green, green, ...G4], count: 70, size: 13, sway: 90, delay: .2 });
-    if (!G.mistakes && !G.hints) FX.fireworks({ el: '#tiles', colors: ['#f0c24a', green], shells: 3, delay: .4, shapes: ['star', 'spark'] });
-    FX.stamp(!G.mistakes && !G.hints ? 'Perfect!' : 'Lucky you!', { color: green });
-  } else FX.rain({ shapes: ['leaf'], colors: ['#b58b55', '#9c7a4a', '#c9a46c'], count: 22, size: 13, gravity: 50, sway: 70, over: 1.4, ttl: 4.5 });
+    const perfect = !G.mistakes && !G.hints, big = Math.min(innerWidth, 560) * .28; // the giant clover is about half the screen across
+    FX.burst({ el: '#tiles', shapes: ['clover'], colors: [green], count: 1, size: big, speed: 0, gravity: 0, grow: .6, spin: 1.4, ttl: 2.8, fade: .3 });
+    FX.burst({ el: '#tiles', shapes: ['clover'], colors: [green, ...G4], count: 40, size: 28, speed: 1150, gravity: 520, delay: .25 });
+    FX.rain({ shapes: ['clover', 'leaf', 'clover'], colors: [green, green, ...G4], count: 60, size: 24, sway: 110, delay: .35 });
+    if (perfect) FX.fireworks({ el: '#tiles', colors: ['#f0c24a', green], shells: 4, delay: .5, shapes: ['star', 'spark'], size: 8 });
+    FX.stamp(perfect ? 'Perfect!' : 'Lucky you!', { color: green, top: 22 });
+  } else FX.rain({ shapes: ['leaf'], colors: ['#b58b55', '#9c7a4a', '#c9a46c'], count: 22, size: 24, gravity: 50, sway: 80, over: 1.4, ttl: 4.5 });
 }
 function record(){
   const s = st(mode); s.played++;

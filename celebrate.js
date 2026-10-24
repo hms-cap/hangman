@@ -9,6 +9,7 @@
 //   FX.wave({ el, cols, rows, color })                         a lit wave across a grid's squares (Chess, Sudoku)
 //   FX.stamp(text, { color })                                  the big word
 //   FX.css(name) reads a CSS colour variable.  With reduced motion only the stamp shows, without movement.
+// burst options also take grow (seconds to swell in), spin (turn speed) and fade (share of life spent fading).
 // Shapes: confetti, star, digit, leaf, clover, shell, stone, petal, pixel, bubble, crown, spark.
 (function(){
 'use strict';
@@ -61,11 +62,12 @@ function add(p){ if (parts.length < 420) parts.push(Object.assign({ t: 0, vr: rn
 function burst(o = {}){
   if (reduced) return; layer();
   const { x, y } = centre(o), n = o.count || 90, colors = o.colors || [css('--hit'), css('--miss'), css('--present', '#d38c1f')], shapes = o.shapes || ['confetti'];
-  const sp = o.speed || 900, spread = o.spread == null ? TAU : o.spread, dir = o.dir == null ? -Math.PI / 2 : o.dir;
+  const sp = o.speed == null ? 900 : o.speed, spread = o.spread == null ? TAU : o.spread, dir = o.dir == null ? -Math.PI / 2 : o.dir;
   for (let i = 0; i < n; i++){
     const a = dir + rnd(-spread / 2, spread / 2), v = sp * rnd(.35, 1), sh = pick(shapes);
     add({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: (o.size || 9) * rnd(.65, 1.35), shape: sh, color: pick(colors), ch: o.chars ? pick(o.chars) : '',
-      ttl: (o.ttl || 2.2) * rnd(.75, 1.15), g: o.gravity == null ? 900 : o.gravity, drag: o.drag || .985, sway: o.sway || 0, delay: (o.delay || 0) + (o.stagger ? rnd(0, o.stagger) : 0) });
+      ttl: (o.ttl || 2.2) * rnd(.75, 1.15), g: o.gravity == null ? 900 : o.gravity, drag: o.drag || .985, sway: o.sway || 0, delay: (o.delay || 0) + (o.stagger ? rnd(0, o.stagger) : 0),
+      grow: o.grow || 0, vr: o.spin != null ? o.spin : rnd(-6, 6), fade: o.fade || .3 });
   }
 }
 function rain(o = {}){
@@ -161,7 +163,9 @@ function frame(now){
     p.vx *= Math.pow(p.drag, dt * 60); p.vy = p.vy * Math.pow(p.drag, dt * 60) + p.g * dt;
     p.x += (p.vx + (p.sway ? Math.sin(p.t * 3 + p.rot) * p.sway : 0)) * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
     const left = p.ttl - p.t; c.globalAlpha = left < p.ttl * p.fade ? left / (p.ttl * p.fade) : 1;
-    c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = p.color; SH[p.shape](c, p.s, p); c.restore();
+    // grow: the particle swells in over that many seconds with a little overshoot
+    const gk = p.grow ? Math.min(1, p.t / p.grow) : 1, gs = p.grow ? 1 + 2.2 * Math.pow(gk - 1, 3) + 1.2 * Math.pow(gk - 1, 2) : 1;
+    c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = p.color; SH[p.shape](c, p.s * Math.max(0, gs), p); c.restore();
   }
   c.globalAlpha = 1;
   if (parts.length || fx.length) raf = requestAnimationFrame(frame);
