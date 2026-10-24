@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="paper.css">
 <script src="profiles.js"></script>
 <script src="playtime.js"></script>
+<script src="celebrate.js"></script>
 <style>
 .score{display:flex;gap:14px;justify-content:center;font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
 .score span{display:flex;align-items:baseline;gap:5px;text-transform:uppercase;letter-spacing:.08em;font-size:.62rem}
@@ -27,6 +28,12 @@
 .stage .part{stroke:var(--miss);stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .45s ease-out}
 .stage .part.on{stroke-dashoffset:0}
 .stage .part:not(.on){visibility:hidden}
+/* end of a word: on a win the figure is freed and walks off the page; on a loss an eraser rubs it out */
+.stage svg *{transform-box:view-box}
+.stage .walker path,.stage .walker circle{stroke:var(--hit)}
+.stage .walker .note{fill:var(--hit);stroke:none;font:600 14px var(--ui)}
+.stage .eraser rect{stroke:none}
+.stage .rope{transform-origin:139px 23px}
 .cat{position:absolute;left:0;top:2px;display:flex;flex-direction:column;align-items:flex-start;gap:0;border:0;background:transparent;padding:0;cursor:pointer;text-align:left;max-width:48%}
 .cat .label{font-size:.62rem}
 .cat b{font-family:var(--hand);font-weight:400;font-size:1.45rem;color:var(--hit);line-height:1.1;display:flex;align-items:center;gap:4px}
@@ -99,7 +106,7 @@
       <path d="M50 216 L52 22" />
       <path d="M50 24 Q100 21 140 23" />
       <path d="M52 62 L88 24" />
-      <path d="M138 23 L139 52" />
+      <path class="rope" d="M138 23 L139 52" />
       <circle class="part" pathLength="1" cx="139" cy="71" r="19" transform="rotate(-90 139 71)" />
       <path class="part" pathLength="1" d="M139 90 Q141 120 139 148" />
       <path class="part" pathLength="1" d="M139 104 Q125 116 113 128" />
@@ -185,6 +192,7 @@ const letters = w => [...new Set(w.replace(/ /g, ''))];
 
 function newGame(restore){
   if ($('endSheet')) $('endSheet').hidden = true;
+  resetStage();
   const p = restore && restore.word ? restore : pick();
   S = { word: p.word, cat: p.cat, guessed: new Set(p.guessed || []), hinted: new Set(p.hinted || []), wrong: 0, over: false };
   S.wrong = [...S.guessed].filter(c => !S.word.includes(c)).length + S.hinted.size;
@@ -247,7 +255,66 @@ function check(silent){
   }
   store.set('hangman-stats', stats); renderStats(); render();
   $('newBtn').className = 'btn primary'; $('newBtn').textContent = 'Next word';
-  if (!silent) setTimeout(() => showEnd(won), won ? 900 : 1300);
+  if (!silent){ const t = won ? walkAway() : eraseOut(); setTimeout(() => showEnd(won), t); }
+}
+// ---- end-of-word moments ----
+const SVGNS = 'http://www.w3.org/2000/svg', stage = document.querySelector('.stage svg[role=img]');
+const motionOff = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const el = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || stage).appendChild(e); return e; };
+function resetStage(){
+  stage.querySelectorAll('.walker,.eraser').forEach(e => e.remove());
+  parts.forEach(p => { p.getAnimations().forEach(a => a.cancel()); p.style.opacity = ''; });
+  const rope = stage.querySelector('.rope'); rope.getAnimations().forEach(a => a.cancel());
+}
+// Win: the rope snaps up, the figure (in your pencil colour) stands free on the ground, hops, waves, and walks off whistling.
+// Returns how long to wait before the result sheet.
+function walkAway(){
+  if (motionOff){ if (window.FX) FX.stamp(S.wrong ? 'Free!' : 'Flawless!'); return 900; }
+  parts.forEach(p => p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' }));
+  stage.querySelector('.rope').animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(.3)', offset: .5 }, { transform: 'scaleY(.5)', offset: .75 }, { transform: 'scaleY(.42)' }], { duration: 500, easing: 'ease-out', fill: 'forwards' });
+  const W = el('g', { class: 'walker' }), bob = el('g', {}, W), fig = el('g', {}, bob);
+  const head = el('circle', { cx: 139, cy: 140, r: 14 }, fig), body = el('path', { d: 'M139 154 Q140 170 139 186' }, fig);
+  const armL = el('path', { d: 'M139 162 Q128 170 120 180' }, fig), armR = el('path', { d: 'M139 162 Q150 170 158 180' }, fig);
+  const legL = el('path', { d: 'M139 186 Q133 200 128 216' }, fig), legR = el('path', { d: 'M139 186 Q145 200 150 216' }, fig);
+  const smile = el('path', { d: 'M133 143 Q139 149 145 143', 'stroke-width': 2 }, fig); el('circle', { cx: 134, cy: 136, r: 1.4, style: 'fill:var(--hit)', 'stroke-width': 1.5 }, fig); el('circle', { cx: 144, cy: 136, r: 1.4, style: 'fill:var(--hit)', 'stroke-width': 1.5 }, fig);
+  [armR].forEach(a => a.style.transformOrigin = '139px 162px'); [legL, legR].forEach(l => l.style.transformOrigin = '139px 186px');
+  // 1. drawn in quickly with a little drop from the rope
+  fig.animate([{ transform: 'translateY(-26px)', opacity: 0 }, { transform: 'translateY(4px)', opacity: 1, offset: .7 }, { transform: 'none', opacity: 1 }], { duration: 450, delay: 250, easing: 'ease-in', fill: 'backwards' });
+  // 2. a hop for joy and a wave
+  bob.animate([{ transform: 'none' }, { transform: 'translateY(-16px)' }, { transform: 'none' }], { duration: 380, delay: 760, easing: 'ease-out' });
+  armR.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-150deg)', offset: .25 }, { transform: 'rotate(-115deg)', offset: .45 }, { transform: 'rotate(-150deg)', offset: .65 }, { transform: 'rotate(-115deg)', offset: .85 }, { transform: 'rotate(0)' }], { duration: 900, delay: 820 });
+  // 3. walk off to the right: legs swing, arms swing, a little bob each step, notes float up
+  const T0 = 1750, DUR = 1900, steps = 6;
+  const swing = (a) => [{ transform: `rotate(${a}deg)` }, { transform: `rotate(${-a}deg)` }];
+  legL.animate(swing(26), { duration: DUR / steps, delay: T0, iterations: steps, direction: 'alternate', easing: 'ease-in-out' });
+  legR.animate(swing(-26), { duration: DUR / steps, delay: T0, iterations: steps, direction: 'alternate', easing: 'ease-in-out' });
+  armL.style.transformOrigin = '139px 162px';
+  armL.animate(swing(-18), { duration: DUR / steps, delay: T0, iterations: steps, direction: 'alternate', easing: 'ease-in-out' });
+  bob.animate([{ transform: 'none' }, { transform: 'translateY(-3px)' }, { transform: 'none' }], { duration: DUR / steps, delay: T0, iterations: steps, easing: 'ease-in-out' });
+  W.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(150px)', opacity: 1, offset: .8 }, { transform: 'translateX(190px)', opacity: 0 }], { duration: DUR, delay: T0, easing: 'linear', fill: 'forwards' });
+  ['♪', '♫', '♪'].forEach((n, k) => { const t = el('text', { class: 'note', x: 150, y: 128 }, W); t.textContent = n;
+    t.animate([{ transform: 'translate(0,0)', opacity: 0 }, { opacity: 1, offset: .2 }, { transform: `translate(${10 + k * 6}px,-34px)`, opacity: 0 }], { duration: 900, delay: T0 + 200 + k * 450, fill: 'both' }); });
+  if (window.FX) setTimeout(() => FX.stamp(S.wrong ? 'Free!' : 'Flawless!', { color: FX.css('--hit'), top: 24 }), 700);
+  return T0 + DUR - 200;
+}
+// Loss: a pink eraser scrubs back and forth over the figure, rubbing it out and leaving crumbs.
+function eraseOut(){
+  if (motionOff) return 1300;
+  const E = el('g', { class: 'eraser' }), body = el('g', {}, E);
+  el('rect', { x: -15, y: -9, width: 30, height: 18, rx: 4, fill: '#f29bb0' }, body);
+  el('rect', { x: 4, y: -9, width: 11, height: 18, rx: 2, fill: '#5b7fa8' }, body);
+  body.setAttribute('transform', 'rotate(-25)');
+  const path = [[178, 40], [116, 70], [166, 98], [112, 126], [168, 152], [116, 176], [164, 196], [210, 230]];
+  E.animate(path.map(([x, y]) => ({ transform: `translate(${x}px,${y}px)` })), { duration: 1500, delay: 500, easing: 'ease-in-out', fill: 'both' });
+  parts.forEach((p, i) => p.animate([{ opacity: 1 }, { opacity: .12 }], { duration: 380, delay: 650 + i * 170, fill: 'forwards' }));
+  if (window.FX){ // crumbs from where the eraser has been
+    const m = stage.getScreenCTM();
+    [[139, 75], [139, 120], [139, 165]].forEach(([x, y], k) => setTimeout(() => {
+      const pt = new DOMPoint(x, y).matrixTransform(m);
+      FX.burst({ x: pt.x, y: pt.y, shapes: ['pixel'], colors: ['#f29bb0', '#c9cfd4', '#9aa1a8'], count: 18, size: 3.5, speed: 220, gravity: 700, ttl: 1.1, spread: Math.PI * 1.4, dir: Math.PI / 2 });
+    }, 700 + k * 380));
+  }
+  return 2200;
 }
 function showEnd(won){
   if (!S || !S.over) return;

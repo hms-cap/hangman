@@ -224,7 +224,8 @@ The app keeps a simple record of how long each player spends in it.
 - It's kept per player, like the other saves, under `playtime` (a year of days, each with the total and the time per game and per hour). `PlayTime.day()` and `PlayTime.days()` read it for anything else in the app that wants to use it
 
 ## End-of-game moments
-Every game except Hangman ends with a short animation in its own theme (`celebrate.js`, drawn on one full-screen layer that never blocks taps):
+Every game ends with a short animation in its own theme (`celebrate.js`, drawn on one full-screen layer that never blocks taps):
+- **Hangman**: solve the word and the figure is freed: the rope snaps up, the figure (in your pencil colour) drops to the ground, hops, waves and walks off the page whistling. Run out of guesses and a pink eraser scrubs the figure out, leaving crumbs
 - **Sudoku**: a gold wave across the grid and pencil digits flying off it ("Flawless!" with no mistakes or hints); out of mistakes, red digits drop
 - **Stelium**: the starfish spins, with stars and rising bubbles; a loss brings the tide in
 - **Tendril**: vines climb up the screen and leaves burst from the grid
