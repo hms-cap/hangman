@@ -19,6 +19,7 @@ const GAMES = [
   ['five', 'Stelium', 'fiveletters.html', '#d38c1f'],
   ['trail', 'Tendril', 'trail.html', '#2e5ea6'],
   ['groups', 'Clover', 'groups.html', '#7457a6'],
+  ['mini', 'Trellis', 'mini.html', '#1f8796'],
   ['chess', 'Chess', 'chess.html', '#33424f'],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html', '#2b6c84'],
   ['trainer', 'Chess Trainer', 'chess-trainer.html', '#8a4f7d'],

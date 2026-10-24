@@ -3,9 +3,12 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.4.0',
+  version: '1.5.0',
   date: '2026-10-24',
   changes: [
+    { v: '1.5.0', date: '2026-10-24', notes: [
+      'New daily game: Trellis, a 5 × 5 mini crossword with a new puzzle every day, a timer, check and reveal, and every past puzzle to play',
+    ] },
     { v: '1.4.0', date: '2026-10-24', notes: [
       'Hangman: three ways to win, picked at random: the figure walks away, floats off on balloons spelling the word, or swings on the gallows-turned-swing',
       'Hangman: two ways to lose: an eraser rubs the figure out, or it is wiped off a chalkboard with a duster',

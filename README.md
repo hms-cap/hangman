@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Tendril, Clover, Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Tendril, Clover, Trellis (mini crossword), Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -170,6 +170,16 @@ A word-grouping puzzle in the style of Connections. Four groups, four leaves: ea
 - `node tools/check-groups.js` checks the bank (and uses the system Hunspell dictionary to find compound words a "___ ball" style list is missing), builds 300 puzzles per level and two years of dailies, and prints samples
 - Shuffle, deselect, share your result as colored squares, saved progress
 
+### Trellis
+A 5 × 5 mini crossword, one a day. The grid is a garden trellis: words cross like its slats.
+- Tap a square to choose it; tap it again (or tap the clue) to switch between Across and Down. The arrows beside the clue step through the clues, and the list button shows them all
+- An on-screen keyboard, so the phone's own keyboard never covers the grid; typing moves through the word and then on to the next clue with a gap. A hardware keyboard works too (arrows, Tab for the next clue, space to switch direction)
+- A timer that only runs while the puzzle is on screen
+- **Check** a square, word or the whole grid (wrong letters are crossed out in red pencil; right ones stay in blue and lock) or **Reveal** them (marked with a red corner). A solve without either is a clean solve
+- **Daily** puzzle (No. 1 = 24 Oct 2026), the same for everyone, with a day streak that counts toward the home screen's flame, a countdown and stats (best clean time, average time, clean solves). Every earlier daily can be played from **Past puzzles**
+- Share your time and a picture of the grid as coloured squares
+- The puzzles are in `mini-data.js`: 62 grids made by `node tools/generate-mini.js` from Tendril's everyday words (no plurals, nothing obscure or grim), each word with one hand-written clue. They repeat after No. 62; add more by running the generator, pasting the new grids at the end and writing clues for the words it lists. `node tools/check-mini.js` checks every word has a clue, no clue gives away an answer in its grid, and no grid repeats
+
 ### Snake
 The classic: steer the snake to the apples, grow with each one, and don't hit the walls or your own tail.
 - Swipe anywhere to turn (one finger can make several turns), or use the on-screen arrow buttons; arrow keys or `WASD` on a keyboard
@@ -230,6 +240,7 @@ Every game ends with a short animation in its own theme (`celebrate.js`, drawn o
 - **Stelium**: the starfish spins, with stars and rising bubbles; a loss brings the tide in
 - **Tendril**: vines climb up the screen and leaves burst from the grid
 - **Clover**: four-leaf clovers shower down in the group colours, with fireworks for a perfect game; a loss drops a few wilted leaves
+- **Trellis**: a gold wave across the grid, leaves and petals flung out and drifting down, fireworks for a clean solve
 - **Chess** and **Chess Puzzles**: a gold wave across the squares, crowns, stars and fireworks ("Checkmate!"); a loss drops grey squares
 - **Go** and **Go Problems**: ink rings spread across the board and black and white stones scatter; a loss leaves grey ripples
 - **Snake**: the snake crumbles into pixels, with fireworks for a new best or a full board
@@ -254,6 +265,7 @@ The version is in `version.js` and shows on the About page (the About button abo
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Tendril page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Clover page; category bank; puzzle generator and solver; hand-written classics |
+| `mini.html`, `mini-data.js` | Trellis page; the grids and clues (`tools/generate-mini.js` makes grids, `tools/check-mini.js` checks them) |
 | `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
 | `go-explain.js`, `go-glossary.js` | Go Problems walkthrough captions; the glossary of terms and its diagrams (checked by `tools/test-go-problems.js`) |
 | `go-solver.js`, `go-problem.js`, `go-problems-worker.js` | Capture and life-and-death reading; judging a move in a problem and explaining wrong ones; worker (`node tools/test-go-solver.js`) |

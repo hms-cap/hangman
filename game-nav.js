@@ -12,6 +12,7 @@ const GAMES = [
   ['five', 'Stelium', 'fiveletters.html', '#d38c1f'],
   ['trail', 'Tendril', 'trail.html', '#2e5ea6'],
   ['groups', 'Clover', 'groups.html', '#7457a6'],
+  ['mini', 'Trellis', 'mini.html', '#1f8796'],
   ['chess', 'Chess', 'chess.html', '#33424f'],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html', '#2b6c84'],
   ['trainer', 'Chess Trainer', 'chess-trainer.html', '#8a4f7d'],
@@ -152,6 +153,7 @@ const DAILIES = [
   ['trail', 'Tendril', 'trail.html?daily', [2026, 9, 16]],
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html?daily', [2026, 9, 17]],
   ['groups', 'Clover', 'groups.html?daily', [2026, 9, 16]],
+  ['mini', 'Trellis', 'mini.html', [2026, 9, 24]],
 ];
 const read = k => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } };
 const dayOf = ([y, m, d]) => { const n = new Date(); return Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(y, m, d)) / 864e5); };
@@ -161,7 +163,7 @@ function dailyDone(id){
     const p = read('groups-progress') || {}, lv = ['e', 'm', 'h'].map(l => p['d' + day + l]);
     return lv.some(x => x && x.done && x.won) || lv.every(x => x && x.done);
   }
-  const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily' }[id]);
+  const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily', mini: 'mini-daily' }[id]);
   return !!(s && s.day === day && s.done);
 }
 // HTML for the end of a results screen: "Up next" to the next unfinished daily (if any), then Back to all games.

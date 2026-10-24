@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Trellis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="paper.css">
+<script src="profiles.js"></script>
+<script src="playtime.js"></script>
+<script src="celebrate.js"></script>
+<style>
+/* Trellis: a 5×5 mini crossword. The grid is a garden trellis: ink squares, pencil letters, a vine-green word highlight. */
+:root{ --tw:#1f8796; --tw-soft:rgba(31,135,150,.16); --tw-word:rgba(31,135,150,.30); --block:#26323b }
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){ --tw:#4fb9c7; --tw-soft:rgba(79,185,199,.14); --tw-word:rgba(79,185,199,.30); --block:#0a1c2e }}
+:root[data-theme="dark"]{ --tw:#4fb9c7; --tw-soft:rgba(79,185,199,.14); --tw-word:rgba(79,185,199,.30); --block:#0a1c2e }
+
+.app{gap:8px}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.85rem}
+@media (max-width:440px){.back .txt{display:none}}
+.icons{display:flex;gap:2px;justify-self:end}
+.icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+.status{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:34px}
+.status .lead{margin:0;color:var(--muted);font-size:.92rem}
+.status .lead b{color:var(--ink);font-weight:600}
+.timer{font-family:var(--mono);font-weight:600;font-size:1rem;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:center;gap:5px}
+.timer svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.tools{display:flex;gap:6px}
+.tools .btn{font-family:var(--ui);font-size:.86rem;font-weight:600;padding:5px 12px}
+
+.stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+.grid{
+  --n:5;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:0;
+  width:min(100%,360px,calc(100dvh - 400px));min-width:220px;aspect-ratio:1;
+  border:3px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--ink);container-type:inline-size;
+}
+.cell{
+  position:relative;border:0;padding:0;margin:0;background:var(--key);cursor:pointer;
+  box-shadow:inset -1px -1px 0 var(--line);font-family:var(--mono);font-weight:600;color:var(--ink);
+  display:flex;align-items:center;justify-content:center;text-transform:uppercase;font-size:11.5cqw;line-height:1;padding-top:3cqw;
+  -webkit-tap-highlight-color:transparent;
+}
+.cell.blk{background:var(--block);cursor:default}
+.cell .num{position:absolute;left:1.1cqw;top:.7cqw;font-family:var(--ui);font-size:3.4cqw;font-weight:600;color:var(--muted)}
+.cell.word{background:color-mix(in srgb,var(--tw) 22%,var(--key))}
+.cell.cur{background:color-mix(in srgb,#f0c24a 70%,var(--key))}
+.cell.ok{color:var(--hit)}
+.cell.rev::after{content:"";position:absolute;right:0;top:0;border-style:solid;border-width:0 4.5cqw 4.5cqw 0;border-color:transparent var(--miss) transparent transparent}
+.cell.bad .ch{position:relative}
+.cell.bad::before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--miss);transform:rotate(-38deg);border-radius:2px}
+.cell.pop .ch{animation:pop .22s ease-out}
+@keyframes pop{0%{transform:scale(.6)}100%{transform:none}}
+.done .cell{cursor:default}
+.done .cell.word,.done .cell.cur{background:var(--key)}
+
+.cluebar{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:stretch;min-height:56px;border-radius:12px;background:color-mix(in srgb,var(--tw) 22%,var(--key));border:1px solid var(--key-edge)}
+.cluebar button{border:0;background:transparent;cursor:pointer;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.cluebar button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.cluebar .txt{justify-content:flex-start;text-align:left;gap:10px;padding:6px 4px;font-size:1rem;line-height:1.25}
+.cluebar .txt b{font-family:var(--mono);font-weight:700;font-size:.9rem;flex:none;min-width:2.4em}
+.cluebar .txt span{text-wrap:balance}
+
+.kb{display:flex;flex-direction:column;gap:6px}
+.kb .r{display:flex;gap:5px;justify-content:center}
+.key{flex:1 1 0;max-width:44px;height:50px;min-width:0;border:1px solid var(--key-edge);border-radius:8px;background:var(--key);color:var(--ink);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.07);font-family:var(--mono);font-weight:600;font-size:1.02rem;padding:0;cursor:pointer;text-transform:uppercase}
+.key:active{transform:translateY(1px);background:var(--peer)}
+.key.wide{flex:1.5 1 0;max-width:66px}
+.key.wide svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+@media (max-height:680px){.key{height:42px}.cluebar{min-height:48px}}
+.kb[hidden]{display:none}
+.after{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.after .row{display:flex;gap:8px}
+.after .row .btn{flex:1}
+
+.toast{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--paper);font-weight:600;font-size:.92rem;padding:9px 14px;border-radius:10px;pointer-events:none}
+.toast[hidden]{display:none}
+
+.help ul{margin:0;padding-left:1.1em;color:var(--muted);line-height:1.5}
+.help b{color:var(--ink)}
+.assist{display:grid;grid-template-columns:auto repeat(3,1fr);gap:8px;align-items:center}
+.assist .label{margin-right:4px}
+.assist .btn{font-family:var(--ui);font-size:.9rem;font-weight:600;padding:8px 6px}
+.clues h3{margin:4px 0 2px;font-family:var(--hand);font-weight:400;font-size:1.4rem}
+.clues ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.clues li button{width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:7px 8px;cursor:pointer;display:flex;gap:10px;line-height:1.3;color:var(--ink)}
+.clues li button b{font-family:var(--mono);min-width:1.6em}
+.clues li button.on{background:var(--tw-word)}
+.clues li button.full{color:var(--muted)}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.3rem;font-weight:500;font-variant-numeric:tabular-nums}
+.shareText{font-family:var(--mono);white-space:pre;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;font-size:.9rem}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.picker button{border:1px solid var(--line);background:var(--key);border-radius:10px;padding:10px 4px;cursor:pointer;font-family:var(--mono);font-weight:600;font-size:.9rem;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px}
+.picker button small{font-family:var(--ui);font-size:.66rem;color:var(--muted);font-weight:600}
+.picker button.won small{color:var(--correct)} .picker button.lost small{color:var(--miss)}
+.picker button[aria-current="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit)}
+.mini-hero{display:flex;justify-content:center}
+.mini-hero svg{width:84px;height:84px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Trellis</h1>
+    <div class="icons">
+      <button class="icon" id="cluesBtn" type="button" aria-label="All clues"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="2.6"/></svg></button>
+      <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
+      <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="status">
+    <p class="lead" id="lead"></p>
+    <span class="timer" id="timer" aria-label="Time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/></svg><span id="time">0:00</span></span>
+    <div class="tools"><button class="btn" id="assistBtn" type="button">Check</button></div>
+  </div>
+
+  <div class="stage"><div class="grid" id="grid" role="grid" aria-label="Crossword"></div></div>
+
+  <div class="cluebar" id="cluebar">
+    <button type="button" id="prevClue" aria-label="Previous clue"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button type="button" class="txt" id="clueTxt" aria-live="polite"></button>
+    <button type="button" id="nextClue" aria-label="Next clue"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+  <div class="kb" id="kb"></div>
+  <div class="after" id="afterBar" hidden></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="sheet" id="helpSheet" hidden>
+  <div class="panel help" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">How to play</h2>
+    <p>A mini crossword: fill the 5 × 5 grid so every row and column spells the answer to its clue.</p>
+    <ul>
+      <li>Tap a square to choose it. Tap it again, or tap the clue, to switch between <b>Across</b> and <b>Down</b>.</li>
+      <li>Type with the keyboard below; you move on through the word, then to the next clue. The arrows beside the clue step through the clues.</li>
+      <li>Stuck? <b>Check</b> crosses out wrong letters in a square, a word or the whole grid. <b>Reveal</b> fills in the answer (marked with a red corner).</li>
+      <li>Fill the grid correctly to finish. A solve with no checks or reveals is a <b>clean solve</b>.</li>
+    </ul>
+    <p>There's a new puzzle every midnight, the same for everyone, and you can go back to any earlier one from the menu (tap the title) or the stats.</p>
+    <button class="btn primary" id="helpClose" type="button">Start</button>
+  </div>
+</div>
+
+<div class="sheet" id="assistSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="assistTitle">
+    <h2 id="assistTitle">Check or reveal</h2>
+    <div class="assist">
+      <span class="label">Check</span>
+      <button class="btn" type="button" data-a="check" data-s="cell">Square</button>
+      <button class="btn" type="button" data-a="check" data-s="word">Word</button>
+      <button class="btn" type="button" data-a="check" data-s="all">Grid</button>
+      <span class="label">Reveal</span>
+      <button class="btn" type="button" data-a="reveal" data-s="cell">Square</button>
+      <button class="btn" type="button" data-a="reveal" data-s="word">Word</button>
+      <button class="btn" type="button" data-a="reveal" data-s="all" id="revealAll">Grid</button>
+    </div>
+    <p>Checking or revealing means the solve won't count as clean. Revealing the whole grid ends the puzzle.</p>
+    <button class="btn" id="assistClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="cluesSheet" hidden>
+  <div class="panel clues" role="dialog" aria-labelledby="cluesTitle">
+    <h2 id="cluesTitle">Clues</h2>
+    <h3>Across</h3><ol id="listA"></ol>
+    <h3>Down</h3><ol id="listD"></ol>
+    <button class="btn" id="cluesClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <div class="mini-hero" id="hero"></div>
+    <h2 id="statsTitle">Statistics</h2>
+    <p id="result"></p>
+    <div class="stats4" id="stats4"></div>
+    <div class="stats4" id="stats4b"></div>
+    <div id="after"></div>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="pickSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="pickTitle">
+    <h2 id="pickTitle">Past puzzles</h2>
+    <button class="btn primary" id="pickToday" type="button">Today's puzzle</button>
+    <div class="picker" id="picker"></div>
+    <p id="pickNone">Earlier puzzles show up here from tomorrow.</p>
+    <button class="btn" id="pickClose" type="button">Close</button>
+  </div>
+</div>
+
+<script src="mini-data.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const DATA = window.MINI_DATA, N = 5;
+const EPOCH = new Date(2026, 9, 24); // No. 1 = 24 Oct 2026
+const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = s => { s = Math.floor(s); return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+// ---- the puzzle: grid, numbering, entries ----
+function build(day){
+  const list = DATA.grids, g = list[((day % list.length) + list.length) % list.length].split('|').join('');
+  const blk = i => g[i] === '#';
+  const entries = [], num = Array(N * N).fill(0); let n = 0;
+  for (let i = 0; i < N * N; i++){
+    if (blk(i)) continue;
+    const r = Math.floor(i / N), c = i % N;
+    const a = (c === 0 || blk(i - 1)) && c < N - 1 && !blk(i + 1), d = (r === 0 || blk(i - N)) && r < N - 1 && !blk(i + N);
+    if (a || d) num[i] = ++n;
+    for (const [dir, ok, step] of [['A', a, 1], ['D', d, N]]){
+      if (!ok) continue;
+      const cells = []; for (let j = i; j < N * N && !blk(j) && (dir === 'D' || Math.floor(j / N) === r); j += step) cells.push(j);
+      const answer = cells.map(j => g[j]).join('');
+      entries.push({ dir, num: n, cells, answer, clue: DATA.clues[answer] || '(missing clue)' });
+    }
+  }
+  const order = entries.filter(e => e.dir === 'A').concat(entries.filter(e => e.dir === 'D'));
+  return { g, blk, num, entries: order };
+}
+
+// ---- state ----
+// progress: d<day> -> { fill:[25], elapsed:secs, done, won, checks, reveals, ok:[i], rev:[i], bad:[i] }
+let progress = store.get('mini-progress', {});
+let stats = store.get('mini-stats', {});
+const st = m => (stats[m] ||= { played: 0, won: 0, clean: 0, cur: 0, max: 0, last: null, best: null, total: 0 });
+let day = 0, P = null, G = null, cur = 0, dir = 'A', fullWarned = '';
+
+function load(d){
+  day = d; P = build(day);
+  G = progress['d' + day] || { fill: Array(N * N).fill(''), elapsed: 0, done: false, won: false, checks: 0, reveals: 0, ok: [], rev: [], bad: [] };
+  progress['d' + day] = G;
+  const first = P.entries[0]; dir = first.dir; cur = firstEmpty(first) ?? first.cells[0];
+  fullWarned = '';
+  save(); drawGrid(); render(); tickStart();
+}
+const isToday = () => day === dayIndex();
+function save(){
+  progress['d' + day] = G; store.set('mini-progress', progress);
+  if (isToday()) store.set('mini-daily', { day, done: G.done, won: G.won, elapsed: Math.floor(G.elapsed), filled: G.fill.filter(Boolean).length });
+}
+const entryAt = (i, d) => P.entries.find(e => e.dir === d && e.cells.includes(i));
+const curEntry = () => entryAt(cur, dir) || entryAt(cur, dir === 'A' ? 'D' : 'A');
+const firstEmpty = e => e.cells.find(i => !G.fill[i]);
+const locked = i => G.rev.includes(i) || G.ok.includes(i);
+
+// ---- drawing ----
+function drawGrid(){
+  let h = '';
+  for (let i = 0; i < N * N; i++){
+    if (P.blk(i)){ h += '<div class="cell blk" aria-hidden="true"></div>'; continue; }
+    h += `<button type="button" class="cell" data-i="${i}" role="gridcell">${P.num[i] ? `<span class="num">${P.num[i]}</span>` : ''}<span class="ch"></span></button>`;
+  }
+  $('grid').innerHTML = h;
+}
+function render(popAt){
+  const e = curEntry(); if (e) dir = e.dir;
+  $('grid').classList.toggle('done', G.done);
+  $('grid').querySelectorAll('.cell[data-i]').forEach(b => {
+    const i = +b.dataset.i;
+    b.querySelector('.ch').textContent = G.fill[i];
+    b.className = 'cell' + (!G.done && e && e.cells.includes(i) ? ' word' : '') + (!G.done && i === cur ? ' cur' : '')
+      + (G.ok.includes(i) ? ' ok' : '') + (G.rev.includes(i) ? ' rev' : '') + (G.bad.includes(i) && G.fill[i] ? ' bad' : '') + (i === popAt && !reduced ? ' pop' : '');
+    b.setAttribute('aria-label', `${G.fill[i] || 'blank'}${P.num[i] ? ', ' + P.num[i] : ''}`);
+  });
+  $('clueTxt').innerHTML = e ? `<b>${e.num}${e.dir}</b><span>${esc(e.clue)}</span>` : '';
+  const lab = isToday() ? `No. ${day + 1}` : `<b>No. ${day + 1}</b> · past puzzle`;
+  $('lead').innerHTML = G.done ? (G.won ? `${lab} solved` : `${lab}: revealed`) : lab;
+  $('kb').hidden = G.done; $('cluebar').hidden = G.done; $('assistBtn').hidden = G.done;
+  $('afterBar').hidden = !G.done;
+  if (G.done) $('afterBar').innerHTML = `<div class="row"><button class="btn primary" type="button" id="seeStats">See results</button><button class="btn" type="button" id="seePast">Past puzzles</button></div>`
+    + (isToday() ? '' : `<button class="btn" type="button" id="seeToday">Today's puzzle</button>`);
+  if (G.done){ $('seeStats').onclick = openStats; $('seePast').onclick = openPicker; if ($('seeToday')) $('seeToday').onclick = () => load(dayIndex()); }
+  showTime();
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// ---- keyboard ----
+['qwertyuiop', 'asdfghjkl', 'zxcvbnm⌫'].forEach(row => {
+  const r = document.createElement('div'); r.className = 'r';
+  for (const k of row){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'key';
+    if (k === '⌫'){ b.dataset.k = 'Backspace'; b.classList.add('wide'); b.setAttribute('aria-label', 'Delete'); b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 5H8l-6 7 6 7h13z"/><path d="M12 9l6 6M18 9l-6 6"/></svg>'; }
+    else { b.dataset.k = k; b.textContent = k; }
+    r.appendChild(b);
+  }
+  $('kb').appendChild(r);
+});
+$('kb').addEventListener('click', e => { const b = e.target.closest('.key'); if (b) press(b.dataset.k); });
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (anySheet()){ if (e.key === 'Escape') closeAll(); return; }
+  const k = e.key;
+  if (k === 'Backspace' || k === 'Delete'){ e.preventDefault(); return press('Backspace'); }
+  if (k === 'ArrowRight' || k === 'ArrowLeft' || k === 'ArrowUp' || k === 'ArrowDown'){ e.preventDefault(); return arrow(k); }
+  if (k === 'Tab' || k === 'Enter'){ e.preventDefault(); return stepClue(e.shiftKey ? -1 : 1); }
+  if (k === ' '){ e.preventDefault(); return toggleDir(); }
+  if (/^[a-zA-Z]$/.test(k)) press(k.toLowerCase());
+});
+
+function press(k){
+  if (G.done) return;
+  const e = curEntry(); if (!e) return;
+  if (k === 'Backspace'){
+    if (G.fill[cur] && !locked(cur)){ setCell(cur, ''); }
+    else {
+      const p = e.cells.indexOf(cur);
+      if (p > 0){ cur = e.cells[p - 1]; if (!locked(cur)) setCell(cur, ''); }
+      else { const prev = P.entries[(P.entries.indexOf(e) - 1 + P.entries.length) % P.entries.length]; dir = prev.dir; cur = prev.cells[prev.cells.length - 1]; if (!locked(cur)) setCell(cur, ''); }
+    }
+    save(); render(); return;
+  }
+  const at = cur;
+  if (!locked(cur)) setCell(cur, k);
+  advance(e);
+  save(); render(at); checkFull();
+}
+function setCell(i, ch){ G.fill[i] = ch; G.bad = G.bad.filter(x => x !== i); }
+// after typing: the next empty square in this word; if the word is full, the next word with an empty square
+function advance(e){
+  const p = e.cells.indexOf(cur), rest = e.cells.slice(p + 1).concat(e.cells.slice(0, p)).filter(i => !G.fill[i]);
+  if (rest.length){ cur = e.cells.slice(p + 1).find(i => !G.fill[i]) ?? rest[0]; return; }
+  const k = P.entries.indexOf(e);
+  for (let s = 1; s <= P.entries.length; s++){
+    const n = P.entries[(k + s) % P.entries.length], f = firstEmpty(n);
+    if (f != null){ dir = n.dir; cur = f; return; }
+  }
+  if (p < e.cells.length - 1) cur = e.cells[p + 1]; // grid full: just step along
+}
+function stepClue(d){
+  if (G.done) return;
+  const e = curEntry(), k = P.entries.indexOf(e), n = P.entries[(k + d + P.entries.length) % P.entries.length];
+  dir = n.dir; cur = firstEmpty(n) ?? n.cells[0]; render();
+}
+function toggleDir(){
+  const o = dir === 'A' ? 'D' : 'A';
+  if (entryAt(cur, o)){ dir = o; render(); }
+}
+function arrow(k){
+  if (G.done) return;
+  const want = k === 'ArrowRight' || k === 'ArrowLeft' ? 'A' : 'D';
+  if (dir !== want && entryAt(cur, want)){ dir = want; render(); return; }
+  const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: N, ArrowUp: -N }[k];
+  let j = cur;
+  for (;;){
+    const r0 = Math.floor(j / N); j += step;
+    if (j < 0 || j >= N * N || (want === 'A' && Math.floor(j / N) !== r0)) return;
+    if (!P.blk(j)){ cur = j; render(); return; }
+  }
+}
+$('grid').addEventListener('click', e => {
+  const b = e.target.closest('.cell[data-i]'); if (!b || G.done) return;
+  const i = +b.dataset.i;
+  if (i === cur) toggleDir();
+  else { cur = i; if (!entryAt(i, dir)) dir = dir === 'A' ? 'D' : 'A'; render(); }
+});
+$('clueTxt').addEventListener('click', toggleDir);
+$('prevClue').addEventListener('click', () => stepClue(-1));
+$('nextClue').addEventListener('click', () => stepClue(1));
+
+// ---- finishing ----
+const solvedNow = () => G.fill.every((v, i) => P.blk(i) || v === P.g[i]);
+function checkFull(){
+  if (G.done) return;
+  const full = G.fill.every((v, i) => v || P.blk(i));
+  if (!full) return;
+  if (solvedNow()) return finish(true);
+  const sig = G.fill.join('');
+  if (sig !== fullWarned){ fullWarned = sig; toast('Not quite: something in the grid is off', 2000); }
+}
+function finish(won){
+  G.done = true; G.won = won; tickStop();
+  record(); save(); render(); cheer(won);
+  setTimeout(openStats, won && !reduced ? 1900 : 900);
+}
+function record(){
+  const daily = isToday(), s = st(daily ? 'daily' : 'past');
+  s.played++;
+  if (G.won){
+    s.won++; s.total += Math.floor(G.elapsed);
+    if (!G.checks && !G.reveals){ s.clean++; s.best = s.best == null ? Math.floor(G.elapsed) : Math.min(s.best, Math.floor(G.elapsed)); }
+  }
+  if (daily){ if (G.won){ s.cur = s.last === day - 1 ? s.cur + 1 : 1; s.last = day; } else s.cur = 0; s.max = Math.max(s.max, s.cur); }
+  store.set('mini-stats', stats);
+}
+function cheer(won){
+  if (!window.FX) return;
+  const tw = FX.css('--tw', '#1f8796'), leaf = FX.css('--em-tendril', '#3f8f4f');
+  if (won){
+    const clean = !G.checks && !G.reveals;
+    FX.wave({ el: '#grid', cols: N, color: '#f0c24a', ttl: 1.1 });
+    FX.burst({ el: '#grid', shapes: ['leaf', 'petal', 'leaf'], colors: [leaf, '#8fcf86', '#f2a196', '#f3c867', tw], count: 46, size: 16, speed: 950, gravity: 480, delay: .2 });
+    FX.rain({ shapes: ['petal', 'leaf'], colors: ['#f2a196', '#f3c867', '#8fcf86', leaf], count: 40, size: 16, sway: 90, delay: .35 });
+    if (clean) FX.fireworks({ el: '#grid', colors: ['#f0c24a', tw], shells: 3, delay: .5, shapes: ['star', 'spark'], size: 8 });
+    FX.stamp(clean ? (G.elapsed < 60 ? 'Lightning!' : 'Clean solve!') : 'Solved!', { color: tw, top: 24 });
+  }
+}
+
+// ---- check and reveal ----
+function assist(a, s){
+  if (G.done) return;
+  const e = curEntry();
+  const cells = s === 'cell' ? [cur] : s === 'word' ? e.cells : P.g.split('').map((_, i) => i).filter(i => !P.blk(i));
+  if (a === 'check'){
+    G.checks++;
+    let wrong = 0, empty = 0;
+    for (const i of cells){
+      if (!G.fill[i]){ empty++; continue; }
+      if (G.fill[i] === P.g[i]){ if (!G.ok.includes(i)) G.ok.push(i); }
+      else { wrong++; if (!G.bad.includes(i)) G.bad.push(i); }
+    }
+    toast(wrong ? `${wrong} wrong letter${wrong > 1 ? 's' : ''} crossed out` : empty === cells.length ? 'Nothing to check yet' : 'All correct so far', 1600);
+  } else {
+    G.reveals++;
+    for (const i of cells){ if (G.fill[i] !== P.g[i]){ G.fill[i] = P.g[i]; if (!G.rev.includes(i)) G.rev.push(i); } G.bad = G.bad.filter(x => x !== i); }
+    if (s !== 'all' && e.cells.includes(cur)) advance(e);
+  }
+  closeAll(); save(); render();
+  if (a === 'reveal'){ if (s === 'all') finish(false); else checkFull(); }
+}
+$('assistSheet').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return;
+  if (b.id === 'revealAll' && !b.dataset.armed){ b.dataset.armed = '1'; b.textContent = 'Sure?'; return; }
+  assist(b.dataset.a, b.dataset.s); });
+$('assistBtn').addEventListener('click', () => { const b = $('revealAll'); delete b.dataset.armed; b.textContent = 'Grid'; open('assistSheet'); });
+$('assistClose').addEventListener('click', closeAll);
+
+// ---- timer: runs while the puzzle is open, on screen and unfinished ----
+let timerT = null, lastTick = 0;
+function tickStart(){ tickStop(); if (G.done || document.hidden || anySheetBlocking()) return; lastTick = performance.now(); timerT = setInterval(tick, 500); }
+function tickStop(){ if (timerT){ tick(); clearInterval(timerT); timerT = null; } }
+function tick(){ const t = performance.now(); G.elapsed += (t - lastTick) / 1000; lastTick = t; showTime(); }
+function showTime(){ $('time').textContent = fmt(G ? G.elapsed : 0); }
+const anySheetBlocking = () => !$('helpSheet').hidden; // the clock waits while How to play is open
+setInterval(() => { if (timerT) save(); }, 5000);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){ tickStop(); save(); return; }
+  tickStart();
+});
+addEventListener('pagehide', () => { tickStop(); save(); });
+
+// ---- sheets ----
+let toastT;
+function toast(t, ms = 1400){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hidden);
+function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); if (id === 'helpSheet') tickStop(); }
+function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); tickStart(); }
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
+$('helpBtn').addEventListener('click', () => open('helpSheet'));
+$('helpClose').addEventListener('click', closeAll);
+$('statsBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', closeAll);
+
+function openClues(){
+  const e = curEntry();
+  const li = d => P.entries.filter(x => x.dir === d).map(x => `<li><button type="button" data-k="${P.entries.indexOf(x)}" class="${x === e && !G.done ? 'on' : ''}${x.cells.every(i => G.fill[i]) ? ' full' : ''}"><b>${x.num}</b><span>${esc(x.clue)}${G.done ? ` <small>(${x.answer.toUpperCase()})</small>` : ''}</span></button></li>`).join('');
+  $('listA').innerHTML = li('A'); $('listD').innerHTML = li('D');
+  open('cluesSheet');
+}
+$('cluesBtn').addEventListener('click', openClues);
+$('cluesClose').addEventListener('click', closeAll);
+$('cluesSheet').addEventListener('click', ev => { const b = ev.target.closest('button[data-k]'); if (!b || G.done) return; const n = P.entries[+b.dataset.k]; dir = n.dir; cur = firstEmpty(n) ?? n.cells[0]; closeAll(); render(); });
+
+// the finished grid as a little picture (squares only, no letters)
+function picture(){
+  let b = '';
+  for (let i = 0; i < N * N; i++){
+    const x = (i % N) * 20 + 1, y = Math.floor(i / N) * 20 + 1;
+    const f = P.blk(i) ? 'var(--ink)' : G.rev.includes(i) ? 'var(--miss)' : G.fill[i] ? 'var(--tw)' : 'var(--peer)';
+    b += `<rect x="${x}" y="${y}" width="18" height="18" rx="3" style="fill:${f}"/>`;
+  }
+  return `<svg viewBox="0 0 101 101" aria-hidden="true">${b}</svg>`;
+}
+let cd;
+function openStats(){
+  if (timerT) tick();
+  const daily = isToday(), s = st('daily'), p = st('past');
+  $('statsTitle').textContent = 'Statistics';
+  $('hero').innerHTML = picture();
+  const help = [G.checks && `${G.checks} check${G.checks > 1 ? 's' : ''}`, G.reveals && `${G.reveals} reveal${G.reveals > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  $('result').textContent = !G.done ? `No. ${day + 1} in progress: ${fmt(G.elapsed)} so far.`
+    : G.won ? `No. ${day + 1} solved in ${fmt(G.elapsed)}${help ? ` (${help})` : ', a clean solve'}.` : `No. ${day + 1}: the grid was revealed.`;
+  $('stats4').innerHTML = [[s.played, 'Dailies played'], [s.won, 'Solved'], [s.cur, 'Day streak'], [s.max, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  const all = { won: s.won + p.won, total: s.total + p.total, clean: s.clean + p.clean, best: [s.best, p.best].filter(x => x != null) };
+  $('stats4b').innerHTML = [[all.best.length ? fmt(Math.min(...all.best)) : '–', 'Best clean time'], [all.won ? fmt(all.total / all.won) : '–', 'Average time'], [all.clean, 'Clean solves'], [p.won, 'Past solved']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  let after = '';
+  if (G.done) after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button><button class="btn" id="pastBtn" type="button">Past puzzles</button></div><div class="shareText" id="shareText" hidden></div>`;
+  after += `<div class="next"><span class="label">Next puzzle in</span><b id="countdown"></b></div>`;
+  if (G.done && daily) after += GameNav.endButtons('mini');
+  $('after').innerHTML = after;
+  if (G.done){ $('shareBtn').onclick = share; $('pastBtn').onclick = openPicker; }
+  clearInterval(cd);
+  const c = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
+    el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); };
+  c(); cd = setInterval(c, 1000);
+  open('statsSheet');
+}
+function shareText(){
+  const help = [G.checks && `${G.checks} check${G.checks > 1 ? 's' : ''}`, G.reveals && `${G.reveals} reveal${G.reveals > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  const rows = []; for (let r = 0; r < N; r++){ let t = ''; for (let c = 0; c < N; c++){ const i = r * N + c; t += P.blk(i) ? '⬛' : G.rev.includes(i) ? '🟥' : '🟩'; } rows.push(t); }
+  return `Trellis No. ${day + 1}\n` + (G.won ? `Solved in ${fmt(G.elapsed)}${help ? ` (${help})` : ' ✨'}` : 'Revealed') + '\n' + rows.join('\n');
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }
+  catch(e){ const b = $('shareText'); b.textContent = text; b.hidden = false; const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+}
+
+function stateOf(d){ const p = progress['d' + d]; return p && p.done ? (p.won ? 'won' : 'lost') : p && p.fill && p.fill.some(Boolean) ? 'started' : ''; }
+const STATE_TXT = { won: 'Solved', lost: 'Revealed', started: 'Started', '': 'New' };
+function openPicker(){
+  const t = dayIndex(), days = []; for (let d = t - 1; d >= 0 && days.length < 120; d--) days.push(d);
+  $('picker').innerHTML = days.map(d => { const s = stateOf(d); return `<button type="button" data-d="${d}" class="${s}" aria-current="${d === day}">${d + 1}<small>${STATE_TXT[s]}</small></button>`; }).join('');
+  $('pickNone').hidden = days.length > 0;
+  $('pickToday').hidden = isToday();
+  open('pickSheet');
+}
+$('picker').addEventListener('click', e => { const b = e.target.closest('button[data-d]'); if (!b) return; closeAll(); tickStop(); save(); load(+b.dataset.d); });
+$('pickToday').addEventListener('click', () => { closeAll(); tickStop(); save(); load(dayIndex()); });
+$('pickClose').addEventListener('click', closeAll);
+
+// ---- start ----
+{ const q = new URLSearchParams(location.search); if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
+load(dayIndex());
+if (!store.get('mini-seen-help', false)){ store.set('mini-seen-help', true); open('helpSheet'); }
+
+GameNav.init({ id: 'mini', note: () => G && !G.done && G.fill.some(Boolean) ? 'Your letters and time are saved.' : '',
+  onOpen: () => tickStop(), onClose: () => tickStart(),
+  actions: () => [
+    G && !G.done && { icon: 'eye', label: 'Reveal the grid', note: isToday() ? 'Shows the answers. Ends today\'s streak.' : 'Shows the answers.', danger: true, confirm: 'Tap again to reveal', run: () => assist('reveal', 'all') },
+    G && !G.done && G.fill.some(Boolean) && { icon: 'restart', label: 'Clear the grid', note: 'Removes your letters (the clock keeps running).', confirm: 'Tap again to clear',
+      run: () => { G.fill = G.fill.map((v, i) => G.rev.includes(i) ? v : ''); G.ok = []; G.bad = []; save(); render(); } },
+    { icon: 'new', label: 'Past puzzles…', note: 'Every earlier daily.', run: openPicker },
+    !isToday() && { icon: 'mode', label: "Today's puzzle", run: () => { tickStop(); save(); load(dayIndex()); } },
+  ] });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
