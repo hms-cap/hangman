@@ -1,6 +1,6 @@
 // Offline cache. Online: fetch fresh files (so updates show at once) and keep the cache current.
 // Offline or on a very slow connection: serve the saved copy.
-const CACHE = 'paper-games-v1.1.0'; // = APP.version in version.js; bump both with every change
+const CACHE = 'paper-games-v1.2.0'; // = APP.version in version.js; bump both with every change
 const FILES = ['./', 'index.html', 'hangman.html', 'sudoku.html', 'sudoku-coach.js', 'fiveletters.html', 'chess.html', 'trail.html', 'groups.html', 'chess-puzzles.html', 'chess-trainer.html', 'snake.html', 'chowka.html', 'paper.css', 'version.js', 'profiles.js', 'playtime.js', 'game-nav.js', 'celebrate.js', 'emblems.js', 'words.js', 'puzzles.js', 'fivewords.js', 'chess-core.js', 'chess-pieces.js', 'chess-worker.js', 'chess-tutor.js', 'trailwords.js', 'trail-daily.js', 'trail-core.js', 'groups-data.js', 'groups-bank.js', 'groups-core.js', 'chess-puzzles.js', 'chess-daily.js', 'chess-trainer-core.js', 'chess-trainer-data.js', 'chess-openings.js', 'chess-endgames.js', 'chess-endgames-worker.js', 'chowka-core.js', 'go.html', 'go-core.js', 'go-tutor.js', 'go-worker.js', 'go-solver.js', 'go-problem.js', 'go-problems.html', 'go-problems-data.js', 'go-problems-worker.js', 'go-daily.js', 'go-explain.js', 'go-glossary.js', 'go-trainer.html', 'go-trainer-core.js',
   'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));

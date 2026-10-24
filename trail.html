@@ -80,6 +80,17 @@
 .trailLayer .halo{fill:none;stroke:var(--paper);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.35}
 .trailLayer .stem{fill:none;stroke:var(--em-tendril);stroke-width:.85;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
 .trailLayer .lf{fill:var(--em-leaf);stroke:var(--em-tendril);stroke-width:.5;stroke-linejoin:round}
+/* a found word: its vine stays for a moment and a flower or fruit grows on it, then it all fades */
+.bloomLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
+.bloomLayer .bl{animation:bloomOut .45s ease-in 1.35s forwards}
+.bloomLayer .halo{fill:none;stroke:var(--paper);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.35}
+.bloomLayer .stem{fill:none;stroke:var(--em-tendril);stroke-width:1;stroke-linecap:round;stroke-linejoin:round}
+.bloomLayer .lf{fill:var(--em-leaf);stroke:var(--em-tendril);stroke-width:.5;stroke-linejoin:round}
+.bloomLayer .item{transform-box:fill-box;transform-origin:center;animation:bloomIn .55s cubic-bezier(.2,.9,.3,1.4) both}
+.bloomLayer .bud{transform-box:fill-box;transform-origin:center;animation:bloomIn .4s ease-out both}
+@keyframes bloomIn{0%{transform:scale(0) rotate(-60deg);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes bloomOut{to{opacity:0;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.bloomLayer .item,.bloomLayer .bud{animation:none}}
 
 .words{flex:1 1 auto;min-height:90px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:4px;-webkit-user-select:none}
 .group h3{margin:0 0 5px;font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
@@ -247,6 +258,7 @@ function build(){
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'trailLayer'); svg.setAttribute('viewBox', `0 0 ${P.size * 10} ${P.size * 10}`); svg.id = 'trailLayer';
   g.appendChild(svg);
+  const bl = svg.cloneNode(); bl.setAttribute('class', 'bloomLayer'); bl.id = 'bloomLayer'; g.appendChild(bl);
   place();
 }
 // Number shown on a tile: unfound target words that start there (each word counted on exactly one tile, so the numbers add up to the words left).
@@ -308,7 +320,38 @@ function vine(p){
   }
   return `<path class="halo" d="${d}"/><path class="stem" d="${d}"/>${leaves}`;
 }
+// Flowers and fruit that grow on a found word's vine (drawn about 8 units across, centred on 0,0; a tile is 10)
+const ring = (n, r, petal, rot = 0) => Array.from({ length: n }, (_, k) => `<g transform="rotate(${rot + k * 360 / n})">${petal(r)}</g>`).join('');
+const BLOOMS = {
+  daisy: () => ring(10, 0, () => '<ellipse cx="0" cy="-2.5" rx=".9" ry="1.9" fill="#fff" stroke="#d9d4c3" stroke-width=".2"/>') + '<circle r="1.3" fill="#f2b51c"/>',
+  sunflower: () => ring(14, 0, () => '<ellipse cx="0" cy="-2.9" rx=".8" ry="1.8" fill="#f7c21b"/>') + '<circle r="1.7" fill="#6b4220"/><circle r="1.1" fill="#4a2c14"/>',
+  blossom: () => ring(5, 0, () => '<path d="M0 0C-1.9-1.3-1.6-3.6 0-3.4C1.6-3.6 1.9-1.3 0 0Z" fill="#f6a7c1" stroke="#e07ba0" stroke-width=".2"/>') + '<circle r=".8" fill="#fff4b0"/>',
+  tulip: () => '<path d="M0 4V0" stroke="#3f8f4f" stroke-width=".6"/><path d="M-2.2-2.4C-2.4 .4-1.2 1.4 0 1.4S2.4 .4 2.2-2.4L1.1-1 0-3 -1.1-1Z" fill="#e2463b" stroke="#a82820" stroke-width=".25"/>',
+  rose: () => '<circle r="2.6" fill="#d8314f"/><path d="M-1.6-.4C-1 1.6 1.2 1.6 1.6-.2M-.9-1.3C.2-.6 .9-1 .8-1.8M-1.8 .8C-.6 2.4 1.8 2 2.1 .3" fill="none" stroke="#8f1630" stroke-width=".35" stroke-linecap="round"/>',
+  violet: () => ring(5, 0, () => '<ellipse cx="0" cy="-1.9" rx="1.2" ry="1.6" fill="#8a5bd1"/>', 36) + '<circle r=".7" fill="#fbe36a"/>',
+  cherries: () => '<path d="M-1.6 1.2C-1.2-1.6 0-3 1.4-3.6M1.6 1C1.4-1.4 1.4-2.6 1.4-3.6" fill="none" stroke="#3f8f4f" stroke-width=".35"/><circle cx="-1.7" cy="2" r="1.5" fill="#d42435"/><circle cx="1.7" cy="1.8" r="1.5" fill="#c41d2f"/><circle cx="-2.1" cy="1.5" r=".4" fill="#fff" opacity=".6"/><circle cx="1.3" cy="1.3" r=".4" fill="#fff" opacity=".6"/>',
+  apple: () => '<path d="M0-1.9C-1.2-2.8-3.1-2.4-3.1-.2C-3.1 2.2-1.4 3.3 0 2.7C1.4 3.3 3.1 2.2 3.1-.2C3.1-2.4 1.2-2.8 0-1.9Z" fill="#e0402f"/><path d="M0-1.9C0-2.6.2-3.1.6-3.5" stroke="#6b4220" stroke-width=".4" fill="none"/><path d="M.5-2.8C1.6-3.8 2.6-3.2 2.6-3.2C2-2.3 1.2-2.3.5-2.8Z" fill="#5aa94c"/><ellipse cx="-1.6" cy="-.6" rx=".5" ry=".9" fill="#fff" opacity=".45"/>',
+  strawberry: () => '<path d="M-2.6-1.4C-2.6 1.4-.8 3.4 0 3.4S2.6 1.4 2.6-1.4C1.4-2 -1.4-2-2.6-1.4Z" fill="#e8324a"/>' + [[-1.3,-.2],[0,-.5],[1.3,-.2],[-.8,1.1],[.8,1.1],[0,2.2]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx=".18" ry=".3" fill="#ffe27a"/>`).join('') + '<path d="M-2.2-1.6L-1-1.2L-.6-2.5L0-1.3L.6-2.5L1-1.2L2.2-1.6L1.2-2.6H-1.2Z" fill="#3f8f4f"/>',
+  lemon: () => '<ellipse rx="3" ry="2.2" fill="#f6d23a" stroke="#d5ab12" stroke-width=".25" transform="rotate(-25)"/><path d="M2.4-1.6L3.1-2.2M-2.4 1.6L-3 2.1" stroke="#d5ab12" stroke-width=".45" stroke-linecap="round"/><ellipse cx="-.9" cy="-.6" rx=".9" ry=".4" fill="#fff" opacity=".5" transform="rotate(-25)"/>',
+  grapes: () => '<path d="M0-3.4V-2.2" stroke="#6b4220" stroke-width=".4"/>' + [[-1.2,-1.4],[0,-1.6],[1.2,-1.4],[-.6,-.2],[.6,-.2],[-1.3,1],[0,1.1],[1.3,1],[-.6,2.2],[.6,2.2]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".75" fill="#7a3fa0" stroke="#5a2a78" stroke-width=".15"/>`).join(''),
+  orange: () => '<circle r="2.8" fill="#f28c1e"/><circle cx="-.9" cy="-.9" r=".7" fill="#fff" opacity=".35"/><path d="M0-2.8C.4-3.5 1.4-3.7 2-3.3C1.4-2.7.6-2.6 0-2.8Z" fill="#4f9a55"/>',
+};
+const BLOOM_NAMES = Object.keys(BLOOMS);
+let bloomTimer = 0;
+// grow a random flower or fruit at the end of the found word's vine; little buds open along it
+function bloom(pathIdx, bonus){
+  const L = $('bloomLayer'); if (!L || pathIdx.length < 2) return;
+  const pts = pathIdx.map(i => { const [r, c] = toDisplay(i); return [c * 10 + 5, r * 10 + 5]; }), end = pts[pts.length - 1];
+  const kind = BLOOM_NAMES[(Math.random() * BLOOM_NAMES.length) | 0], tilt = (Math.random() * 40 - 20) | 0;
+  const buds = pts.slice(0, -1).map(([x, y], k) => { const [nx, ny] = pts[k + 1], mx = (x + nx) / 2, my = (y + ny) / 2;
+    return `<circle class="bud" cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r=".9" fill="${bonus ? '#f6d23a' : '#f6a7c1'}" stroke="#fff" stroke-width=".3" style="animation-delay:${120 + k * 70}ms"/>`; }).join('');
+  clearTimeout(bloomTimer);
+  L.innerHTML = `<g class="bl">${vine(pts)}${buds}<g transform="translate(${end[0]} ${end[1] - 1}) rotate(${tilt}) scale(1.05)"><g class="item" style="animation-delay:${120 + pts.length * 70}ms">${BLOOMS[kind]()}</g></g></g>`;
+  L.dataset.kind = kind;
+  bloomTimer = setTimeout(() => { L.innerHTML = ''; }, 2000);
+}
 function drawTrail(){
+  if (path.length && $('bloomLayer') && $('bloomLayer').innerHTML){ clearTimeout(bloomTimer); $('bloomLayer').innerHTML = ''; } // a new swipe clears the last flower
   $('trailLayer').innerHTML = path.length > 1 ? vine(path.map(i => { const [r, c] = toDisplay(i); return [c * 10 + 5, r * 10 + 5]; })) : '';
 }
 function drawCurrent(){
@@ -397,6 +440,7 @@ function submit(){
     S.bonus.push(w); justFound = w; feedback(w, 'Bonus word', 'bonus');
   } else { feedback(w, 'Not in the word list', 'bad'); bump(); }
   save(); render();
+  if (justFound) bloom(prevPath, !P.targets.includes(justFound));
   if (!reduced && justFound) prevPath.forEach((i, k) => tiles[i].animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 260, delay: k * 35 }));
 }
 function bump(){ const c = $('current'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }

@@ -157,6 +157,7 @@ A letter-grid word search in the style of Squares. Each word you trace is drawn 
 - Rotate the grid a quarter-turn at a time (letters stay upright) to spot new words; the rotation is saved
 - Hints show the first three letters of a word and outline those tiles, numbered, on the grid
 - Share your result, saves progress
+- **Every word you find blooms**: the vine stays for a moment and a random flower or fruit grows at its end (daisy, sunflower, cherry blossom, tulip, rose, violet, cherries, apple, strawberry, lemon, grapes or orange), with buds opening along it: pink for target words, yellow for bonus words
 
 ### Clover
 A word-grouping puzzle in the style of Connections. Four groups, four leaves: each group you find adds a leaf, in its colour, to the clover beside the mistakes counter, on the stats sheet and on the home tile.
