@@ -176,6 +176,14 @@
 .overlay rect.sqr{fill:rgba(46,94,166,.12);stroke:var(--hit);stroke-width:.9;stroke-dasharray:2 1.4}
 .overlay rect.sqr.bad{fill:rgba(196,53,61,.10);stroke:var(--miss)}
 .ghost{position:fixed;z-index:30;pointer-events:none;transform:translate(-50%,-58%) scale(1.12);filter:drop-shadow(0 6px 8px rgba(0,0,0,.25))}
+/* lesson boards (chess-lessons.js) */
+.cl{display:block;width:100%;height:auto;border-radius:4px}
+.cl-l{fill:var(--sq-l)} .cl-d{fill:var(--sq-d)} .cl-last{fill:var(--sq-last)} .cl-zone{fill:rgba(230,160,30,.42)}
+.cl-good{fill:rgba(47,138,91,.45)} .cl-bad{fill:rgba(196,53,61,.45)} .cl-mark{fill:rgba(217,160,58,.5)}
+.cl-c{font-family:var(--mono);font-size:2.3px;fill:var(--ink);opacity:.55}
+.cl-dot{fill:rgba(16,42,67,.45)} .cl-ring{fill:none;stroke:rgba(16,42,67,.45);stroke-width:.9}
+.cl-star{fill:#e6a817;stroke:#8a5d00;stroke-width:.3}
+.cl-arrow{stroke:rgba(46,94,166,.8);stroke-width:1.6;stroke-linecap:round;fill:none} .cl-head{fill:rgba(46,94,166,.8)}
 .pc .pb{stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
 .pc.w .pb{fill:var(--pw-fill);stroke:var(--pw-line)} .pc.b .pb{fill:var(--pb-fill);stroke:var(--pb-line)}
 .pc .pl{fill:none;stroke-width:1.3;stroke-linecap:round}
@@ -261,6 +269,7 @@
     <div class="lvinfo" id="lvInfo"></div>
     <p class="tip" id="lvTip"></p>
     <button class="btn primary" id="lvGo" type="button">Start</button>
+    <button class="btn" id="lvLesson" type="button">Lesson</button>
     <button class="btn" id="lvCancel" type="button">Back</button>
   </div>
 </div>
@@ -306,6 +315,8 @@
 <script src="chess-trainer-data.js"></script>
 <script src="chess-openings.js"></script>
 <script src="chess-trainer-core.js"></script>
+<script src="chess-lessons.js"></script>
+<script src="lesson-view.js"></script>
 <script src="game-nav.js"></script>
 <script>
 'use strict';
@@ -485,6 +496,7 @@ function openLevel(tk, i){
   $('lvTip').textContent = tipFor(L);
   if (lessonsOf(L).length) $('lvInfo').innerHTML += '<p class="mnote">Or take it <b>one opening at a time</b>: the lessons are listed under this level.</p>';
   $('lvGo').textContent = !st ? 'Start' : mastered_(tk, i) ? 'Play again' : st.stars ? 'Try for mastery' : 'Try again';
+  introButtons(chosen);
   open('lvSheet');
 }
 function openLesson(key){
@@ -497,9 +509,33 @@ function openLesson(key){
     `<p class="mnote">${st && st.stars >= 3 ? '<b>Mastered.</b> Replay it any time to stay sharp.' : `Get ${les.count === 1 ? 'it' : `all ${les.count}`} right first time to <b>master</b> it.`}</p>`;
   $('lvTip').textContent = L.tip;
   $('lvGo').textContent = !st ? 'Start' : st.stars >= 3 ? 'Play again' : st.stars ? 'Try for mastery' : 'Try again';
+  introButtons(chosen);
   open('lvSheet');
 }
-$('lvGo').addEventListener('click', () => { close(); chosen.lesson ? startLesson(chosen.lesson) : startLevel(chosen.tk, chosen.i); });
+// ---------- the lesson before a level (or an opening lesson): shown the first time, then from the Lesson button ----------
+let introsSeen = store.get('trainer-intros', {});
+const introKey = c => c.lesson ? 'o:' + c.lesson : c.tk + ':' + c.i;
+const introPages = c => { try { return c.lesson ? ChessLessons.openingPages(lessonFind(c.lesson).les) : ChessLessons.pages(c.tk, c.i); } catch (e) { return []; } };
+// a level played before the lessons existed counts as seen: its lesson is a button away
+const introSeen = c => !!(introsSeen[introKey(c)] || (c.lesson ? lsState(c.lesson) : lvState(c.tk, c.i)));
+const begin = c => c.lesson ? startLesson(c.lesson) : startLevel(c.tk, c.i);
+function introButtons(c){
+  const has = introPages(c).length > 0;
+  $('lvLesson').hidden = !has || !introSeen(c);
+  if (has && !introSeen(c)) $('lvGo').textContent = 'Start with the lesson';
+}
+function showIntro(c, replay){
+  const pages = introPages(c); if (!pages.length) return begin(c);
+  introsSeen[introKey(c)] = 1; store.set('trainer-intros', introsSeen);
+  const f = c.lesson && lessonFind(c.lesson), t = T.TRACKS.find(x => x.key === (f ? f.tk : c.tk));
+  LessonView.open({ label: f ? `Lesson · ${f.L.name}` : `Lesson · ${t.name}`, title: f ? lessonLabel(f.les) : levelsOf(c.tk)[c.i].name, pages, figure: ChessLessons.figure,
+    done: 'Start the drills', skip: replay ? 'Close the lesson' : 'Skip to the drills',
+    onDone: () => begin(c), onSkip: replay ? () => (c.lesson ? openLesson(c.lesson) : openLevel(c.tk, c.i)) : () => begin(c) });
+}
+// going into a level from anywhere (the map, Next level, Next step): the lesson first, the first time
+function enter(c){ introSeen(c) || !introPages(c).length ? begin(c) : showIntro(c, false); }
+$('lvGo').addEventListener('click', () => { const c = Object.assign({}, chosen); close(); enter(c); });
+$('lvLesson').addEventListener('click', () => showIntro(Object.assign({}, chosen), true));
 $('lvCancel').addEventListener('click', close);
 
 // ---------- sheets ----------
@@ -727,11 +763,11 @@ function finishLevel(){
 $('resRow').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const a = b.dataset.a, { tk, li, custom } = D;
-  if (a === 'next'){ close(); startLevel(tk, li + 1); }
-  else if (a === 'goto'){ close(); startLevel(b.dataset.t, +b.dataset.i); }
+  if (a === 'next'){ close(); enter({ tk, i: li + 1 }); }
+  else if (a === 'goto'){ close(); enter({ tk: b.dataset.t, i: +b.dataset.i }); }
   else if (a === 'again'){ close(); D.lesson ? startLesson(D.lesson.key) : custom ? (custom.kind === 'placement' ? startPlacement() : startCheckpoint(custom.path)) : startLevel(tk, li); }
-  else if (a === 'lesson'){ close(); startLesson(b.dataset.k); }
-  else if (a === 'step'){ close(); startLevel(b.dataset.t, +b.dataset.i); }
+  else if (a === 'lesson'){ close(); enter({ lesson: b.dataset.k }); }
+  else if (a === 'step'){ close(); enter({ tk: b.dataset.t, i: +b.dataset.i }); }
   else if (a === 'checkpoint'){ startCheckpoint(path.key); }
   else if (a === 'path'){ backToMap(); setPath(b.dataset.p); }
   else if (a === 'choose'){ backToMap(); openPaths(); }

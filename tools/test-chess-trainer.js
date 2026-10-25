@@ -181,6 +181,16 @@ for (const t of T.TRACKS) t.levels.forEach((L, li) => {
     check('naming questions have four different options including the answer', !amb.length, amb.join(', '));
   }
 }
+// lessons before each level and each opening lesson: every page builds, every board's moves are legal
+{
+  const CL = require('../chess-lessons.js'); let ok = true, msg = '', n = 0;
+  T.TRACKS.forEach(t => t.levels.forEach((L, i) => {
+    try { const pg = CL.pages(t.key, i); if (!pg.length) throw new Error('no pages'); pg.forEach(p => { if (/undefined|NaN/.test(p.text || '')) throw new Error('text: ' + p.text); (p.figs || []).forEach(f => CL.figure(f)); }); n++; }
+    catch (e) { ok = false; msg += ` ${t.key} ${i}: ${e.message}`; }
+  }));
+  for (const lvl of ['e4w', 'e4b', 'd4w', 'd4b']) for (const les of T.openingLessons(lvl)) { try { CL.openingPages(les).forEach(p => (p.figs || []).forEach(f => CL.figure(f))); } catch (e) { ok = false; msg += ` ${les.key}: ${e.message}`; } }
+  check(`lessons build for all ${n} levels and every opening`, ok, msg);
+}
 // opening lessons: every repertoire line is in exactly one lesson of its level, and every lesson's drills build
 {
   const OD = T.openingData(); let ok = true, msg = '';

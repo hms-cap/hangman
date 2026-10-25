@@ -63,6 +63,9 @@ function diagram(spec) {
       placed.set(q, k + 1);
       h += `<circle class="gd-${black ? 'b' : 'w'}" cx="${X(x)}" cy="${Y(y)}" r="4.5"/><text class="gd-n ${black ? 'onb' : 'onw'}" x="${X(x)}" y="${Y(y) + .3}">${k + 1}</text>`; }); }
   for (const m of libMarks) { const one = String(m).endsWith('!'), q = parseInt(m, 10), [x, y] = b.xy(q); h += `<circle class="gd-lib${one ? ' one' : ''}" cx="${X(x)}" cy="${Y(y)}" r="1.8"/>`; }
+  // territory: small squares in the owner's colour
+  names(spec.tb).forEach(s => { const [x, y] = at(s); h += `<rect class="gd-tb" x="${X(x) - 1.7}" y="${Y(y) - 1.7}" width="3.4" height="3.4"/>`; });
+  names(spec.tw).forEach(s => { const [x, y] = at(s); h += `<rect class="gd-tw" x="${X(x) - 1.7}" y="${Y(y) - 1.7}" width="3.4" height="3.4"/>`; });
   names(spec.eye).forEach(s => { const [x, y] = at(s); h += `<rect class="gd-eye" x="${X(x) - 2.4}" y="${Y(y) - 2.4}" width="4.8" height="4.8" rx="1"/>`; });
   names(spec.try).forEach((s, i) => { const [x, y] = at(s); h += `<circle class="gd-try" cx="${X(x)}" cy="${Y(y)}" r="4.3"/>` + (spec.tryNum !== false ? `<text class="gd-n tryn" x="${X(x)}" y="${Y(y) + .3}">${i + 1}</text>` : ''); });
   names(spec.no).forEach(s => { const [x, y] = at(s); h += `<path class="gd-no" d="M${X(x) - 2.6} ${Y(y) - 2.6}l5.2 5.2M${X(x) + 2.6} ${Y(y) - 2.6}l-5.2 5.2"/>`; });
@@ -185,6 +188,7 @@ function ensureStyle() {
 .gd-n.tryn{fill:var(--gd-try)}
 .gd-t{fill:none;stroke-width:.7}
 .gd-lib{fill:var(--gd-good)} .gd-lib.one{fill:var(--gd-mark)}
+.gd-tb{fill:var(--gd-b)} .gd-tw{fill:var(--gd-w);stroke:var(--gd-w-edge);stroke-width:.35}
 .gd-eye{fill:none;stroke:var(--gd-good);stroke-width:.8}
 .gd-try{fill:none;stroke:var(--gd-try);stroke-width:.7;stroke-dasharray:1.3 .9}
 .gd-no{stroke:var(--gd-mark);stroke-width:.9;stroke-linecap:round}

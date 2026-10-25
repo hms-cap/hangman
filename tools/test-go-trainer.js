@@ -35,6 +35,19 @@ for (const t of T.TRACKS) for (let i = 0; i < t.levels.length; i++) {
 // the four legality cases all appear
 const cases = new Set(); for (let s = 1; s < 10; s++) T.makeSet('rules', 3, s).forEach(it => cases.add(it.case));
 ok(['free', 'suicide', 'capture', 'ko'].every(k => cases.has(k)), 'all legality cases: ' + [...cases].join(','));
+// lessons: every level has one, every diagram is legal and no stone starts without liberties
+{
+  global.Go = G; global.GoProblem = require('../go-problem.js'); global.GoGlossary = require('../go-glossary.js'); global.GoExplain = require('../go-explain.js'); global.GoTrainer = T;
+  const LS = require('../go-lessons.js'), GL = global.GoGlossary;
+  T.TRACKS.forEach(t => t.levels.forEach((L, i) => {
+    const pg = LS.pages(t.key, i, L); ok(pg.length > 0, `${t.key} ${i}: lesson`);
+    pg.forEach(p => (p.figs || []).forEach(f => {
+      try { GL.figure(f); } catch (e) { ok(false, `${t.key} ${i}: ${e.message}`); }
+      if (f.n) { const b = new G.Board(f.n); (f.B || '').split(/\s+/).filter(Boolean).forEach(s => b._place(b.parse(s), BLACK)); (f.W || '').split(/\s+/).filter(Boolean).forEach(s => b._place(b.parse(s), WHITE));
+        ok(b.points.every(q => (b.c[q] !== BLACK && b.c[q] !== WHITE) || b.libs(q).length), `${t.key} ${i}: a stone without liberties (${f.cap})`); }
+    }));
+  }));
+}
 const idx = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), m = idx.match(/const total = (\d+); \/\/ levels in go-trainer-core\.js/);
 ok(m && +m[1] === levels, `home page total ${m && m[1]} = ${levels} levels`);
 console.log(levels, 'levels');

@@ -3,9 +3,13 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.5.2',
-  date: '2026-10-24',
+  version: '1.6.0',
+  date: '2026-10-25',
   changes: [
+    { v: '1.6.0', date: '2026-10-25', notes: [
+      'Chess Trainer and Go Trainer: every level now starts with a short lesson: the idea, pictures of it on the board, and a worked example from the level\'s own drills',
+      'The lesson appears the first time you start a level (or one of the opening lessons); after that, the Lesson button on the level brings it back',
+    ] },
     { v: '1.5.2', date: '2026-10-24', notes: [
       'Chowka Bara: restarting during the computer\'s turn no longer carries its throw or move into the new game',
     ] },
