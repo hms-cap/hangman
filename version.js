@@ -3,9 +3,12 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.7.1',
+  version: '1.8.0',
   date: '2026-11-18',
   changes: [
+    { v: '1.8.0', date: '2026-11-18', notes: [
+      'Trellis practice: 29 more mini crosswords, bringing Practice up to 109 puzzles',
+    ] },
     { v: '1.7.1', date: '2026-11-18', notes: [
       'Trellis: the squares no longer change shape as you type; every square stays the same size whatever letter goes in it',
     ] },
