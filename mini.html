@@ -51,23 +51,23 @@
 
 .stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
 .grid{
-  --n:5;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:0;
+  --n:5;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));grid-template-rows:repeat(var(--n),minmax(0,1fr));gap:0;
   width:min(100%,360px,calc(100dvh - 450px));min-width:220px;aspect-ratio:1;
   border:3px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--ink);container-type:inline-size;
 }
 .cell{
-  position:relative;border:0;padding:0;margin:0;background:var(--key);cursor:pointer;
+  position:relative;border:0;padding:0;margin:0;min-width:0;min-height:0;overflow:hidden;contain:strict;background:var(--key);cursor:pointer;
   box-shadow:inset -1px -1px 0 var(--line);font-family:var(--mono);font-weight:600;color:var(--ink);
-  display:flex;align-items:center;justify-content:center;text-transform:uppercase;font-size:11.5cqw;line-height:1;padding-top:3cqw;
+  display:flex;align-items:center;justify-content:center;text-transform:uppercase;font-size:11.5cqw;line-height:1;
   -webkit-tap-highlight-color:transparent;
 }
+.cell .ch{position:absolute;left:0;right:0;top:3cqw;bottom:0;display:flex;align-items:center;justify-content:center}
 .cell.blk{background:var(--block);cursor:default}
 .cell .num{position:absolute;left:1.1cqw;top:.7cqw;font-family:var(--ui);font-size:3.4cqw;font-weight:600;color:var(--muted)}
 .cell.word{background:color-mix(in srgb,var(--tw) 22%,var(--key))}
 .cell.cur{background:color-mix(in srgb,#f0c24a 70%,var(--key))}
 .cell.ok{color:var(--hit)}
 .cell.rev::after{content:"";position:absolute;right:0;top:0;border-style:solid;border-width:0 4.5cqw 4.5cqw 0;border-color:transparent var(--miss) transparent transparent}
-.cell.bad .ch{position:relative}
 .cell.bad::before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:var(--miss);transform:rotate(-38deg);border-radius:2px}
 .cell.pop .ch{animation:pop .22s ease-out}
 @keyframes pop{0%{transform:scale(.6)}100%{transform:none}}
