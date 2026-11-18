@@ -37,12 +37,22 @@
 .timer{font-family:var(--mono);font-weight:600;font-size:1rem;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:center;gap:5px}
 .timer svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .tools{display:flex;gap:6px}
+.tools .btn.ico{padding:5px 8px;display:flex;align-items:center}
+.tools .btn.ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.mode,.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.seg{grid-template-columns:repeat(3,1fr);margin-top:6px}
+.mode button,.seg button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted);min-width:0}
+.mode button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+.opt .grp{padding:9px 0;border-bottom:1px solid var(--line)}
+.opt .grp small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
+.opt .grp b{font-weight:600}
 .tools .btn{font-family:var(--ui);font-size:.86rem;font-weight:600;padding:5px 12px}
 
 .stage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
 .grid{
   --n:5;display:grid;grid-template-columns:repeat(var(--n),1fr);gap:0;
-  width:min(100%,360px,calc(100dvh - 400px));min-width:220px;aspect-ratio:1;
+  width:min(100%,360px,calc(100dvh - 450px));min-width:220px;aspect-ratio:1;
   border:3px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--ink);container-type:inline-size;
 }
 .cell{
@@ -125,10 +135,15 @@
     </div>
   </header>
 
+  <div class="mode" id="mode">
+    <button type="button" data-m="daily" aria-pressed="true">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="practice" aria-pressed="false">Practice</button>
+  </div>
+
   <div class="status">
     <p class="lead" id="lead"></p>
     <span class="timer" id="timer" aria-label="Time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/></svg><span id="time">0:00</span></span>
-    <div class="tools"><button class="btn" id="assistBtn" type="button">Check</button></div>
+    <div class="tools"><button class="btn" id="assistBtn" type="button">Check</button><button class="btn ico" id="optBtn" type="button" aria-label="Practice options" title="Practice options" hidden><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button></div>
   </div>
 
   <div class="stage"><div class="grid" id="grid" role="grid" aria-label="Crossword"></div></div>
@@ -155,6 +170,7 @@
       <li>Fill the grid correctly to finish. A solve with no checks or reveals is a <b>clean solve</b>.</li>
     </ul>
     <p>There's a new puzzle every midnight, the same for everyone, and you can go back to any earlier one from the menu (tap the title) or the stats.</p>
+    <p><b>Practice</b> (the toggle at the top) gives you as many extra puzzles as you like, each one new until you have played them all, with its own stats. Its <b>options</b> can mark wrong letters as you type (auto-check), or start you off with a few letters filled in. You can also choose whether typing skips squares that are already filled and whether the timer shows. Auto-check and starter letters mean the solve isn't clean.</p>
     <button class="btn primary" id="helpClose" type="button">Start</button>
   </div>
 </div>
@@ -174,6 +190,21 @@
     </div>
     <p>Checking or revealing means the solve won't count as clean. Revealing the whole grid ends the puzzle.</p>
     <button class="btn" id="assistClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet" id="optSheet" hidden>
+  <div class="panel opt" role="dialog" aria-labelledby="optTitle">
+    <h2 id="optTitle">Practice options</h2>
+    <div>
+      <label class="switch" data-p="1"><span>Auto-check<small>Wrong letters are crossed out as you type. The solve won't count as clean. Practice only.</small></span><input type="checkbox" id="oAuto"></label>
+      <div class="grp" data-p="1"><b>Starter letters</b>
+        <small>Squares filled in for you when a puzzle starts, marked like revealed ones. The solve won't count as clean. A change applies from the next puzzle, not the current one. Practice only.</small>
+        <div class="seg" id="oStarter"><button type="button" data-v="off" aria-pressed="true">Off</button><button type="button" data-v="few" aria-pressed="false">A few squares</button><button type="button" data-v="first" aria-pressed="false">First letters</button></div></div>
+      <label class="switch"><span>Skip filled squares<small>Typing jumps to the next empty square. Turn off to move one square at a time. Daily and practice.</small></span><input type="checkbox" id="oSkip"></label>
+      <label class="switch"><span>Show timer<small>Hides only the clock; your time is still recorded. Daily and practice.</small></span><input type="checkbox" id="oTimer"></label>
+    </div>
+    <button class="btn primary" id="optClose" type="button">Done</button>
   </div>
 </div>
 
@@ -209,6 +240,7 @@
 </div>
 
 <script src="mini-data.js"></script>
+<script src="mini-practice.js"></script>
 <script src="game-nav.js"></script>
 <script>
 'use strict';
@@ -224,8 +256,9 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fmt = s => { s = Math.floor(s); return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 // ---- the puzzle: grid, numbering, entries ----
-function build(day){
-  const list = DATA.grids, g = list[((day % list.length) + list.length) % list.length].split('|').join('');
+const PRAC = window.MINI_PRACTICE || { grids: [], clues: {} };
+function build(day, practice){
+  const list = DATA.grids, g = (practice ? day : list[((day % list.length) + list.length) % list.length]).split('|').join('');
   const blk = i => g[i] === '#';
   const entries = [], num = Array(N * N).fill(0); let n = 0;
   for (let i = 0; i < N * N; i++){
@@ -237,7 +270,7 @@ function build(day){
       if (!ok) continue;
       const cells = []; for (let j = i; j < N * N && !blk(j) && (dir === 'D' || Math.floor(j / N) === r); j += step) cells.push(j);
       const answer = cells.map(j => g[j]).join('');
-      entries.push({ dir, num: n, cells, answer, clue: DATA.clues[answer] || '(missing clue)' });
+      entries.push({ dir, num: n, cells, answer, clue: (practice && PRAC.clues[answer]) || DATA.clues[answer] || '(missing clue)' });
     }
   }
   const order = entries.filter(e => e.dir === 'A').concat(entries.filter(e => e.dir === 'D'));
@@ -250,6 +283,41 @@ let progress = store.get('mini-progress', {});
 let stats = store.get('mini-stats', {});
 const st = m => (stats[m] ||= { played: 0, won: 0, clean: 0, cur: 0, max: 0, last: null, best: null, total: 0 });
 let day = 0, P = null, G = null, cur = 0, dir = 'A', fullWarned = '';
+// practice: its own save ('mini-practice'), shuffled order ('mini-practice-order'), stats ('mini-practice-stats'), options ('mini-opts'), last mode ('mini-mode')
+let mode = store.get('mini-mode', 'daily') === 'practice' && PRAC.grids.length ? 'practice' : 'daily';
+{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (q.has('practice') && PRAC.grids.length) mode = 'practice'; }
+let pstats = store.get('mini-practice-stats', {});
+const pst = () => (pstats.played != null ? pstats : Object.assign(pstats, { played: 0, won: 0, clean: 0, total: 0, best: null }));
+const opts = Object.assign({ auto: false, starter: 'off', skip: true, timer: true }, store.get('mini-opts', {}));
+const isP = () => mode === 'practice';
+const clean = g => !g.checks && !g.reveals && !g.auto && !(g.st && g.st.length);
+const startedP = () => G.fill.some((v, i) => v && !(G.st || []).includes(i));
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function nextIdx(){
+  const n = PRAC.grids.length; let o = store.get('mini-practice-order', null);
+  if (!o || !Array.isArray(o.order) || o.order.length !== n || o.pos >= n){
+    const last = o && o.order && o.order.length === n ? o.order[n - 1] : -1, a = shuffle([...Array(n).keys()]);
+    if (n > 1 && a[0] === last) [a[0], a[n - 1]] = [a[n - 1], a[0]];
+    o = { order: a, pos: 0 };
+  }
+  const i = o.order[o.pos++]; store.set('mini-practice-order', o); return i;
+}
+function newPractice(){
+  const idx = nextIdx(), g = PRAC.grids[idx], Q = build(g, true);
+  const s = { idx, g, fill: Array(N * N).fill(''), elapsed: 0, done: false, won: false, checks: 0, reveals: 0, auto: false, ok: [], rev: [], bad: [], st: [] };
+  const open = Q.g.split('').map((_, i) => i).filter(i => !Q.blk(i));
+  const pick = opts.starter === 'first' ? Q.entries.map(e => e.cells[0]) : opts.starter === 'few' ? shuffle(open).slice(0, 3) : [];
+  pick.forEach(i => { s.fill[i] = Q.g[i]; if (!s.st.includes(i)) s.st.push(i); });
+  return s;
+}
+function loadPractice(fresh){
+  let s = fresh ? null : store.get('mini-practice', null);
+  if (s && s.fill && s.g){ if (PRAC.grids[s.idx] !== s.g) s.idx = PRAC.grids.indexOf(s.g); if (s.idx < 0) s = null; } else s = null;
+  G = s || newPractice(); G.st = G.st || []; P = build(G.g, true);
+  const first = P.entries[0]; dir = first.dir; cur = firstEmpty(first) ?? first.cells[0];
+  fullWarned = '';
+  save(); drawGrid(); render(); tickStart();
+}
 
 function load(d){
   day = d; P = build(day);
@@ -259,15 +327,17 @@ function load(d){
   fullWarned = '';
   save(); drawGrid(); render(); tickStart();
 }
-const isToday = () => day === dayIndex();
+const isToday = () => !isP() && day === dayIndex();
 function save(){
+  if (!G) return;
+  if (isP()){ store.set('mini-practice', G); return; }
   progress['d' + day] = G; store.set('mini-progress', progress);
   if (isToday()) store.set('mini-daily', { day, done: G.done, won: G.won, elapsed: Math.floor(G.elapsed), filled: G.fill.filter(Boolean).length });
 }
 const entryAt = (i, d) => P.entries.find(e => e.dir === d && e.cells.includes(i));
 const curEntry = () => entryAt(cur, dir) || entryAt(cur, dir === 'A' ? 'D' : 'A');
 const firstEmpty = e => e.cells.find(i => !G.fill[i]);
-const locked = i => G.rev.includes(i) || G.ok.includes(i);
+const locked = i => G.rev.includes(i) || G.ok.includes(i) || (G.st || []).includes(i);
 
 // ---- drawing ----
 function drawGrid(){
@@ -285,17 +355,19 @@ function render(popAt){
     const i = +b.dataset.i;
     b.querySelector('.ch').textContent = G.fill[i];
     b.className = 'cell' + (!G.done && e && e.cells.includes(i) ? ' word' : '') + (!G.done && i === cur ? ' cur' : '')
-      + (G.ok.includes(i) ? ' ok' : '') + (G.rev.includes(i) ? ' rev' : '') + (G.bad.includes(i) && G.fill[i] ? ' bad' : '') + (i === popAt && !reduced ? ' pop' : '');
+      + (G.ok.includes(i) ? ' ok' : '') + (G.rev.includes(i) || (G.st || []).includes(i) ? ' rev' : '') + (G.bad.includes(i) && G.fill[i] ? ' bad' : '') + (i === popAt && !reduced ? ' pop' : '');
     b.setAttribute('aria-label', `${G.fill[i] || 'blank'}${P.num[i] ? ', ' + P.num[i] : ''}`);
   });
   $('clueTxt').innerHTML = e ? `<b>${e.num}${e.dir}</b><span>${esc(e.clue)}</span>` : '';
-  const lab = isToday() ? `No. ${day + 1}` : `<b>No. ${day + 1}</b> · past puzzle`;
+  const lab = isP() ? 'Practice' : isToday() ? `No. ${day + 1}` : `<b>No. ${day + 1}</b> · past puzzle`;
   $('lead').innerHTML = G.done ? (G.won ? `${lab} solved` : `${lab}: revealed`) : lab;
+  $('optBtn').hidden = !isP();
   $('kb').hidden = G.done; $('cluebar').hidden = G.done; $('assistBtn').hidden = G.done;
   $('afterBar').hidden = !G.done;
-  if (G.done) $('afterBar').innerHTML = `<div class="row"><button class="btn primary" type="button" id="seeStats">See results</button><button class="btn" type="button" id="seePast">Past puzzles</button></div>`
+  if (G.done && isP()) $('afterBar').innerHTML = `<div class="row"><button class="btn primary" type="button" id="nextPz">Next puzzle</button><button class="btn" type="button" id="seeStats">See results</button></div>`;
+  else if (G.done) $('afterBar').innerHTML = `<div class="row"><button class="btn primary" type="button" id="seeStats">See results</button><button class="btn" type="button" id="seePast">Past puzzles</button></div>`
     + (isToday() ? '' : `<button class="btn" type="button" id="seeToday">Today's puzzle</button>`);
-  if (G.done){ $('seeStats').onclick = openStats; $('seePast').onclick = openPicker; if ($('seeToday')) $('seeToday').onclick = () => load(dayIndex()); }
+  if (G.done){ $('seeStats').onclick = openStats; if ($('seePast')) $('seePast').onclick = openPicker; if ($('seeToday')) $('seeToday').onclick = () => load(dayIndex()); if ($('nextPz')) $('nextPz').onclick = nextPractice; }
   showTime();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -336,13 +408,17 @@ function press(k){
     save(); render(); return;
   }
   const at = cur;
-  if (!locked(cur)) setCell(cur, k);
+  if (!locked(cur)){ setCell(cur, k); if (isP() && opts.auto){ G.auto = true; if (k !== P.g[cur]) G.bad.push(cur); } }
   advance(e);
   save(); render(at); checkFull();
 }
 function setCell(i, ch){ G.fill[i] = ch; G.bad = G.bad.filter(x => x !== i); }
 // after typing: the next empty square in this word; if the word is full, the next word with an empty square
 function advance(e){
+  if (!opts.skip){
+    const p = e.cells.indexOf(cur); if (p < e.cells.length - 1){ cur = e.cells[p + 1]; return; }
+    const n = P.entries[(P.entries.indexOf(e) + 1) % P.entries.length]; dir = n.dir; cur = n.cells[0]; return;
+  }
   const p = e.cells.indexOf(cur), rest = e.cells.slice(p + 1).concat(e.cells.slice(0, p)).filter(i => !G.fill[i]);
   if (rest.length){ cur = e.cells.slice(p + 1).find(i => !G.fill[i]) ?? rest[0]; return; }
   const k = P.entries.indexOf(e);
@@ -399,6 +475,11 @@ function finish(won){
   setTimeout(openStats, won && !reduced ? 1900 : 900);
 }
 function record(){
+  if (isP()){
+    const s = pst(), t = Math.floor(G.elapsed); s.played++;
+    if (G.won){ s.won++; s.total += t; if (clean(G)){ s.clean++; s.best = s.best == null ? t : Math.min(s.best, t); } }
+    store.set('mini-practice-stats', pstats); return;
+  }
   const daily = isToday(), s = st(daily ? 'daily' : 'past');
   s.played++;
   if (G.won){
@@ -412,12 +493,12 @@ function cheer(won){
   if (!window.FX) return;
   const tw = FX.css('--tw', '#1f8796'), leaf = FX.css('--em-tendril', '#3f8f4f');
   if (won){
-    const clean = !G.checks && !G.reveals;
+    const cl = clean(G);
     FX.wave({ el: '#grid', cols: N, color: '#f0c24a', ttl: 1.1 });
     FX.burst({ el: '#grid', shapes: ['leaf', 'petal', 'leaf'], colors: [leaf, '#8fcf86', '#f2a196', '#f3c867', tw], count: 46, size: 16, speed: 950, gravity: 480, delay: .2 });
     FX.rain({ shapes: ['petal', 'leaf'], colors: ['#f2a196', '#f3c867', '#8fcf86', leaf], count: 40, size: 16, sway: 90, delay: .35 });
-    if (clean) FX.fireworks({ el: '#grid', colors: ['#f0c24a', tw], shells: 3, delay: .5, shapes: ['star', 'spark'], size: 8 });
-    FX.stamp(clean ? (G.elapsed < 60 ? 'Lightning!' : 'Clean solve!') : 'Solved!', { color: tw, top: 24 });
+    if (cl) FX.fireworks({ el: '#grid', colors: ['#f0c24a', tw], shells: 3, delay: .5, shapes: ['star', 'spark'], size: 8 });
+    FX.stamp(cl ? (G.elapsed < 60 ? 'Lightning!' : 'Clean solve!') : 'Solved!', { color: tw, top: 24 });
   }
 }
 
@@ -496,10 +577,25 @@ function picture(){
   return `<svg viewBox="0 0 101 101" aria-hidden="true">${b}</svg>`;
 }
 let cd;
+const helpTxt = g => [g.checks && `${g.checks} check${g.checks > 1 ? 's' : ''}`, g.reveals && `${g.reveals} reveal${g.reveals > 1 ? 's' : ''}`, g.auto && 'auto-check', g.st && g.st.length && 'starter letters'].filter(Boolean).join(', ');
+function openPStats(){
+  const s = pst(), o = store.get('mini-practice-order', null), n = PRAC.grids.length, help = helpTxt(G);
+  $('statsTitle').textContent = 'Practice statistics';
+  $('hero').innerHTML = picture();
+  $('result').textContent = !G.done ? `Practice puzzle in progress: ${fmt(G.elapsed)} so far.`
+    : G.won ? `Practice puzzle solved in ${fmt(G.elapsed)}${help ? ` (${help})` : ', a clean solve'}.` : 'Practice puzzle: the grid was revealed.';
+  $('stats4').innerHTML = [[s.played, 'Played'], [s.won, 'Solved'], [s.won ? fmt(s.total / s.won) : '–', 'Average time'], [s.best != null ? fmt(s.best) : '–', 'Best clean time']].map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('');
+  $('stats4b').style.gridTemplateColumns = '1fr 1fr';
+  $('stats4b').innerHTML = [[s.clean, 'Clean solves'], [o ? `${o.pos} of ${n}` : '–', 'Puzzles this round']].map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('');
+  $('after').innerHTML = (G.done ? `<div class="row"><button class="btn primary" id="nextPz2" type="button">Next puzzle</button><button class="btn" id="shareBtn" type="button">Share result</button></div><div class="shareText" id="shareText" hidden></div>` : '');
+  if (G.done){ $('shareBtn').onclick = share; $('nextPz2').onclick = nextPractice; }
+  clearInterval(cd); open('statsSheet');
+}
 function openStats(){
   if (timerT) tick();
+  if (isP()) return openPStats();
   const daily = isToday(), s = st('daily'), p = st('past');
-  $('statsTitle').textContent = 'Statistics';
+  $('statsTitle').textContent = 'Statistics'; $('stats4b').style.gridTemplateColumns = '';
   $('hero').innerHTML = picture();
   const help = [G.checks && `${G.checks} check${G.checks > 1 ? 's' : ''}`, G.reveals && `${G.reveals} reveal${G.reveals > 1 ? 's' : ''}`].filter(Boolean).join(', ');
   $('result').textContent = !G.done ? `No. ${day + 1} in progress: ${fmt(G.elapsed)} so far.`
@@ -520,9 +616,9 @@ function openStats(){
   open('statsSheet');
 }
 function shareText(){
-  const help = [G.checks && `${G.checks} check${G.checks > 1 ? 's' : ''}`, G.reveals && `${G.reveals} reveal${G.reveals > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  const help = helpTxt(G);
   const rows = []; for (let r = 0; r < N; r++){ let t = ''; for (let c = 0; c < N; c++){ const i = r * N + c; t += P.blk(i) ? '⬛' : G.rev.includes(i) ? '🟥' : '🟩'; } rows.push(t); }
-  return `Trellis No. ${day + 1}\n` + (G.won ? `Solved in ${fmt(G.elapsed)}${help ? ` (${help})` : ' ✨'}` : 'Revealed') + '\n' + rows.join('\n');
+  return `${isP() ? 'Trellis practice' : `Trellis No. ${day + 1}`}\n` + (G.won ? `Solved in ${fmt(G.elapsed)}${help ? ` (${help})` : ' ✨'}` : 'Revealed') + '\n' + rows.join('\n');
 }
 async function share(){
   const text = shareText();
@@ -546,17 +642,56 @@ $('pickClose').addEventListener('click', closeAll);
 
 // ---- start ----
 { const q = new URLSearchParams(location.search); if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
-load(dayIndex());
+store.set('mini-mode', mode);
+day = dayIndex();
+$('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+if (!PRAC.grids.length) $('mode').hidden = true;
+function syncUI(){ [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode)); $('timer').hidden = !opts.timer; }
+function switchMode(m){
+  if (m === mode) return;
+  closeAll(); tickStop(); save(); mode = m; store.set('mini-mode', m);
+  if (m === 'practice') loadPractice(); else load(day);
+  syncUI();
+}
+function nextPractice(){ if (G && !G.done && startedP()) record(); store.set('mini-practice', null); closeAll(); loadPractice(true); toast('New practice puzzle'); }
+$('mode').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) switchMode(b.dataset.m); });
+function openOpts(){
+  $('oAuto').checked = opts.auto; $('oSkip').checked = opts.skip; $('oTimer').checked = opts.timer;
+  [...$('oStarter').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.v === opts.starter));
+  document.querySelectorAll('#optSheet [data-p]').forEach(x => x.hidden = !isP());
+  open('optSheet');
+}
+const saveOpts = () => { store.set('mini-opts', opts); syncUI(); };
+$('optBtn').addEventListener('click', openOpts);
+$('optClose').addEventListener('click', closeAll);
+$('oAuto').addEventListener('change', e => {
+  opts.auto = e.target.checked; saveOpts();
+  if (opts.auto && isP() && !G.done){ G.auto = true; G.fill.forEach((v, i) => { if (v && v !== P.g[i] && !G.bad.includes(i)) G.bad.push(i); }); save(); render(); }
+});
+$('oSkip').addEventListener('change', e => { opts.skip = e.target.checked; saveOpts(); });
+$('oTimer').addEventListener('change', e => { opts.timer = e.target.checked; saveOpts(); });
+$('oStarter').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; opts.starter = b.dataset.v; saveOpts(); [...$('oStarter').children].forEach(x => x.setAttribute('aria-pressed', x === b)); });
+if (isP()) loadPractice(); else load(dayIndex());
+syncUI();
 if (!store.get('mini-seen-help', false)){ store.set('mini-seen-help', true); open('helpSheet'); }
 
 GameNav.init({ id: 'mini', note: () => G && !G.done && G.fill.some(Boolean) ? 'Your letters and time are saved.' : '',
   onOpen: () => tickStop(), onClose: () => tickStart(),
-  actions: () => [
+  actions: () => isP() ? [
+    G && !G.done && { icon: 'eye', label: 'Reveal the grid', note: 'Shows the answers.', danger: true, confirm: 'Tap again to reveal', run: () => assist('reveal', 'all') },
+    G && !G.done && startedP() && { icon: 'restart', label: 'Clear the grid', note: 'Removes your letters (the clock keeps running).', confirm: 'Tap again to clear',
+      run: () => { G.fill = G.fill.map((v, i) => G.rev.includes(i) || G.st.includes(i) ? v : ''); G.ok = []; G.bad = []; save(); render(); } },
+    { icon: 'next', label: G && G.done ? 'Next puzzle' : 'New puzzle', note: G && !G.done && startedP() ? 'Skipping a started puzzle counts as played, not solved.' : '', confirm: G && !G.done && startedP() ? 'Tap again for a new puzzle' : false, run: nextPractice },
+    { icon: 'mode', label: 'Practice options…', note: 'Auto-check, starter letters, timer.', run: openOpts },
+    { icon: 'mode', label: 'Daily puzzle', note: 'Your practice puzzle is saved.', run: () => switchMode('daily') },
+  ] : [
     G && !G.done && { icon: 'eye', label: 'Reveal the grid', note: isToday() ? 'Shows the answers. Ends today\'s streak.' : 'Shows the answers.', danger: true, confirm: 'Tap again to reveal', run: () => assist('reveal', 'all') },
     G && !G.done && G.fill.some(Boolean) && { icon: 'restart', label: 'Clear the grid', note: 'Removes your letters (the clock keeps running).', confirm: 'Tap again to clear',
       run: () => { G.fill = G.fill.map((v, i) => G.rev.includes(i) ? v : ''); G.ok = []; G.bad = []; save(); render(); } },
     { icon: 'new', label: 'Past puzzles…', note: 'Every earlier daily.', run: openPicker },
     !isToday() && { icon: 'mode', label: "Today's puzzle", run: () => { tickStop(); save(); load(dayIndex()); } },
+    PRAC.grids.length && { icon: 'mode', label: 'Practice puzzles', note: 'Unlimited puzzles with options and their own stats. Today\'s puzzle stays as it is.', run: () => switchMode('practice') },
+    { icon: 'mode', label: 'Options…', note: 'Skip filled squares, show timer.', run: openOpts },
   ] });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){

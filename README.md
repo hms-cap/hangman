@@ -179,6 +179,7 @@ A 5 × 5 mini crossword, one a day. The grid is a garden trellis: words cross li
 - A timer that only runs while the puzzle is on screen
 - **Check** a square, word or the whole grid (wrong letters are crossed out in red pencil; right ones stay in blue and lock) or **Reveal** them (marked with a red corner). A solve without either is a clean solve
 - **Daily** puzzle (No. 1 = 24 Oct 2026), the same for everyone, with a day streak that counts toward the home screen's flame, a countdown and stats (best clean time, average time, clean solves). Every earlier daily can be played from **Past puzzles**
+- **Practice** mode (a Daily | Practice toggle at the top): unlimited extra puzzles from `mini-practice.js`, shuffled so none repeats until all have been played, with its own saved puzzle and stats. Options: **auto-check** (wrong letters crossed out as you type), **starter letters** (off, a few squares, or the first letter of every word; applied from the next puzzle), plus **skip filled squares** and **show timer** for both modes. Auto-check and starter letters mean a solve isn't clean. Practice never touches the daily, its streak or its stats
 - Share your time and a picture of the grid as coloured squares
 - The puzzles are in `mini-data.js`: 62 grids made by `node tools/generate-mini.js` from Tendril's everyday words (no plurals, nothing obscure or grim), each word with one hand-written clue. They repeat after No. 62; add more by running the generator, pasting the new grids at the end and writing clues for the words it lists. `node tools/check-mini.js` checks every word has a clue, no clue gives away an answer in its grid, and no grid repeats
 
@@ -268,7 +269,7 @@ The version is in `version.js` and shows on the About page (the About button abo
 | `chess.html`, `chess-core.js`, `chess-worker.js`, `chess-tutor.js`, `chess-pieces.js` | Chess page; rules and engine; engine worker; tutor (move grading and threat spotting); piece drawings |
 | `trail.html`, `trail-core.js`, `trailwords.js`, `trail-daily.js` | Tendril page; solver and grid generator; packed dictionary; daily grids (`tools/generate-trail.js`) |
 | `groups.html`, `groups-bank.js`, `groups-core.js`, `groups-data.js` | Clover page; category bank; puzzle generator and solver; hand-written classics |
-| `mini.html`, `mini-data.js` | Trellis page; the grids and clues (`tools/generate-mini.js` makes grids, `tools/check-mini.js` checks them) |
+| `mini.html`, `mini-data.js`, `mini-practice.js` | Trellis page; the daily grids and clues, and the practice bank (same format) (`tools/generate-mini.js` makes grids, `tools/check-mini.js` checks them) |
 | `go.html`, `go-core.js`, `go-tutor.js`, `go-worker.js` | Go page; rules, scoring and the computer player; tutor; worker (`node tools/test-go.js` checks rules, scoring, tactics and the strength ladder) |
 | `go-explain.js`, `go-glossary.js` | Go Problems walkthrough captions; the glossary of terms and its diagrams (checked by `tools/test-go-problems.js`) |
 | `go-solver.js`, `go-problem.js`, `go-problems-worker.js` | Capture and life-and-death reading; judging a move in a problem and explaining wrong ones; worker (`node tools/test-go-solver.js`) |
