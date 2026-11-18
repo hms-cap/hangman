@@ -2,12 +2,16 @@
 // every grid is 5×5 with only letters and #, every across and down word (2+ squares) has a clue,
 // no word repeats inside a grid, no two grids are the same, no clue gives away its own answer or
 // another answer in the same grid, and every clue is used. Prints the next week's dailies.
-//   node tools/check-mini.js
+//   node tools/check-mini.js                    (the dailies)
+//   node tools/check-mini.js mini-practice.js   (the practice set: same checks, and no grid may be a daily)
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ctx = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'mini-data.js'), 'utf8'), ctx);
-const { grids, clues } = ctx.window.MINI_DATA;
+const PRACTICE = /practice/.test(process.argv[2] || '');
+if (PRACTICE) vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'mini-practice.js'), 'utf8'), ctx);
+const { grids, clues } = PRACTICE ? ctx.window.MINI_PRACTICE : ctx.window.MINI_DATA;
+const dailies = new Set(PRACTICE ? ctx.window.MINI_DATA.grids : []);
 const N = 5;
 let bad = 0;
 const fail = m => { bad++; console.log('✗ ' + m); };
@@ -30,6 +34,7 @@ grids.forEach((row, i) => {
   if (parts.length !== N || parts.some(p => p.length !== N || !/^[a-z#]+$/.test(p))) return fail(`grid ${i + 1}: not 5 rows of 5`);
   const g = parts.join('');
   if (seen.has(g)) fail(`grid ${i + 1}: same as an earlier grid`); seen.add(g);
+  if (dailies.has(row)) fail(`grid ${i + 1}: is also a daily`);
   // every open square must be in an across or down word of 2+ letters (no unchecked lone squares)
   const ws = words(g);
   if (new Set(ws).size !== ws.length) fail(`grid ${i + 1}: a word repeats`);
@@ -42,6 +47,11 @@ grids.forEach((row, i) => {
 });
 for (const w of Object.keys(clues)) if (!used.has(w)) fail(`clue for "${w}" is never used`);
 
+if (PRACTICE){
+  console.log(`${grids.length} practice grids, ${used.size} clued words.`);
+  if (bad){ console.log(`${bad} problem${bad > 1 ? 's' : ''}`); process.exit(1); }
+  console.log('✓ all good'); process.exit(0);
+}
 const epoch = new Date(2026, 9, 24), now = new Date(), today = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - epoch) / 864e5);
 console.log(`${grids.length} grids, ${used.size} clued words. Today is No. ${today + 1}; the grids repeat after No. ${grids.length}.`);
 for (let d = Math.max(0, today); d < Math.max(0, today) + 7; d++){

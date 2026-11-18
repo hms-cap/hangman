@@ -3,9 +3,15 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.6.0',
-  date: '2026-10-25',
+  version: '1.7.0',
+  date: '2026-11-18',
   changes: [
+    { v: '1.7.0', date: '2026-11-18', notes: [
+      'Trellis: new Practice mode with 80 extra mini crosswords, played in a shuffled order and kept apart from the daily puzzle and its streak',
+      'Trellis practice options: auto-check wrong letters as you type, and starter letters (a few squares or the first letter of every word)',
+      'Trellis: choose whether typing skips filled squares, and hide the timer if you prefer',
+      'Trellis practice keeps its own statistics, including clean solves and your best clean time',
+    ] },
     { v: '1.6.0', date: '2026-10-25', notes: [
       'Chess Trainer and Go Trainer: every level now starts with a short lesson: the idea, pictures of it on the board, and a worked example from the level\'s own drills',
       'The lesson appears the first time you start a level (or one of the opening lessons); after that, the Lesson button on the level brings it back',
