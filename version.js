@@ -3,9 +3,14 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.8.0',
-  date: '2026-11-18',
+  version: '1.8.1',
+  date: '2026-11-19',
   changes: [
+    { v: '1.8.1', date: '2026-11-19', notes: [
+      'Games now open straight away with no network or a weak signal: before, a page could stay blank for a long time waiting on its fonts',
+      'The handwriting and number fonts are now saved on your device, so games look right offline too',
+      'With no signal the app no longer waits on every file before using its saved copy',
+    ] },
     { v: '1.8.0', date: '2026-11-18', notes: [
       'Trellis practice: 29 more mini crosswords, bringing Practice up to 109 puzzles',
     ] },
