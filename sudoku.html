@@ -135,6 +135,44 @@
 .guide button small{color:var(--muted);font-size:.8rem;line-height:1.35}
 .guide .label{margin-top:10px}
 .tool .badge.teach{left:calc(50% + 6px)}
+
+/* ---- Rating ---- */
+.eloLine{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border:0;background:transparent;padding:0;margin:-4px 0 -2px;font:inherit;font-size:.78rem;color:var(--muted);cursor:pointer;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0}
+.eloLine > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.eloLine b{color:var(--ink);font-weight:600;font-family:var(--mono)}
+.eloLine[hidden]{display:none}
+.up{color:var(--hit)} .down{color:var(--miss)}
+.dlt{font-family:var(--mono);font-weight:600;font-size:.9em}
+.seg button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0}
+.seg button .sug{font-size:.56rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--hit);line-height:1}
+.elo{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.eloTop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.eloTop b{font-family:var(--mono);font-weight:600;font-size:1.5rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.eloTop .dlt{font-size:1.05rem}
+.eloMeta{margin:0;font-size:.82rem}
+.eloMeta b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.tchips{display:flex;flex-wrap:wrap;gap:6px}
+.tchip{font-size:.74rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--key);color:var(--ink);border:1px solid var(--line);white-space:nowrap}
+.tchip small{font-family:var(--mono);font-size:.9em;color:var(--muted);font-weight:500;margin-left:2px}
+.tchip.neg{color:var(--miss)}
+.tchip.pos{color:var(--hit)}
+.spark{width:100%;height:80px;flex:none}
+.spark path.l{fill:none;stroke:var(--hit);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.sparkBox{position:relative}
+.sparkBox .sl{position:absolute;left:4px;font-family:var(--mono);font-size:10px;line-height:1;color:var(--muted);pointer-events:none}
+.sparkBox .sl.hi{top:2px}.sparkBox .sl.lo{bottom:2px}
+.sparkBox .sl.msg{left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 12px;line-height:1.3}
+.spark path.a{fill:var(--peer)}
+.prof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+.prof div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.prof div > span{display:flex;justify-content:space-between;gap:6px;font-size:.82rem}
+.prof div > span em{font-style:normal;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.prof i{display:block;height:4px;border-radius:2px;background:var(--hit);min-width:0}
+.prof .zero{opacity:.38}
+.prof .zero i{background:var(--line)}
+.rateRow{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;border:1px solid var(--line);background:var(--peer);border-radius:12px;padding:8px 12px;font:inherit;font-size:.86rem;color:var(--muted);cursor:pointer;text-align:left}
+.rateRow b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.rateRow u{color:var(--hit);text-underline-offset:2px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -153,6 +191,8 @@
       <span class="t" id="time">00:00</span>
     </button>
   </div>
+
+  <button class="eloLine" id="eloLine" type="button" aria-label="Your Sudoku rating and techniques"></button>
 
   <div class="boardWrap">
     <div class="board" id="board" role="grid" aria-label="Sudoku board"></div>
@@ -189,6 +229,7 @@
       <button id="hintReveal" type="button">Just show me a number<small>Fill in one square</small></button>
       <button id="hintGuide" type="button">Technique guide<small>See each well-known technique demonstrated on an example board</small></button>
     </div>
+    <p id="hintNote" style="font-size:.8rem">Hints take a little off this puzzle's rating score: showing a number more than teaching.</p>
     <label class="switch"><span>Teach mode<small>Hint always teaches the next technique, step by step</small></span><input type="checkbox" id="hintTeachMode"></label>
     <button class="btn" id="hintClose" type="button">Back to the puzzle</button>
   </div>
@@ -210,6 +251,7 @@
     <h2 id="newTitle">New puzzle</h2>
     <div class="seg" id="seg"></div>
     <div class="stats" id="lvStats"></div>
+    <button class="rateRow" id="rateRow" type="button"></button>
     <button class="btn primary" id="startRandom" type="button">Start a random puzzle</button>
     <div class="pick">
       <input id="pickNum" type="number" inputmode="numeric" min="1" max="1000" placeholder="Puzzle number, 1–1000" aria-label="Puzzle number">
@@ -217,6 +259,21 @@
     </div>
     <button class="btn" id="newCancel" type="button">Back to current puzzle</button>
     <a class="btn homebtn" id="newHome" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>
+  </div>
+</div>
+
+<!-- Rating -->
+<div class="sheet" id="ratingSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="ratingTitle">
+    <h2 id="ratingTitle">Your Sudoku rating</h2>
+    <div class="stats" id="ratingStats"></div>
+    <div class="label" id="sparkLabel">Rating, last 40 games</div>
+    <div class="sparkBox"><svg class="spark" id="spark" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="Your rating over your recent rated games"></svg><span class="sl hi" id="sparkHi"></span><span class="sl lo" id="sparkLo"></span><span class="sl msg" id="sparkMsg" hidden>Finish a few rated puzzles to see your rating over time</span></div>
+    <div class="label">Techniques you have used</div>
+    <div class="prof" id="techProfile"></div>
+    <div class="label">How the rating works</div>
+    <p id="ratingHow">Every puzzle has a difficulty rating, and you start with a rating that matches the level of your first rated game. Solve a puzzle and you score up to 1: mistakes, hints and guess-like moves (numbers no technique in the guide would have found) take points off, and solving quicker than usual for that puzzle adds a little. If you score more than expected for a puzzle that hard, your rating goes up; less, it goes down. Leaving a puzzle with five or more of your own numbers still on the board, or hitting the mistake limit, counts as a loss. Each puzzle is rated once, so replays don't count. The rating is marked with a ? until you have played 10 rated games, while it is still settling.</p>
+    <button class="btn primary" id="ratingClose" type="button">Done</button>
   </div>
 </div>
 
@@ -242,6 +299,7 @@
     <h2 id="winTitle">Solved!</h2>
     <p id="winSub"></p>
     <div class="result" id="winResult"></div>
+    <div id="winElo"></div>
     <div class="row"><button class="btn primary" id="winNext" type="button">Next puzzle</button><button class="btn" id="winChange" type="button">Change level</button></div>
     <div id="winNav"></div>
   </div>
@@ -252,14 +310,17 @@
   <div class="panel" role="dialog" aria-labelledby="loseTitle">
     <h2 id="loseTitle">Three mistakes</h2>
     <p>You hit the mistake limit for this puzzle. You can keep going without a limit, start over, or try another puzzle.</p>
+    <p id="loseElo"></p>
     <div class="row"><button class="btn primary" id="loseGo" type="button">Keep going</button><button class="btn" id="loseRestart" type="button">Restart</button><button class="btn" id="loseNew" type="button">New puzzle</button></div>
     <div id="loseNav"></div>
   </div>
 </div>
 
 <script src="puzzles.js"></script>
+<script src="sudoku-ratings.js"></script>
 <script src="game-nav.js"></script>
 <script src="sudoku-coach.js"></script>
+<script src="sudoku-elo.js"></script>
 <script>
 'use strict';
 const P = window.SUDOKU_PUZZLES;
@@ -282,6 +343,11 @@ const SETTINGS = [
 let settings = Object.assign(Object.fromEntries(SETTINGS.map(s => [s[0], s[3]])), store.get('sudoku-settings', {}));
 let stats = store.get('sudoku-stats', {});
 const lv = k => (stats[k] ||= { played:0, solved:0, best:null, total:0, done:[] });
+// Player rating (sudoku-elo.js). Puzzle difficulty comes from sudoku-ratings.js; a missing rating falls back to the middle of the level's band.
+const Elo = window.SudokuElo;
+let elo = Object.assign(Elo.fresh(), store.get('sudoku-elo', {}));
+const saveElo = () => store.set('sudoku-elo', elo);
+const puzzleRating = (level, idx) => { const r = window.SUDOKU_RATINGS && window.SUDOKU_RATINGS[level] && window.SUDOKU_RATINGS[level][idx]; return typeof r === 'number' ? r : Elo.MID[level]; };
 
 // ---- geometry ----
 const ROW = i => (i/9)|0, COL = i => i%9, BOX = i => ((ROW(i)/3)|0)*3 + ((COL(i)/3)|0);
@@ -322,7 +388,9 @@ function disguise(p){
 
 // ---- state ----
 let S = null;
+const FRESH_RATING = () => ({ revealHints:0, teachHints:0, guesses:0, techUsed:{}, tallied:[], rateDone:false, result:null });
 function newGame(level, idx){
+  abandon();
   const n = COUNT(level);
   if (idx == null){
     const done = new Set(lv(level).done);
@@ -332,14 +400,15 @@ function newGame(level, idx){
   }
   const puzzle = disguise([...P[level].slice(idx*81, idx*81+81)].map(Number));
   S = { level, idx, puzzle, solution: solve(puzzle), values: puzzle.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false), elims:[],
-        mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false };
+        mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:false, history:[], future:[], sel: puzzle.indexOf(0), notesMode:false, ...FRESH_RATING() };
   lv(level).played++; saveStats();
   paused = false; save(); render();
 }
 function restore(){
   const g = store.get('sudoku-game', null);
   if (!g || !g.puzzle || g.puzzle.length !== 81) return false;
-  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1, counted:[], elims:[] }, g);
+  S = Object.assign({ history:[], future:[], notesMode:false, sel:-1, counted:[], elims:[] }, FRESH_RATING(), g);
+  if (g.revealHints == null) S.revealHints = g.hints || 0; // a game saved before the rating existed: count its hints as shown numbers
   S.solution = solve(S.puzzle);
   if (S.sel < 0) S.sel = S.values.indexOf(0);
   return true;
@@ -408,6 +477,7 @@ function render(){
   $('board').classList.toggle('paused', paused);
   $('cover').hidden = !paused;
   tickLabel();
+  drawEloLine();
   drawTeach();
 }
 
@@ -435,7 +505,9 @@ function input(d){
   } else {
     if (S.values[i] === d){ setCell(i, 0, 0, changes); }
     else {
+      const pre = d === S.solution[i] && !S.tallied.includes(i) ? S.values.map((v, k) => v === S.solution[k] ? v : 0) : null; // the board before this move, right numbers only
       place(i, d, changes); S.hinted[i] = false;
+      if (pre) tally(pre, i, d);
       if (d !== S.solution[i]){
         // Count each wrong number in a square once, so putting the same one back after undo, erase or a double tap isn't a new mistake
         const key = i * 10 + d;
@@ -446,6 +518,14 @@ function input(d){
     }
   }
   commit(changes); after();
+}
+// Which technique would have found this correct number? Counted once per square, so undo/redo and re-entering don't count twice.
+function tally(pre, i, d){
+  S.tallied.push(i);
+  try {
+    const k = Coach.forcedBy(pre, i, d);
+    if (k) S.techUsed[k] = (S.techUsed[k] || 0) + 1; else S.guesses++;
+  } catch(e){} // a coach error must never break play
 }
 function erase(){
   const i = S.sel; if (S.done || paused || i < 0 || S.puzzle[i]) return;
@@ -468,7 +548,8 @@ function reveal(){
     i = best;
   }
   if (i < 0) return;
-  const ch = []; place(i, S.solution[i], ch); S.hinted[i] = true; S.hints++; S.sel = i;
+  const ch = []; place(i, S.solution[i], ch); S.hinted[i] = true; S.hints++; S.revealHints++; S.sel = i;
+  if (!S.tallied.includes(i)) S.tallied.push(i); // a number the game wrote in is not the player's own
   commit(ch); celebrateUnits(i); after();
 }
 function fillNotes(){
@@ -482,13 +563,15 @@ function clearNotes(){
 function undo(){ const c = S.history.pop(); if (!c || S.done) return; for (let k=c.length-1;k>=0;k--){ const x=c[k]; S.values[x.i]=x.v0; S.notes[x.i]=x.n0; } S.future.push(c); S.sel = c[0].i; after(); }
 function redo(){ const c = S.future.pop(); if (!c || S.done) return; for (const x of c){ S.values[x.i]=x.v1; S.notes[x.i]=x.n1; } S.history.push(c); S.sel = c[0].i; after(); }
 function restart(){
+  abandon(); // before the board is cleared: it counts the player's numbers still on it
   S.values = S.puzzle.slice(); S.notes.fill(0); S.hinted.fill(false); S.history = []; S.future = [];
+  Object.assign(S, FRESH_RATING());
   S.mistakes = 0; S.counted = []; S.elims = []; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
   paused = false; save(); render();
 }
 function after(){
   if (S.values.every((v,i) => v === S.solution[i])) return win();
-  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; save(); render(); cheer(false); return (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); }
+  if (settings.limit && !S.limitOff && S.mistakes >= 3 && !S.failed){ S.failed = true; rateGame(false); save(); render(); cheer(false); fillLose(); return (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); }
   save(); render();
 }
 function win(){
@@ -496,14 +579,89 @@ function win(){
   const st = lv(S.level), t = Math.round(S.elapsed/1000), first = !st.done.includes(S.idx);
   const newBest = st.best == null || t < st.best;
   st.solved++; st.total += t; if (newBest) st.best = t; if (first) st.done.push(S.idx);
+  const r = S.rateDone ? S.result : rateGame(true);
   saveStats(); save(); render();
   const name = LEVELS.find(l => l[0] === S.level)[1];
+  $('winElo').innerHTML = eloWinHTML(r);
   $('winSub').textContent = `${name} puzzle #${S.idx+1}` + (S.hints || S.mistakes ? '' : ', no mistakes and no hints');
   $('winResult').innerHTML = `<div><span class="label">Time</span><b>${fmt(t)}</b>${newBest ? '<span class="newbest">new best</span>' : ''}</div>`
     + `<div><span class="label">Mistakes</span><b>${S.mistakes}</b></div><div><span class="label">Hints</span><b>${S.hints}</b></div>`;
   $('winNext').textContent = `Next ${name} puzzle`;
   wave(); cheer(true); setTimeout(() => (GameNav.fillEnd('winNav', 'sudoku'), open('winSheet')), reduced ? 0 : 1100);
 }
+
+// ---- rating ----
+// Scores the game and moves the rating. Once per game: a later win after hitting the mistake limit, or a replay, doesn't count again.
+function rateGame(solved){
+  if (!S || S.demo || S.rateDone) return S && S.result;
+  S.rateDone = true;
+  const pr = puzzleRating(S.level, S.idx);
+  const r = Elo.update(elo, { level:S.level, idx:S.idx, puzzleRating:pr, solved, mistakes:S.mistakes, revealHints:S.revealHints, teachHints:S.teachHints,
+    guesses:S.guesses, seconds:S.elapsed/1000, techUsed:S.techUsed });
+  if (r.rated){ elo = r.state; saveElo(); }
+  S.result = { rated:r.rated, solved, pr, score:r.score, parts:r.parts, delta:r.delta, before:r.before, after:r.after };
+  return S.result;
+}
+// Numbers on the board that the player wrote in themselves: not givens, not filled in by a hint or a lesson
+const ownNumbers = () => { let n = 0; for (let i = 0; i < 81; i++) if (S.values[i] && !S.puzzle[i] && !S.hinted[i]) n++; return n; };
+// Leaving an unfinished puzzle (new puzzle, restart, quit) with five or more numbers of your own still on the board is a loss
+function abandon(){
+  if (S && !S.demo && !S.done && !S.rateDone && ownNumbers() >= 5) rateGame(false);
+}
+const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
+const arrow = d => d > 0 ? `<span class="dlt up">▲${d}</span>` : d < 0 ? `<span class="dlt down">▼${-d}</span>` : '';
+const ratingText = () => elo.rating == null ? '—' : Math.round(elo.rating) + (Elo.provisional(elo) ? '?' : '');
+const PROV_TIP = 'Provisional: your rating settles after 10 rated games';
+const TECH_NAMES = () => Coach.TECHNIQUES.filter(t => t.key !== 'reveal' && t.key !== 'mistake');
+function techChips(used, guesses){
+  const rows = Object.entries(used || {}).filter(([k]) => Coach.INFO[k]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  return rows.map(([k, n]) => `<span class="tchip">${Coach.INFO[k].name}<small>×${n}</small></span>`).join('')
+    + (guesses ? `<span class="tchip neg">${guesses} guess-like move${guesses === 1 ? '' : 's'}</span>` : '');
+}
+function eloWinHTML(r){
+  const chips = techChips(S.techUsed, S.guesses), tech = chips ? `<div class="label">Techniques you used</div><div class="tchips">${chips}</div>` : '';
+  if (!r || !r.rated || !r.solved){
+    const why = r && r.rated ? 'This puzzle already counted as a loss when you hit the mistake limit, so it is not rated again.' : 'Not rated: you\'ve already played this puzzle for your rating, so replays don\'t change it.';
+    return `<div class="elo"><p class="eloMeta">${why}</p>${tech}</div>`;
+  }
+  const P = r.parts, bits = [['Mistakes', P.mistakes], ['Hints', P.hints], ['Guesses', P.guesses], ['Time', P.time]].filter(([, v]) => v)
+    .map(([n, v]) => `<span class="tchip ${v < 0 ? 'neg' : 'pos'}">${n}<small>${sgn(Math.round(v * 100) / 100)}</small></span>`).join('') || '<span class="tchip pos">Clean solve</span>';
+  return `<div class="elo"><div class="eloTop"><span class="label">Rating</span><b>${Math.round(r.after)}${Elo.provisional(elo) ? '<span title="' + PROV_TIP + '" aria-label="' + PROV_TIP + '">?</span>' : ''}</b>${arrow(r.delta) || '<span class="dlt">±0</span>'}</div>`
+    + `<p class="eloMeta">Puzzle rated <b>${Math.round(r.pr)}</b> · your score <b>${r.score.toFixed(2)}</b> out of 1</p><div class="tchips">${bits}</div>${tech}</div>`;
+}
+function fillLose(){
+  const r = S.result;
+  $('loseElo').innerHTML = !r ? '' : r.rated
+    ? `<b style="color:var(--ink)">Rating ${Math.round(r.before)} → ${Math.round(r.after)}</b> ${arrow(r.delta) || '(no change)'} · this puzzle counts as a loss. Playing on without the limit won't change it.<br>Restarting this puzzle won't be rated; pick a new one to earn rating back.`
+    : 'Not rated: you\'ve already played this puzzle for your rating.';
+}
+function drawEloLine(){
+  const el = $('eloLine'); el.hidden = !!S.demo; if (S.demo) return;
+  const last = elo.history.length ? elo.history[elo.history.length - 1].d : 0, prov = elo.rating != null && Elo.provisional(elo);
+  el.innerHTML = `<span>Rating <b${prov ? ` title="${PROV_TIP}"` : ''}>${ratingText()}</b> ${arrow(last)}</span><span>This puzzle <b>${Math.round(puzzleRating(S.level, S.idx))}</b></span>`;
+  el.setAttribute('aria-label', `Your rating ${elo.rating == null ? 'none yet' : Math.round(elo.rating) + (prov ? ', provisional' : '')}. This puzzle is rated ${Math.round(puzzleRating(S.level, S.idx))}. Tap for details.`);
+}
+function openRating(){
+  const h = elo.history.slice(-40), sp = $('spark');
+  $('ratingStats').innerHTML = [[ratingText(), 'Rating'], [elo.best == null ? '–' : Math.round(elo.best), 'Best'], [elo.games, 'Games rated']].map(([n, l]) => `<div><span class="label">${l}</span><b>${n}</b></div>`).join('');
+  $('sparkLabel').textContent = `Rating, last ${Math.max(h.length, 1) > 1 ? h.length + ' ' : ''}rated games`;
+  $('sparkMsg').hidden = h.length >= 2; $('sparkHi').textContent = $('sparkLo').textContent = '';
+  if (h.length < 2) sp.innerHTML = '';
+  else {
+    const v = h.map(e => e.r), lo = Math.min(...v) - 20, hi = Math.max(...v) + 20, x = i => 4 + i * (292 / (v.length - 1)), y = q => 72 - (q - lo) / (hi - lo) * 62;
+    const pts = v.map((q, i) => `${x(i).toFixed(1)},${y(q).toFixed(1)}`).join(' L');
+    sp.innerHTML = `<path class="a" d="M${x(0)},76 L${pts} L${x(v.length - 1)},76 Z"/><path class="l" d="M${pts}"/>`;
+    $('sparkHi').textContent = Math.round(hi - 20); $('sparkLo').textContent = Math.round(lo + 20);
+  }
+  const max = Math.max(1, ...TECH_NAMES().map(t => elo.tech[t.key] || 0));
+  $('techProfile').innerHTML = TECH_NAMES().map(t => { const n = elo.tech[t.key] || 0;
+    return `<div class="${n ? '' : 'zero'}"><span>${t.name}<em>${n}</em></span><i style="width:${n ? Math.max(6, Math.round(100 * n / max)) : 100}%"></i></div>`; }).join('');
+  open('ratingSheet'); $('ratingSheet').firstElementChild.scrollTop = 0;
+}
+let ratingFrom = null;
+$('eloLine').addEventListener('click', () => { ratingFrom = null; openRating(); });
+$('rateRow').addEventListener('click', () => { ratingFrom = 'new'; openRating(); });
+$('ratingClose').addEventListener('click', () => ratingFrom === 'new' ? openNew() : close());
 
 // ---- motion & feedback ----
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -559,6 +717,10 @@ function drawSeg(){
   $('lvStats').innerHTML = `<div><span class="label">Solved</span><b>${st.done.length}<small style="font-size:.7em;color:var(--muted)">/${n}</small></b></div>`
     + `<div><span class="label">Best</span><b>${st.best == null ? '–' : fmt(st.best)}</b></div>`
     + `<div><span class="label">Average</span><b>${st.solved ? fmt(Math.round(st.total/st.solved)) : '–'}</b></div>`;
+  const sug = Elo.suggestLevel(elo.rating);
+  if (sug) $('seg').querySelectorAll('button').forEach(b => { if (b.dataset.k === sug) b.insertAdjacentHTML('beforeend', '<span class="sug">Suggested</span>'); });
+  $('rateRow').innerHTML = elo.rating == null ? `<span>Rating <b>—</b> · finish a puzzle to get one</span><u>Details</u>`
+    : `<span>Rating <b>${ratingText()}</b> · best <b>${Math.round(elo.best)}</b> · ${elo.games} rated</span><u>Details</u>`;
   $('pickNum').max = n; $('pickNum').placeholder = `Puzzle number, 1–${n}`;
 }
 $('seg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ segLevel = b.dataset.k; drawSeg(); } });
@@ -608,7 +770,7 @@ function teach(){
   close();
   const l = Coach.next(S.values, S.solution, new Set(S.elims), { givens: S.puzzle });
   if (!l) return;
-  if (l.key !== 'mistake'){ S.hints++; save(); }
+  if (l.key !== 'mistake'){ S.hints++; if (l.key === 'reveal') S.revealHints++; else S.teachHints++; save(); } // a lesson that just writes the answer in counts as a shown number
   startLesson(l);
 }
 function startLesson(l){ T = { lesson:l, step:0, done:false }; $('cIdea').hidden = true; showCoach(); render(); }
@@ -649,7 +811,7 @@ function applyLesson(){
     T.done = true; showCoach(); render(); if (a.type === 'place') pulse(a.i, 0); return;
   }
   const ch = [];
-  if (a.type === 'place'){ place(a.i, a.d, ch); S.hinted[a.i] = true; S.sel = a.i; }
+  if (a.type === 'place'){ place(a.i, a.d, ch); S.hinted[a.i] = true; S.sel = a.i; if (!S.tallied.includes(a.i)) S.tallied.push(a.i); }
   else if (a.type === 'elim'){ for (const [i,d] of a.elims){ const k = i*10+d; if (!S.elims.includes(k)) S.elims.push(k); if (!S.values[i] && (S.notes[i] & bit(d))) setCell(i, 0, S.notes[i] & ~bit(d), ch); } }
   else { setCell(a.i, 0, 0, ch); S.hinted[a.i] = false; S.sel = a.i; }
   commit(ch); T.done = true;
@@ -776,7 +938,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ---- boot ----
-if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) (GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); } }
+if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) (fillLose(), GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); } }
 else { newGame('easy'); }
 if (location.hash === '#new') openNew();
 // ---- game menu (tap the title) ----
@@ -788,7 +950,7 @@ GameNav.init({ id: 'sudoku', note: () => S && !S.done ? 'Your puzzle and time ar
     S && !S.done && { icon: 'restart', label: 'Restart this puzzle', note: 'Clears your numbers, notes and the timer.', confirm: 'Tap again to restart', run: restart },
     { icon: 'new', label: 'New puzzle…', note: 'Choose a level or a puzzle number.', run: openNew },
     S && !S.done && { icon: 'quit', label: 'Quit this puzzle', note: 'Throws it away and goes back to the games. Your stats are kept.', danger: true, confirm: 'Tap again to quit', leave: true,
-      run: () => { S.done = true; store.set('sudoku-game', null); } },
+      run: () => { abandon(); S.done = true; store.set('sudoku-game', null); } },
   ] });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:'){
