@@ -349,6 +349,41 @@ function findExample(key, puzzles, solveFn, limit) {
   return null;
 }
 
-const api = { next, candidates, findExample, TECHNIQUES, INFO, UNITS, PEERS, unitName, cellName };
+// ---------- which technique forced a move? ----------
+// `values`: the board BEFORE the player's move, with only correct numbers kept (the caller zeroes wrong ones). Was putting `d` in square `i`
+// something the guide's techniques could have worked out? Returns the simplest key: 'fullHouse', 'hiddenSingle' or 'nakedSingle' when
+// the plain candidates already force it; otherwise the guide's elimination techniques are applied, easiest first and over and over (eliminations
+// only, no numbers written in), until (i, d) turns into a hidden or naked single. Then the HARDEST elimination technique needed so far is
+// returned. null: nothing in the guide forces it, so the move was a guess-like one (or needs chains the guide doesn't have).
+const ELIM_LADDER = [['pointing', pointing], ['claiming', claiming], ['nakedPair', B => nakedSubset(B, 2)], ['hiddenPair', B => hiddenSubset(B, 2)],
+  ['nakedTriple', B => nakedSubset(B, 3)], ['hiddenTriple', B => hiddenSubset(B, 3)], ['xWing', B => fish(B, 2)], ['xyWing', xyWing], ['swordfish', B => fish(B, 3)]];
+function forcedBy(values, i, d) {
+  const vals = Array.from(values); vals[i] = 0;
+  const B = Board(vals, null), bd = bit(d), us = unitsOf(i);
+  if (!(B.cand[i] & bd)) return null;
+  const single = () => {
+    for (const u of us) { let n = 0; for (const j of UNITS[u]) if (B.cand[j] & bd) n++; if (n === 1) return 'hiddenSingle'; }
+    return B.cand[i] === bd ? 'nakedSingle' : null;
+  };
+  for (const u of us) if (UNITS[u].every(j => j === i || vals[j])) return 'fullHouse';
+  let k = single(); if (k) return k;
+  let hardest = -1;
+  for (let guard = 0; guard < 400; guard++) {
+    let found = false;
+    for (let t = 0; t < ELIM_LADDER.length; t++) {
+      const l = ELIM_LADDER[t][1](B);
+      if (!l) continue;
+      for (const [j, x] of l.action.elims) B.cand[j] &= ~bit(x);
+      if (t > hardest) hardest = t;
+      found = true; break;
+    }
+    if (!found) return null;
+    if (!(B.cand[i] & bd)) return null; // can't happen on a correct board; never report a wrong deduction
+    k = single(); if (k) return ELIM_LADDER[hardest][0];
+  }
+  return null;
+}
+
+const api = { next, candidates, findExample, forcedBy, TECHNIQUES, INFO, UNITS, PEERS, unitName, cellName };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SudokuCoach = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -38,6 +38,7 @@ Either way it opens full-screen from its own icon. The install steps on the home
 - Notes (pencil marks), with an option to fill in all notes
 - Undo and redo
 - Hints: tap Hint to choose **Teach me how**, **Just show me a number** or the **Technique guide**
+- **Rating:** an Elo rating for Sudoku, shown under the title (`Rating 1240 ▲14`; a `?` until 10 rated games). Every puzzle has a difficulty rating (`sudoku-ratings.js`); your first rated game's level sets your starting rating. Each solve scores 0 to 1: mistakes, hints (showing a number costs more than teaching) and guess-like moves take points off, and a quick solve adds a little. Hitting the three-mistake limit, or leaving a puzzle after placing 5 or more numbers, is a loss; each puzzle is rated once, so replays don't count. The coach's technique finder (`forcedBy` in `sudoku-coach.js`) works out which technique each of your correct numbers needed, shown as "Techniques you used" on the win sheet and as a technique profile in the rating details. The level picker tags the level nearest your rating as Suggested. Logic is in `sudoku-elo.js`; saved in `sudoku-elo`
 - **Teach mode** (switch it on from the Hint sheet or Settings, then Hint always teaches): a coach card replaces the number pad and walks through the next logical step on the board, one tap at a time, then writes the number in or crosses off the candidates for you
   - The board shows the reasoning: the houses involved are shaded, the numbers that rule squares out are circled with lines along their rows and columns, blocked squares are hatched, candidates in the pattern are circled in blue, candidates being removed are struck through in red, and patterns (pairs, X-Wings, XY-Wings, Swordfish) are joined with lines
   - The coach always picks the simplest step available, from Full House, Hidden Single and Naked Single through Pointing, Claiming, Naked/Hidden Pairs and Triples to X-Wing, XY-Wing and Swordfish. A wrong number on the board is pointed out first. When a position needs something harder (some Expert puzzles), it says so and reveals one square
@@ -296,6 +297,12 @@ This rewrites `puzzles.js`. After changing any file, bump `CACHE` in `sw.js`. Th
 node tools/test-sudoku-coach.js 100   # puzzles per level
 ```
 Solves puzzles at every level with the coach alone and checks that every number it writes in and every candidate it crosses off agrees with the solution, that every lesson has its text, that wrong numbers are taught first, and that the technique guide finds an example of each technique.
+
+## Testing the Sudoku rating
+```sh
+node tools/test-sudoku-elo.js
+```
+Checks the strategy detection (`forcedBy`: hidden single, naked single, full house, a move that needs pointing, a guess-like move, and its speed) and the score and rating formulas against hand-computed numbers.
 
 ## Chess Trainer data and tests
 ```sh
