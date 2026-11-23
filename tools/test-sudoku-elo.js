@@ -56,6 +56,16 @@ const hiddenIn = (v, i, d) => unitsOf(i).some(u => u.filter(j => !v[j] && cands(
   eq(`all ${n} answers are known technique keys or null`, bad, 0);
 }
 
+{ // credit goes to the smallest sufficient tier: a move that pointing alone unlocks is credited to pointing/claiming, never to a pair or triple
+  const v = grid('easy', 1), sol = solve(v, 1).solution, k = C.forcedBy(v, 26, sol[26]);
+  eq('pointing-only move is credited to pointing, not a pair or triple', k, 'pointing');
+  let tier1 = 0, harder = 0;
+  for (let p = 0; p < 40; p++) { const g = grid('easy', p), sl = solve(g, 1).solution;
+    for (let i = 0; i < 81; i++) if (!g[i]) { const x = C.forcedBy(g, i, sl[i]); if (x === 'pointing' || x === 'claiming') tier1++; else if (x && !['fullHouse', 'hiddenSingle', 'nakedSingle'].includes(x)) harder++; } }
+  console.log(`info easy puzzles: ${tier1} opening moves credited to pointing/claiming, ${harder} to anything harder`);
+  eq('easy puzzles have pointing/claiming credits', tier1 > 0, true);
+}
+
 // ---- speed: positions from real puzzles at every level ----
 { let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; let n = 0, tot = 0, worst = 0;
   for (const lv of ['easy', 'medium', 'hard', 'expert']) for (let p = 0; p < 60; p++) {
@@ -75,37 +85,37 @@ const hiddenIn = (v, i, d) => unitsOf(i).some(u => u.filter(j => !v[j] && cands(
 near('expected: equal ratings', E.expected(1000, 1000), 0.5);
 near('expected: puzzle 400 above', E.expected(800, 1200), 1 / 11);
 near('expected: puzzle 400 below', E.expected(1400, 1000), 10 / 11);
-eq('K by games rated', [0, 9, 10, 29, 30, 500].map(E.K), [40, 40, 24, 24, 16, 16]);
+eq('K by games rated', [0, 9, 10, 19, 20, 39, 40, 500].map(E.K), [64, 64, 40, 40, 24, 24, 16, 16]);
 near('expectedSeconds(800) = 300', E.expectedSeconds(800), 300);
 near('expectedSeconds(1150) = 600', E.expectedSeconds(1150), 600);
 near('expectedSeconds(450) = 150', E.expectedSeconds(450), 150);
 eq('unsolved scores 0 with no other parts', E.score({ solved: false, mistakes: 0, seconds: 10, puzzleRating: 800 }), { score: 0, parts: { base: 0 } });
-// 1 − 2×0.12 − (0.15 + 0.08) − 3×0.03 + time(300s on an 800 puzzle = 0) = 0.44
+// 1 − 2×0.15 − (0.2 + 0.1) − 3×0.04 + time(300s on an 800 puzzle = 0) = 0.28
 eq('score: 2 mistakes, 1 reveal, 1 teach, 3 guesses, on time', E.score({ solved: true, mistakes: 2, revealHints: 1, teachHints: 1, guesses: 3, seconds: 300, puzzleRating: 800 }),
-  { score: 0.44, parts: { base: 1, mistakes: -0.24, hints: -0.23, guesses: -0.09, time: 0 } });
-eq('score: mistakes cap at −0.5 (5 mistakes), guesses cap at −0.15 (9 guesses)', E.score({ solved: true, mistakes: 5, revealHints: 0, teachHints: 0, guesses: 9, seconds: 300, puzzleRating: 800 }).parts,
-  { base: 1, mistakes: -0.5, hints: 0, guesses: -0.15, time: 0 });
+  { score: 0.28, parts: { base: 1, mistakes: -0.3, hints: -0.3, guesses: -0.12, time: 0 } });
+eq('score: mistakes cap at −0.6 (5 mistakes), guesses cap at −0.2 (9 guesses)', E.score({ solved: true, mistakes: 5, revealHints: 0, teachHints: 0, guesses: 9, seconds: 300, puzzleRating: 800 }).parts,
+  { base: 1, mistakes: -0.6, hints: 0, guesses: -0.2, time: 0 });
 eq('score: half the expected time = +0.05; fast clean solve clamps to 1', [E.score({ solved: true, seconds: 150, puzzleRating: 800 }).parts.time, E.score({ solved: true, seconds: 150, puzzleRating: 800 }).score], [0.05, 1]);
 eq('score: the time part clamps at +0.1 (floor of 30 s) and −0.1', [E.score({ solved: true, seconds: 1, puzzleRating: 800 }).parts.time, E.score({ solved: true, seconds: 5000, puzzleRating: 800 }).parts.time], [0.1, -0.1]);
 eq('score: 1.5× the expected time on a 1150 puzzle (900 s vs 600 s): 0.05×log2(2/3)', E.score({ solved: true, seconds: 900, puzzleRating: 1150 }).parts.time, -0.029);
 eq('score: never below 0', E.score({ solved: true, mistakes: 5, revealHints: 6, teachHints: 0, guesses: 9, seconds: 9999, puzzleRating: 800 }).score, 0);
 
-{ // update: first game sets the start from the level, 800 vs a puzzle rated 800, clean on time: score 1, expected 0.5, K 40 → +20
+{ // update: first game sets the start from the level, 800 vs a puzzle rated 800, clean on time: score 1, expected 0.5, K 64 → +32
   const a = E.update(null, { level: 'easy', idx: 4, puzzleRating: 800, solved: true, mistakes: 0, seconds: 300, techUsed: { hiddenSingle: 5, nakedSingle: 2 }, t: 1 });
-  eq('update 1: before/after/delta/expected', [a.rated, a.before, a.after, a.delta, a.expected, a.score], [true, 800, 820, 20, 0.5, 1]);
+  eq('update 1: before/after/delta/expected', [a.rated, a.before, a.after, a.delta, a.expected, a.score], [true, 800, 832, 32, 0.5, 1]);
   eq('update 1: state', [a.state.rating, a.state.games, a.state.best, a.state.history, a.state.tech, a.state.rated],
-    [820, 1, 820, [{ t: 1, level: 'easy', idx: 4, pr: 800, s: 1, d: 20, r: 820 }], { hiddenSingle: 5, nakedSingle: 2 }, { 'easy:4': 1 }]);
+    [832, 1, 832, [{ t: 1, level: 'easy', idx: 4, pr: 800, s: 1, d: 32, r: 832 }], { hiddenSingle: 5, nakedSingle: 2 }, { 'easy:4': 1 }]);
   const re = E.update(a.state, { level: 'easy', idx: 4, puzzleRating: 800, solved: true, seconds: 300, techUsed: { hiddenSingle: 9 } });
-  eq('replay of a rated puzzle is unrated: delta 0, state unchanged', [re.rated, re.delta, re.state.rating, re.state.games, re.state.tech], [false, 0, 820, 1, { hiddenSingle: 5, nakedSingle: 2 }]);
-  // a loss on an expert puzzle (2000) for the first game: start 1800, expected 1/(1+10^0.5) = 0.24025, K 40 → round(−9.61) = −10
+  eq('replay of a rated puzzle is unrated: delta 0, state unchanged', [re.rated, re.delta, re.state.rating, re.state.games, re.state.tech], [false, 0, 832, 1, { hiddenSingle: 5, nakedSingle: 2 }]);
+  // a loss on an expert puzzle (2000) for the first game: start 1800, expected 1/(1+10^0.5) = 0.24025, K 64 → round(−15.376) = −15
   const b = E.update(null, { level: 'expert', idx: 1, puzzleRating: 2000, solved: false });
-  eq('update loss: first expert game', [b.rated, b.before, b.after, b.delta, b.expected, b.state.best], [true, 1800, 1790, -10, 0.24, 1790]);
-  // a later game uses K 24 after 10 rated games: 1000 vs 1000, score 0.44 → 24 × (0.44 − 0.5) = −1.44 → −1
-  let s = { rating: 1000, games: 10, best: 1000, history: [], tech: {}, rated: {} };
+  eq('update loss: first expert game', [b.rated, b.before, b.after, b.delta, b.expected, b.state.best], [true, 1800, 1785, -15, 0.24, 1785]);
+  // a later game uses K 24 after 20 rated games: 1000 vs 1000, score 0.28 → 24 × (0.28 − 0.5) = −5.28 → −5
+  let s = { rating: 1000, games: 20, best: 1000, history: [], tech: {}, rated: {} };
   const c = E.update(s, { level: 'easy', idx: 0, puzzleRating: 1000, solved: true, mistakes: 2, revealHints: 1, teachHints: 1, guesses: 3, seconds: 300 * Math.pow(2, 200 / 350) });
-  eq('update K=24 after 10 games', [c.score, c.delta, c.after, c.state.games], [0.44, -1, 999, 11]);
+  eq('update K=24 after 20 games', [c.score, c.delta, c.after, c.state.games], [0.28, -5, 995, 21]);
   eq('best keeps the peak', c.state.best, 1000);
-  eq('the input state is not changed', s, { rating: 1000, games: 10, best: 1000, history: [], tech: {}, rated: {} });
+  eq('the input state is not changed', s, { rating: 1000, games: 20, best: 1000, history: [], tech: {}, rated: {} });
   let h = null; for (let k = 0; k < 230; k++) h = E.update(h, { level: 'easy', idx: k, puzzleRating: 800, solved: true, seconds: 300 }).state;
   eq('history keeps the last 200', [h.history.length, h.history[0].idx, h.games], [200, 30, 230]);
   eq('missing puzzle rating falls back to the level midpoint', E.update(null, { level: 'hard', idx: 0, puzzleRating: undefined, solved: true, seconds: 300 }).state.history[0].pr, 1550);

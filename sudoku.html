@@ -157,9 +157,12 @@
 .tchip.neg{color:var(--miss)}
 .tchip.pos{color:var(--hit)}
 .spark{width:100%;height:80px;flex:none}
-.spark path.l{fill:none;stroke:var(--hit);stroke-width:2;stroke-linejoin:round}
+.spark path.l{fill:none;stroke:var(--hit);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.sparkBox{position:relative}
+.sparkBox .sl{position:absolute;left:4px;font-family:var(--mono);font-size:10px;line-height:1;color:var(--muted);pointer-events:none}
+.sparkBox .sl.hi{top:2px}.sparkBox .sl.lo{bottom:2px}
+.sparkBox .sl.msg{left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 12px;line-height:1.3}
 .spark path.a{fill:var(--peer)}
-.spark text{font-family:var(--mono);font-size:9px;fill:var(--muted)}
 .prof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
 .prof div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .prof div > span{display:flex;justify-content:space-between;gap:6px;font-size:.82rem}
@@ -265,11 +268,11 @@
     <h2 id="ratingTitle">Your Sudoku rating</h2>
     <div class="stats" id="ratingStats"></div>
     <div class="label" id="sparkLabel">Rating, last 40 games</div>
-    <svg class="spark" id="spark" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="Your rating over your recent rated games"></svg>
+    <div class="sparkBox"><svg class="spark" id="spark" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="Your rating over your recent rated games"></svg><span class="sl hi" id="sparkHi"></span><span class="sl lo" id="sparkLo"></span><span class="sl msg" id="sparkMsg" hidden>Finish a few rated puzzles to see your rating over time</span></div>
     <div class="label">Techniques you have used</div>
     <div class="prof" id="techProfile"></div>
     <div class="label">How the rating works</div>
-    <p id="ratingHow">Every puzzle has a difficulty rating, and you start with a rating that matches the level of your first rated game. Solve a puzzle and you score up to 1: mistakes, hints and guess-like moves (numbers no technique in the guide would have found) take points off, and solving quicker than usual for that puzzle adds a little. If you score more than expected for a puzzle that hard, your rating goes up; less, it goes down. Giving up on a puzzle after placing five or more numbers, or hitting the mistake limit, counts as a loss. Each puzzle is rated once, so replays don't count. The rating is marked with a ? until you have played 10 rated games, while it is still settling.</p>
+    <p id="ratingHow">Every puzzle has a difficulty rating, and you start with a rating that matches the level of your first rated game. Solve a puzzle and you score up to 1: mistakes, hints and guess-like moves (numbers no technique in the guide would have found) take points off, and solving quicker than usual for that puzzle adds a little. If you score more than expected for a puzzle that hard, your rating goes up; less, it goes down. Leaving a puzzle with five or more of your own numbers still on the board, or hitting the mistake limit, counts as a loss. Each puzzle is rated once, so replays don't count. The rating is marked with a ? until you have played 10 rated games, while it is still settling.</p>
     <button class="btn primary" id="ratingClose" type="button">Done</button>
   </div>
 </div>
@@ -385,7 +388,7 @@ function disguise(p){
 
 // ---- state ----
 let S = null;
-const FRESH_RATING = () => ({ revealHints:0, teachHints:0, guesses:0, techUsed:{}, tallied:[], placed:0, rateDone:false, result:null });
+const FRESH_RATING = () => ({ revealHints:0, teachHints:0, guesses:0, techUsed:{}, tallied:[], rateDone:false, result:null });
 function newGame(level, idx){
   abandon();
   const n = COUNT(level);
@@ -503,7 +506,7 @@ function input(d){
     if (S.values[i] === d){ setCell(i, 0, 0, changes); }
     else {
       const pre = d === S.solution[i] && !S.tallied.includes(i) ? S.values.map((v, k) => v === S.solution[k] ? v : 0) : null; // the board before this move, right numbers only
-      place(i, d, changes); S.hinted[i] = false; S.placed++;
+      place(i, d, changes); S.hinted[i] = false;
       if (pre) tally(pre, i, d);
       if (d !== S.solution[i]){
         // Count each wrong number in a square once, so putting the same one back after undo, erase or a double tap isn't a new mistake
@@ -560,8 +563,8 @@ function clearNotes(){
 function undo(){ const c = S.history.pop(); if (!c || S.done) return; for (let k=c.length-1;k>=0;k--){ const x=c[k]; S.values[x.i]=x.v0; S.notes[x.i]=x.n0; } S.future.push(c); S.sel = c[0].i; after(); }
 function redo(){ const c = S.future.pop(); if (!c || S.done) return; for (const x of c){ S.values[x.i]=x.v1; S.notes[x.i]=x.n1; } S.history.push(c); S.sel = c[0].i; after(); }
 function restart(){
+  abandon(); // before the board is cleared: it counts the player's numbers still on it
   S.values = S.puzzle.slice(); S.notes.fill(0); S.hinted.fill(false); S.history = []; S.future = [];
-  abandon();
   Object.assign(S, FRESH_RATING());
   S.mistakes = 0; S.counted = []; S.elims = []; S.hints = 0; S.elapsed = 0; S.done = false; S.failed = false; S.limitOff = false; S.sel = S.puzzle.indexOf(0);
   paused = false; save(); render();
@@ -599,9 +602,11 @@ function rateGame(solved){
   S.result = { rated:r.rated, solved, pr, score:r.score, parts:r.parts, delta:r.delta, before:r.before, after:r.after };
   return S.result;
 }
-// Leaving an unfinished puzzle (new puzzle, restart, quit) after placing five or more numbers of your own is a loss
+// Numbers on the board that the player wrote in themselves: not givens, not filled in by a hint or a lesson
+const ownNumbers = () => { let n = 0; for (let i = 0; i < 81; i++) if (S.values[i] && !S.puzzle[i] && !S.hinted[i]) n++; return n; };
+// Leaving an unfinished puzzle (new puzzle, restart, quit) with five or more numbers of your own still on the board is a loss
 function abandon(){
-  if (S && !S.demo && !S.done && !S.rateDone && S.placed >= 5) rateGame(false);
+  if (S && !S.demo && !S.done && !S.rateDone && ownNumbers() >= 5) rateGame(false);
 }
 const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n);
 const arrow = d => d > 0 ? `<span class="dlt up">▲${d}</span>` : d < 0 ? `<span class="dlt down">▼${-d}</span>` : '';
@@ -616,7 +621,7 @@ function techChips(used, guesses){
 function eloWinHTML(r){
   const chips = techChips(S.techUsed, S.guesses), tech = chips ? `<div class="label">Techniques you used</div><div class="tchips">${chips}</div>` : '';
   if (!r || !r.rated || !r.solved){
-    const why = r && r.rated ? 'This puzzle already counted as a loss when you hit the mistake limit, so it is not rated again.' : 'Not rated: you have already played this puzzle for rating, so replays don\'t change your rating.';
+    const why = r && r.rated ? 'This puzzle already counted as a loss when you hit the mistake limit, so it is not rated again.' : 'Not rated: you\'ve already played this puzzle for your rating, so replays don\'t change it.';
     return `<div class="elo"><p class="eloMeta">${why}</p>${tech}</div>`;
   }
   const P = r.parts, bits = [['Mistakes', P.mistakes], ['Hints', P.hints], ['Guesses', P.guesses], ['Time', P.time]].filter(([, v]) => v)
@@ -627,8 +632,8 @@ function eloWinHTML(r){
 function fillLose(){
   const r = S.result;
   $('loseElo').innerHTML = !r ? '' : r.rated
-    ? `<b style="color:var(--ink)">Rating ${Math.round(r.before)} → ${Math.round(r.after)}</b> ${arrow(r.delta) || '(no change)'} · this puzzle counts as a loss. Playing on without the limit won't change it.`
-    : 'Not rated: you have already played this puzzle for rating.';
+    ? `<b style="color:var(--ink)">Rating ${Math.round(r.before)} → ${Math.round(r.after)}</b> ${arrow(r.delta) || '(no change)'} · this puzzle counts as a loss. Playing on without the limit won't change it.<br>Restarting this puzzle won't be rated; pick a new one to earn rating back.`
+    : 'Not rated: you\'ve already played this puzzle for your rating.';
 }
 function drawEloLine(){
   const el = $('eloLine'); el.hidden = !!S.demo; if (S.demo) return;
@@ -640,11 +645,13 @@ function openRating(){
   const h = elo.history.slice(-40), sp = $('spark');
   $('ratingStats').innerHTML = [[ratingText(), 'Rating'], [elo.best == null ? '–' : Math.round(elo.best), 'Best'], [elo.games, 'Games rated']].map(([n, l]) => `<div><span class="label">${l}</span><b>${n}</b></div>`).join('');
   $('sparkLabel').textContent = `Rating, last ${Math.max(h.length, 1) > 1 ? h.length + ' ' : ''}rated games`;
-  if (h.length < 2) sp.innerHTML = '<text x="150" y="44" text-anchor="middle">Finish a few rated puzzles to see your rating over time</text>';
+  $('sparkMsg').hidden = h.length >= 2; $('sparkHi').textContent = $('sparkLo').textContent = '';
+  if (h.length < 2) sp.innerHTML = '';
   else {
     const v = h.map(e => e.r), lo = Math.min(...v) - 20, hi = Math.max(...v) + 20, x = i => 4 + i * (292 / (v.length - 1)), y = q => 72 - (q - lo) / (hi - lo) * 62;
     const pts = v.map((q, i) => `${x(i).toFixed(1)},${y(q).toFixed(1)}`).join(' L');
-    sp.innerHTML = `<path class="a" d="M${x(0)},76 L${pts} L${x(v.length - 1)},76 Z"/><path class="l" d="M${pts}"/><text x="4" y="10">${Math.round(hi - 20)}</text><text x="4" y="78">${Math.round(lo + 20)}</text>`;
+    sp.innerHTML = `<path class="a" d="M${x(0)},76 L${pts} L${x(v.length - 1)},76 Z"/><path class="l" d="M${pts}"/>`;
+    $('sparkHi').textContent = Math.round(hi - 20); $('sparkLo').textContent = Math.round(lo + 20);
   }
   const max = Math.max(1, ...TECH_NAMES().map(t => elo.tech[t.key] || 0));
   $('techProfile').innerHTML = TECH_NAMES().map(t => { const n = elo.tech[t.key] || 0;
@@ -763,7 +770,7 @@ function teach(){
   close();
   const l = Coach.next(S.values, S.solution, new Set(S.elims), { givens: S.puzzle });
   if (!l) return;
-  if (l.key !== 'mistake'){ S.hints++; S.teachHints++; save(); }
+  if (l.key !== 'mistake'){ S.hints++; if (l.key === 'reveal') S.revealHints++; else S.teachHints++; save(); } // a lesson that just writes the answer in counts as a shown number
   startLesson(l);
 }
 function startLesson(l){ T = { lesson:l, step:0, done:false }; $('cIdea').hidden = true; showCoach(); render(); }

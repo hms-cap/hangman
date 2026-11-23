@@ -13,7 +13,7 @@ const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 const r3 = x => Math.round(x * 1000) / 1000;
 
 const expected = (player, puzzle) => 1 / (1 + Math.pow(10, (puzzle - player) / 400));
-const K = games => games < 10 ? 40 : games < 30 ? 24 : 16; // games = rated games played before this one
+const K = games => games < 10 ? 64 : games < 20 ? 40 : games < 40 ? 24 : 16; // games = rated games played before this one
 const expectedSeconds = r => 300 * Math.pow(2, (r - 800) / 350);
 
 // g: { solved, mistakes, revealHints, teachHints, guesses, seconds, puzzleRating }
@@ -22,9 +22,9 @@ function score(g) {
   const secs = Math.max(30, +g.seconds || 0), pr = g.puzzleRating == null ? 1000 : g.puzzleRating;
   const parts = {
     base: 1,
-    mistakes: -Math.min(0.5, 0.12 * (g.mistakes || 0)),
-    hints: -(0.15 * (g.revealHints || 0) + 0.08 * (g.teachHints || 0)),
-    guesses: -Math.min(0.15, 0.03 * (g.guesses || 0)),
+    mistakes: -Math.min(0.6, 0.15 * (g.mistakes || 0)),
+    hints: -(0.2 * (g.revealHints || 0) + 0.1 * (g.teachHints || 0)),
+    guesses: -Math.min(0.2, 0.04 * (g.guesses || 0)),
     time: clamp(0.05 * Math.log2(expectedSeconds(pr) / secs), -0.1, 0.1),
   };
   const raw = parts.base + parts.mistakes + parts.hints + parts.guesses + parts.time;
