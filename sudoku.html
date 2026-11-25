@@ -50,6 +50,10 @@
 .n{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-family:var(--mono);font-size:2.4cqw;color:var(--muted);line-height:1}
 .n span{display:flex;align-items:center;justify-content:center}
 .n span.hl{color:var(--hit);font-weight:600}
+/* Candidate errors (Show mistakes): never counted. A note that clashes with a placed number is red and struck through;
+   a square whose notes have ruled out its right number gets a thin dashed inner outline (shape as well as colour) */
+.n span.clash{position:relative;color:var(--miss);font-weight:600;text-decoration:line-through;text-decoration-thickness:1px}
+.cell.cerr::after{content:"";position:absolute;inset:1px;border:1.5px dashed color-mix(in srgb,var(--miss) 75%,transparent);border-radius:3px;pointer-events:none}
 .board.paused .v,.board.paused .n{visibility:hidden}
 .cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .cover p{font-family:var(--hand);font-size:2rem;margin:0}
@@ -343,7 +347,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
 const SETTINGS = [
-  ['showMistakes','Show mistakes','Wrong numbers turn red straight away. When off, nothing is marked and mistakes are only counted', true],
+  ['showMistakes','Show mistakes','Wrong numbers turn red straight away. Notes that clash with a number are struck through in red, and a dashed outline marks a square whose notes have crossed out its right number. These note marks never count as mistakes. When off, nothing is marked and mistakes are only counted', true],
   ['limit','Three-mistake limit','The puzzle ends after three wrong numbers', false],
   ['autoClear','Auto-clear notes','Placing a number removes it from notes in the same row, column and box', true],
   ['sameHL','Highlight matching numbers','Shade every square with the selected number', true],
@@ -457,6 +461,7 @@ const cells = [];
 function render(){
   const sel = S.sel, sv = sel >= 0 ? S.values[sel] : 0, counts = new Array(10).fill(0);
   for (let i=0;i<81;i++) counts[S.values[i]]++;
+  const showCand = settings.showMistakes && !S.demo && !LEARN;
   for (let i=0;i<81;i++){
     const el = cells[i], v = S.values[i], given = S.puzzle[i] !== 0;
     let cls = 'cell' + (given ? ' given' : v ? ' user' : '') + (S.hinted[i] ? ' hinted' : '');
@@ -466,14 +471,24 @@ function render(){
     if (i === sel) cls += ' sel';
     else if (sel >= 0 && settings.areaHL && IS_PEER[sel][i]) cls += ' peer';
     if (settings.sameHL && sv && v === sv && i !== sel) cls += ' same';
+    // candidate errors: shown only in a real game with Show mistakes on, and never counted (display only, no state is touched)
+    const nm = v ? 0 : S.notes[i];
+    let clash = 0, lost = false;
+    if (nm && showCand){
+      let seen = 0; for (const j of PEERS[i]) if (S.values[j]) seen |= bit(S.values[j]);
+      clash = nm & seen; lost = !(nm & bit(S.solution[i]));
+      if (lost) cls += ' cerr';
+    }
     if (el.className !== cls) el.className = cls;
     el.firstChild.textContent = v || '';
     // set the colour on the number itself too: Safari doesn't always restyle it from the square's class
     const red = cls.includes(' wrong') ? 'var(--miss)' : '';
     if (el.firstChild.style.color !== red) el.firstChild.style.color = red;
     const ns = el.lastChild.children, m = v ? 0 : S.notes[i];
-    for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = on && settings.sameHL && d === sv ? 'hl' : ''; }
-    el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty'));
+    for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = clash & bit(d) ? 'clash' : on && settings.sameHL && d === sv ? 'hl' : ''; }
+    const cd = []; for (let d=1; d<=9; d++) if (clash & bit(d)) cd.push(d);
+    el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty')
+      + (cd.length ? `, candidate error: note ${cd.join(', ')} already in this row, column or box` : '') + (lost ? ', candidate error: the right number is crossed out' : ''));
   }
   [...$('pad').children].forEach((b, k) => { const d = k+1, left = Math.max(0, 9 - counts[d]); b.lastChild.textContent = left; b.classList.toggle('done', left === 0); });
   $('pad').classList.toggle('notes', S.notesMode);

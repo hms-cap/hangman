@@ -79,12 +79,13 @@ const elimText = (elims, where) => {
 };
 
 // ---------- placement techniques ----------
-function fullHouse(B) {
+function fullHouse(B, acc) {
   for (const order of [[18, 27], [0, 9], [9, 18]]) for (let u = order[0]; u < order[1]; u++) {
     const empty = UNITS[u].filter(i => !B.val[i]);
     if (empty.length !== 1) continue;
     const i = empty[0]; let m = 511; for (const j of UNITS[u]) if (B.val[j]) m &= ~bit(B.val[j]);
     const d = digits(m)[0];
+    if (acc) { acc.push({ place: [i, d] }); continue; }
     return lesson('fullHouse', [
       { text: `Look at ${unitName(u)}. Eight of its nine squares are already filled.`, hl: { units: [u], focus: [i] } },
       { text: `The only number ${unitName(u)} is missing is ${d}, so ${d} goes in the empty square.`, hl: { units: [u], focus: [i], ghost: [i, d] } },
@@ -93,13 +94,14 @@ function fullHouse(B) {
   return null;
 }
 
-function hiddenSingle(B, from, to) {
+function hiddenSingle(B, from, to, acc) {
   for (let u = from; u < to; u++) for (let d = 1; d <= 9; d++) {
     const b = bit(d); if (UNITS[u].some(i => B.val[i] === d)) continue;
     const spots = UNITS[u].filter(i => B.cand[i] & b);
     if (spots.length !== 1) continue;
     const i = spots[0], empties = UNITS[u].filter(j => !B.val[j] && j !== i);
     if (!empties.length) continue; // that's a full house
+    if (acc) { acc.push({ place: [i, d] }); continue; }
     const cause = new Set(), blocked = [], links = [], earlier = [];
     const reach = new Map(); // blocker → squares it rules out
     for (const j of empties) {
@@ -126,9 +128,10 @@ function hiddenSingle(B, from, to) {
   return null;
 }
 
-function nakedSingle(B) {
+function nakedSingle(B, acc) {
   for (let i = 0; i < 81; i++) if (!B.val[i] && POP[B.cand[i]] === 1) {
     const d = digits(B.cand[i])[0], us = unitsOf(i);
+    if (acc) { acc.push({ place: [i, d] }); continue; }
     const by = us.map(u => [...new Set(UNITS[u].filter(j => B.val[j]).map(j => B.val[j]))].sort());
     const cause = PEERS[i].filter(j => B.val[j]);
     const seen = new Set(cause.map(j => B.val[j])), earlier = digits(B.em[i]).filter(x => !seen.has(x));
@@ -146,13 +149,14 @@ function nakedSingle(B) {
 
 // ---------- elimination techniques ----------
 const ALL = 'all';
-function pointing(B) {
+function pointing(B, acc) {
   for (let b = 18; b < 27; b++) for (let d = 1; d <= 9; d++) {
     const bb = bit(d), cs = UNITS[b].filter(i => B.cand[i] & bb); if (cs.length < 2 || cs.length > 3) continue;
     for (const [f, base] of [[ROW, 0], [COL, 9]]) {
       if (!cs.every(i => f(i) === f(cs[0]))) continue;
       const line = base + f(cs[0]), elims = UNITS[line].filter(j => BOX(j) !== b - 18 && (B.cand[j] & bb)).map(j => [j, d]);
       if (!elims.length) continue;
+      if (acc) { acc.push({ elims }); continue; }
       const key = cs.map(i => [i, d, 'key']), lk = [[cs[0], cs[cs.length - 1], 'link']];
       return lesson('pointing', [
         { text: `The small numbers are candidates: the numbers each square could still be. Look at ${unitName(b)}: ${d} can only go in ${NUMW[cs.length]} of its squares.`, hl: { units: [b], cands: ALL, marks: key } },
@@ -164,12 +168,13 @@ function pointing(B) {
   return null;
 }
 
-function claiming(B) {
+function claiming(B, acc) {
   for (let l = 0; l < 18; l++) for (let d = 1; d <= 9; d++) {
     const bb = bit(d), cs = UNITS[l].filter(i => B.cand[i] & bb); if (cs.length < 2 || cs.length > 3) continue;
     if (!cs.every(i => BOX(i) === BOX(cs[0]))) continue;
     const b = 18 + BOX(cs[0]), elims = UNITS[b].filter(j => !UNITS[l].includes(j) && (B.cand[j] & bb)).map(j => [j, d]);
     if (!elims.length) continue;
+    if (acc) { acc.push({ elims }); continue; }
     const key = cs.map(i => [i, d, 'key']), lk = [[cs[0], cs[cs.length - 1], 'link']];
     return lesson('claiming', [
       { text: `The small numbers are candidates: the numbers each square could still be. In ${unitName(l)}, ${d} can only go in these ${NUMW[cs.length]} squares.`, hl: { units: [l], cands: ALL, marks: key } },
@@ -180,7 +185,7 @@ function claiming(B) {
   return null;
 }
 
-function nakedSubset(B, k) {
+function nakedSubset(B, k, acc) {
   const key = k === 2 ? 'nakedPair' : 'nakedTriple';
   for (const order of [[18, 27], [0, 18]]) for (let u = order[0]; u < order[1]; u++) {
     const cells = UNITS[u].filter(i => !B.val[i] && POP[B.cand[i]] >= 2 && POP[B.cand[i]] <= k);
@@ -190,6 +195,7 @@ function nakedSubset(B, k) {
       const ds = digits(m), elims = [];
       for (const j of UNITS[u]) if (!B.val[j] && !combo.includes(j)) for (const d of ds) if (B.cand[j] & bit(d)) elims.push([j, d]);
       if (!elims.length) continue;
+      if (acc) { acc.push({ elims }); continue; }
       const km = combo.flatMap(i => digits(B.cand[i]).map(d => [i, d, 'key']));
       const lk = combo.slice(1).map((i, n) => [combo[n], i, 'link']);
       const what = k === 2 ? 'Both' : 'Between them, these three';
@@ -203,7 +209,7 @@ function nakedSubset(B, k) {
   return null;
 }
 
-function hiddenSubset(B, k) {
+function hiddenSubset(B, k, acc) {
   const key = k === 2 ? 'hiddenPair' : 'hiddenTriple';
   for (const order of [[18, 27], [0, 18]]) for (let u = order[0]; u < order[1]; u++) {
     const ds = []; for (let d = 1; d <= 9; d++) { const n = UNITS[u].filter(i => B.cand[i] & bit(d)).length; if (n >= 2 && n <= k) ds.push(d); }
@@ -212,6 +218,7 @@ function hiddenSubset(B, k) {
       const cells = UNITS[u].filter(i => B.cand[i] & dm); if (cells.length !== k) continue;
       const elims = []; for (const i of cells) for (const d of digits(B.cand[i] & ~dm)) elims.push([i, d]);
       if (!elims.length) continue;
+      if (acc) { acc.push({ elims }); continue; }
       const km = cells.flatMap(i => combo.filter(d => B.cand[i] & bit(d)).map(d => [i, d, 'key']));
       const lk = cells.slice(1).map((i, n) => [cells[n], i, 'link']);
       return lesson(key, [
@@ -224,7 +231,7 @@ function hiddenSubset(B, k) {
   return null;
 }
 
-function fish(B, n) {
+function fish(B, n, acc) {
   const key = n === 2 ? 'xWing' : 'swordfish';
   for (let d = 1; d <= 9; d++) {
     const bb = bit(d);
@@ -237,6 +244,7 @@ function fish(B, n) {
         const ls = combo.map(([l]) => l), elims = [];
         for (const x of cov) for (const j of UNITS[cover + x]) if ((B.cand[j] & bb) && !ls.includes(base === 0 ? ROW(j) : COL(j))) elims.push([j, d]);
         if (!elims.length) continue;
+        if (acc) { acc.push({ elims }); continue; }
         const corners = combo.flatMap(([, cs]) => cs), km = corners.map(i => [i, d, 'key']);
         const bu = ls.map(l => base + l), cu = cov.map(x => cover + x).sort((a, b) => a - b);
         const along = base === 0 ? 'rows' : 'columns', acrossW = base === 0 ? 'columns' : 'rows';
@@ -259,7 +267,7 @@ function fish(B, n) {
   return null;
 }
 
-function xyWing(B) {
+function xyWing(B, acc) {
   for (let p = 0; p < 81; p++) {
     if (B.val[p] || POP[B.cand[p]] !== 2) continue;
     const wings = PEERS[p].filter(i => !B.val[i] && POP[B.cand[i]] === 2 && POP[B.cand[i] & B.cand[p]] === 1);
@@ -270,6 +278,7 @@ function xyWing(B) {
       const z = digits(zm)[0], elims = [];
       for (const j of PEERS[A]) if (j !== C && j !== p && SEES[C][j] && (B.cand[j] & zm)) elims.push([j, z]);
       if (!elims.length) continue;
+      if (acc) { acc.push({ elims }); continue; }
       const [x, y] = digits(B.cand[p]), xa = digits(B.cand[A] & B.cand[p])[0], ya = digits(B.cand[C] & B.cand[p])[0];
       const km = [[p, x, 'key'], [p, y, 'key'], [A, xa, 'key'], [C, ya, 'key'], [A, z, 'alt'], [C, z, 'alt']];
       const lk = [[p, A, 'link'], [p, C, 'link']], wl = lk.concat(elims.flatMap(([j]) => [[A, j, 'ray'], [C, j, 'ray']]));
@@ -390,6 +399,44 @@ function forcedBy(values, i, d) {
   return null;
 }
 
-const api = { next, candidates, findExample, forcedBy, TECHNIQUES, INFO, UNITS, PEERS, unitName, cellName };
+// ---------- every instance of one technique (for the strategy trainer) ----------
+// instances(key, values, elims) -> [{ place:[i,d] }] for fullHouse / hiddenSingle / nakedSingle, or [{ elims:[[i,d],...] }] for the rest:
+// every distinct way `key` applies on this position (eliminations only if they remove at least one candidate).
+const FINDERS = {
+  fullHouse: (B, a) => fullHouse(B, a), hiddenSingle: (B, a) => { hiddenSingle(B, 18, 27, a); hiddenSingle(B, 0, 18, a); }, nakedSingle: (B, a) => nakedSingle(B, a),
+  pointing: (B, a) => pointing(B, a), claiming: (B, a) => claiming(B, a), nakedPair: (B, a) => nakedSubset(B, 2, a), hiddenPair: (B, a) => hiddenSubset(B, 2, a),
+  nakedTriple: (B, a) => nakedSubset(B, 3, a), hiddenTriple: (B, a) => hiddenSubset(B, 3, a), xWing: (B, a) => fish(B, 2, a), xyWing: (B, a) => xyWing(B, a),
+  swordfish: (B, a) => fish(B, 3, a),
+};
+const sortedElims = e => e.map(([i, d]) => i * 10 + d).sort((a, b) => a - b);
+function instances(key, values, elims) {
+  const f = FINDERS[key]; if (!f) return [];
+  const acc = [], out = [], seen = new Set();
+  f(Board(values, elims), acc);
+  for (const x of acc) {
+    if (x.elims) x.elims = sortedElims(x.elims).map(k => [(k / 10) | 0, k % 10]);
+    const id = x.place ? 'p' + x.place : 'e' + sortedElims(x.elims);
+    if (!seen.has(id)) { seen.add(id); out.push(x); }
+  }
+  return out;
+}
+// checkStep(key, values, elims, answer) -> { ok, reason }. answer: { place:[i,d] } or { elims:[[i,d],...] } (the candidates the player crossed off).
+function checkStep(key, values, elims, answer) {
+  const inst = instances(key, values, elims), name = (INFO[key] || {}).name || key;
+  if (!inst.length) return { ok: false, reason: `${name} doesn't apply here` };
+  if (answer && answer.place) {
+    const [i, d] = answer.place;
+    if (!inst.some(x => x.place && x.place[0] === i && x.place[1] === d)) return { ok: false, reason: `${d} in ${cellName(i)} isn't a ${name} step` };
+    return { ok: true, reason: '' };
+  }
+  const crossed = new Set(((answer && answer.elims) || []).map(([i, d]) => i * 10 + d));
+  if (!crossed.size) return { ok: false, reason: 'nothing crossed off' };
+  const allowed = new Set(); for (const x of inst) if (x.elims) for (const [i, d] of x.elims) allowed.add(i * 10 + d);
+  for (const k of crossed) if (!allowed.has(k)) return { ok: false, reason: `${k % 10} in ${cellName((k / 10) | 0)} can't be removed by ${name} here` };
+  if (inst.some(x => x.elims && x.elims.every(([i, d]) => crossed.has(i * 10 + d)))) return { ok: true, reason: '' };
+  return { ok: false, reason: "there's more to remove" };
+}
+
+const api = { instances, checkStep, next, candidates, findExample, forcedBy, TECHNIQUES, INFO, UNITS, PEERS, unitName, cellName };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SudokuCoach = api;
 })(typeof self !== 'undefined' ? self : this);
