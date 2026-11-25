@@ -44,6 +44,7 @@ Either way it opens full-screen from its own icon. The install steps on the home
   - The coach always picks the simplest step available, from Full House, Hidden Single and Naked Single through Pointing, Claiming, Naked/Hidden Pairs and Triples to X-Wing, XY-Wing and Swordfish. A wrong number on the board is pointed out first. When a position needs something harder (some Expert puzzles), it says so and reveals one square
   - Each lesson counts as a hint; candidates the coach crosses off are remembered and respected by Fill in all notes
 - **Technique guide** (from Hint or More): each technique demonstrated on an example board taken from the puzzle set, without touching your game or timer
+- **Learn Sudoku** (no puzzle needed): a "Learn Sudoku" tile on the home screen (also the game menu, the New puzzle sheet and the Hint sheet's technique guide) opens `sudoku.html#learn`: **The basics** (the three rules, then one square solved by ruling numbers out) and all 12 techniques, each worked through step by step on an example board, with a **Next topic** button, ticks for what you've finished and a "n of 13 worked through" bar (saved in `sudoku-learned`). Learn mode never starts, saves, times or rates a puzzle and leaves a puzzle in progress alone; "Start a puzzle" (or "Continue my puzzle") leaves it for the game
 - Erase
 - Mistake checking, with an optional three-mistake limit (each wrong number in a square counts once, so putting it back after undo or erase isn't a new mistake)
 - Highlights for the selected row, column and box, and for matching numbers

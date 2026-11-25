@@ -65,6 +65,7 @@ const ICONS = {
   quit: '<svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/></svg>',
   flag: '<svg viewBox="0 0 24 24"><path d="M6 21V4"/><path d="M6 4h11l-2.5 4L17 12H6"/></svg>',
   eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  learn: '<svg viewBox="0 0 24 24"><path d="M4 5.5C6.2 4.4 9.2 4.4 12 6c2.8-1.6 5.8-1.6 8-.5V19c-2.2-1.1-5.2-1.1-8 .5-2.8-1.6-5.8-1.6-8-.5z"/><path d="M12 6v13.5"/></svg>',
   next: '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   mode: '<svg viewBox="0 0 24 24"><path d="M4 7h11M4 17h7"/><circle cx="18" cy="7" r="2.5"/><circle cx="14" cy="17" r="2.5"/></svg>',
 };

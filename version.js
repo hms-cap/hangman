@@ -3,9 +3,15 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.9.0',
-  date: '2026-11-23',
+  version: '1.10.0',
+  date: '2026-11-25',
   changes: [
+    { v: '1.10.0', date: '2026-11-25', notes: [
+      'Sudoku: new Learn mode: go through the rules and all 12 techniques step by step without starting a puzzle',
+      'A new "Learn Sudoku" tile on the home screen, plus a Learn Sudoku entry in the Sudoku menu and the New puzzle screen',
+      'Learn tracks what you have worked through, with ticks and a progress bar, and a Next topic button takes you straight on',
+      'A new short lesson, The basics, explains the three Sudoku rules and solves one square for you',
+    ] },
     { v: '1.9.0', date: '2026-11-23', notes: [
       'Sudoku: a new player rating that goes up and down with every puzzle, like a chess rating',
       'Every Sudoku puzzle now has its own difficulty rating, based on the techniques it needs',
