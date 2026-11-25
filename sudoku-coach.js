@@ -426,7 +426,7 @@ function checkStep(key, values, elims, answer) {
   if (!inst.length) return { ok: false, reason: `${name} doesn't apply here` };
   if (answer && answer.place) {
     const [i, d] = answer.place;
-    if (!inst.some(x => x.place && x.place[0] === i && x.place[1] === d)) return { ok: false, reason: `${d} in ${cellName(i)} isn't a ${name} step` };
+    if (!inst.some(x => x.place && x.place[0] === i && x.place[1] === d)) return { ok: false, reason: `${d} can't go in ${cellName(i)} as a ${name}` };
     return { ok: true, reason: '' };
   }
   const crossed = new Set(((answer && answer.elims) || []).map(([i, d]) => i * 10 + d));
