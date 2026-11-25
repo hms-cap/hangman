@@ -50,6 +50,10 @@
 .n{position:absolute;inset:6%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-family:var(--mono);font-size:2.4cqw;color:var(--muted);line-height:1}
 .n span{display:flex;align-items:center;justify-content:center}
 .n span.hl{color:var(--hit);font-weight:600}
+/* Candidate errors (Show mistakes): never counted. A note that clashes with a placed number is red and struck through;
+   a square whose notes have ruled out its right number gets a thin dashed inner outline (shape as well as colour) */
+.n span.clash{position:relative;color:var(--miss);font-weight:600;text-decoration:line-through;text-decoration-thickness:1px}
+.cell.cerr::after{content:"";position:absolute;inset:1px;border:1.5px dashed color-mix(in srgb,var(--miss) 75%,transparent);border-radius:3px;pointer-events:none}
 .board.paused .v,.board.paused .n{visibility:hidden}
 .cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .cover p{font-family:var(--hand);font-size:2rem;margin:0}
@@ -143,6 +147,39 @@
 .guide .start{border-bottom:2px solid var(--line)}
 body.learn .status, body.learn .eloLine, body.learn .tools, body.learn #pad{display:none!important}
 .tool .badge.teach{left:calc(50% + 6px)}
+.guide .grow{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.guide .grow > button:first-child{flex:1;min-width:0;border-bottom:0}
+.guide .grow button.pr{flex:none;flex-direction:row;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:600;background:var(--key);color:var(--ink)}
+.guide .grow button.pr:active{background:var(--peer)}
+
+/* the game menu's actions must not shrink away when the menu is taller than a small screen (it scrolls instead) */
+/* ---- Strategy training: find the technique's next step yourself ---- */
+body.train .status, body.train .eloLine, body.train .tools, body.train #newBtn{display:none!important}
+body.train .n{font-size:3.7cqw}
+body.train .trainCard{order:1}
+body.train #pad{order:2}
+.n span.x{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px;opacity:.85}
+.n span.xbad{color:var(--miss);font-weight:700;text-decoration:line-through;text-decoration-thickness:2px;background:color-mix(in srgb,var(--miss) 22%,transparent);border-radius:2px}
+.cell.tbad::after{content:"";position:absolute;inset:1px;border:2px dashed var(--miss);border-radius:4px;pointer-events:none;animation:tshake .35s}
+@keyframes tshake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.pad.off{opacity:.4;pointer-events:none}
+.num.nope{opacity:.3}
+.trainCard{display:flex;flex-direction:column;gap:7px;padding:10px 12px;border-radius:14px;background:var(--sheet);border:1.5px solid var(--line);box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.trHead{display:flex;align-items:center;gap:8px;min-width:0}
+.trHead h3{flex:1;margin:0;font-family:var(--hand);font-weight:400;font-size:1.35rem;line-height:1.05;min-width:0}
+.trPos{font-family:var(--mono);font-size:.74rem;color:var(--muted);white-space:nowrap}
+.trHead .xbtn{padding:2px 4px;line-height:0}
+.trHead .xbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.meter{display:inline-flex;gap:3px;vertical-align:middle}
+.meter i{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--hit);box-sizing:border-box}
+.meter i.on{background:var(--hit)}
+.trText{margin:0;font-size:.88rem;line-height:1.35;min-height:calc(3 * 1.35em)}
+.trText.ok{color:var(--hit);font-weight:600}
+.trText.bad{color:var(--miss)}
+.trBtns{display:flex;gap:8px}
+.trBtns .btn{flex:1 1 0;padding-left:8px;padding-right:8px}
+.trLinks{display:flex;gap:16px;align-items:center}
+@media (max-height:640px){.trainCard{gap:5px;padding:8px 12px}.trText{font-size:.84rem}}
 
 /* ---- Rating ---- */
 .eloLine{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border:0;background:transparent;padding:0;margin:-4px 0 -2px;font:inherit;font-size:.78rem;color:var(--muted);cursor:pointer;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0}
@@ -224,7 +261,17 @@ body.learn .status, body.learn .eloLine, body.learn .tools, body.learn #pad{disp
     <p class="coachText" id="cText"></p>
     <button class="linkbtn" id="cIdeaBtn" type="button"></button>
     <p class="idea" id="cIdea" hidden></p>
+    <button class="linkbtn" id="cPractise" type="button" hidden>Practise this technique</button>
     <div class="coachFoot"><div class="dots" id="cDots"></div><button class="btn small" id="cBack" type="button">Back</button><button class="btn small primary" id="cNext" type="button">Next</button></div>
+  </div>
+
+  <div class="trainCard" id="trainCard" hidden>
+    <div class="trHead"><h3 id="trName"></h3><span id="trMeter"></span><span class="trPos" id="trPos"></span>
+      <button class="xbtn" id="trList" type="button" aria-label="All techniques"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button></div>
+    <p class="trText" id="trText" role="status" aria-live="polite"></p>
+    <div class="trBtns" id="trEdit"><button class="btn small" id="trUndo" type="button">Undo</button><button class="btn small" id="trReset" type="button">Reset</button><button class="btn small primary" id="trCheck" type="button">Check</button></div>
+    <div class="trBtns" id="trDone"><button class="btn small" id="trWhy" type="button">Show why</button><button class="btn small primary" id="trNext" type="button">Next position</button></div>
+    <div class="trLinks" id="trLinks"><button class="linkbtn" id="trRemind" type="button">Remind me</button><button class="linkbtn" id="trShow" type="button">Show me</button><button class="linkbtn" id="trSkip" type="button">Skip</button></div>
   </div>
 </div>
 
@@ -249,9 +296,25 @@ body.learn .status, body.learn .eloLine, body.learn .tools, body.learn #pad{disp
     <h2 id="guideTitle">Technique guide</h2>
     <p id="guideIntro">Tap a technique to see it worked through on an example board. Your puzzle and timer wait for you.</p>
     <p class="learnProg" id="learnProg"><span id="learnProgText"></span><i><b id="learnProgBar"></b></i></p>
+    <button class="rateRow" id="guideTrain" type="button" hidden><span><b>Strategy training</b> · find each technique's next step yourself</span><u>Train</u></button>
     <div class="guide" id="guideList"></div>
     <button class="btn primary" id="guidePlay" type="button" hidden>Start a puzzle</button>
     <button class="btn" id="guideClose" type="button">Back to the puzzle</button>
+  </div>
+</div>
+
+<!-- Strategy training: pick a technique -->
+<div class="sheet" id="trainSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="trainTitle">
+    <h2 id="trainTitle">Strategy training</h2>
+    <p>Pick a technique. You get a position where it is the next move: find it and make it. Nothing here starts a puzzle or touches your rating.</p>
+    <p class="learnProg" id="trainProg"><span id="trainProgText"></span><i><b id="trainProgBar"></b></i></p>
+    <button class="rateRow" id="trainMixed" type="button"></button>
+    <div class="guide" id="trainList"></div>
+    <p style="font-size:.8rem" id="trainRule"><b>Mastery:</b> the dots show your best run of positions solved on the first try. One dot at 1 in a row, two at 3, three at 5 in a row, which is mastered. A wrong answer, Show me or Skip starts the run over.</p>
+    <button class="btn" id="trainBack" type="button" hidden>Back to the position</button>
+    <button class="btn primary" id="trainPlay" type="button">Start a puzzle</button>
+    <a class="btn homebtn" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Back to all games</a>
   </div>
 </div>
 
@@ -331,6 +394,7 @@ body.learn .status, body.learn .eloLine, body.learn .tools, body.learn #pad{disp
 <script src="sudoku-ratings.js"></script>
 <script src="game-nav.js"></script>
 <script src="sudoku-coach.js"></script>
+<script src="sudoku-training.js"></script>
 <script src="sudoku-elo.js"></script>
 <script>
 'use strict';
@@ -343,7 +407,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
 const SETTINGS = [
-  ['showMistakes','Show mistakes','Wrong numbers turn red straight away. When off, nothing is marked and mistakes are only counted', true],
+  ['showMistakes','Show mistakes','Wrong numbers turn red straight away. Notes that clash with a number are struck through in red, and a dashed outline marks a square whose notes have crossed out its right number. These note marks never count as mistakes. When off, nothing is marked and mistakes are only counted', true],
   ['limit','Three-mistake limit','The puzzle ends after three wrong numbers', false],
   ['autoClear','Auto-clear notes','Placing a number removes it from notes in the same row, column and box', true],
   ['sameHL','Highlight matching numbers','Shade every square with the selected number', true],
@@ -401,6 +465,9 @@ function disguise(p){
 let S = null;
 const LEARN = /(^|[#&])learn\b/.test(location.hash); // opened to study the rules and techniques: no puzzle is started, saved, timed or rated
 if (LEARN) document.body.classList.add('learn');
+const TRAIN = /(^|[#&])train\b/.test(location.hash); // strategy training: find a technique's next step yourself; like Learn, no puzzle is started, saved, timed or rated
+if (TRAIN) document.body.classList.add('train');
+let D = null; // the training position in hand (see Strategy training below)
 const FRESH_RATING = () => ({ revealHints:0, teachHints:0, guesses:0, techUsed:{}, tallied:[], rateDone:false, result:null });
 function newGame(level, idx){
   abandon();
@@ -457,26 +524,38 @@ const cells = [];
 function render(){
   const sel = S.sel, sv = sel >= 0 ? S.values[sel] : 0, counts = new Array(10).fill(0);
   for (let i=0;i<81;i++) counts[S.values[i]]++;
+  const showCand = settings.showMistakes && !S.demo && !LEARN && !TRAIN;
   for (let i=0;i<81;i++){
     const el = cells[i], v = S.values[i], given = S.puzzle[i] !== 0;
     let cls = 'cell' + (given ? ' given' : v ? ' user' : '') + (S.hinted[i] ? ' hinted' : '');
     if (v && !given){
       if (settings.showMistakes && v !== S.solution[i]) cls += ' wrong'; // off: nothing is marked, mistakes are only counted
     }
+    if (S.train && S.flash === i) cls += ' tbad';
     if (i === sel) cls += ' sel';
     else if (sel >= 0 && settings.areaHL && IS_PEER[sel][i]) cls += ' peer';
     if (settings.sameHL && sv && v === sv && i !== sel) cls += ' same';
+    // candidate errors: shown only in a real game with Show mistakes on, and never counted (display only, no state is touched)
+    const nm = v ? 0 : S.notes[i];
+    let clash = 0, lost = false;
+    if (nm && showCand){
+      let seen = 0; for (const j of PEERS[i]) if (S.values[j]) seen |= bit(S.values[j]);
+      clash = nm & seen; lost = !(nm & bit(S.solution[i]));
+      if (lost) cls += ' cerr';
+    }
     if (el.className !== cls) el.className = cls;
     el.firstChild.textContent = v || '';
     // set the colour on the number itself too: Safari doesn't always restyle it from the square's class
     const red = cls.includes(' wrong') ? 'var(--miss)' : '';
     if (el.firstChild.style.color !== red) el.firstChild.style.color = red;
     const ns = el.lastChild.children, m = v ? 0 : S.notes[i];
-    for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = on && settings.sameHL && d === sv ? 'hl' : ''; }
-    el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty'));
+    for (let d=1; d<=9; d++){ const on = m & bit(d); ns[d-1].textContent = on ? d : ''; ns[d-1].className = clash & bit(d) ? 'clash' : S.train && S.badX.has(i*10+d) ? 'xbad' : S.train && S.crossed.has(i*10+d) ? 'x' : on && settings.sameHL && d === sv ? 'hl' : ''; }
+    const cd = []; for (let d=1; d<=9; d++) if (clash & bit(d)) cd.push(d);
+    el.setAttribute('aria-label', `Row ${ROW(i)+1}, column ${COL(i)+1}, ` + (v ? v : 'empty')
+      + (cd.length ? `, candidate error: note ${cd.join(', ')} already in this row, column or box` : '') + (lost ? ', candidate error: the right number is crossed out' : ''));
   }
-  [...$('pad').children].forEach((b, k) => { const d = k+1, left = Math.max(0, 9 - counts[d]); b.lastChild.textContent = left; b.classList.toggle('done', left === 0); });
-  $('pad').classList.toggle('notes', S.notesMode);
+  [...$('pad').children].forEach((b, k) => { const d = k+1, left = Math.max(0, 9 - counts[d]); b.lastChild.textContent = left; b.classList.toggle('done', !S.train && left === 0); b.classList.toggle('nope', !!(S.train && D && !D.place && sel >= 0 && !(S.notes[sel] & bit(d)))); });
+  $('pad').classList.toggle('notes', S.notesMode); $('pad').classList.toggle('off', !!(S.train && D && D.state === 'done'));
   $('notes').setAttribute('aria-pressed', S.notesMode); $('notesBadge').textContent = S.notesMode ? 'ON' : 'OFF';
   $('undo').disabled = !S.history.length || S.done; $('redo').disabled = !S.future.length || S.done;
   $('erase').disabled = $('hint').disabled = S.done;
@@ -492,6 +571,7 @@ function render(){
   tickLabel();
   drawEloLine();
   drawTeach();
+  if (TRAIN) drawCard();
 }
 
 // ---- actions ----
@@ -716,7 +796,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && S &
 const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hidden);
 function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); last = Date.now(); }
 function close(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); last = Date.now(); }
-document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'loseSheet' && !(s.id === 'newSheet' && !S) && !(LEARN && s.id === 'guideSheet')) close(); }));
+document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s && s.id !== 'loseSheet' && !(s.id === 'newSheet' && !S) && !(LEARN && s.id === 'guideSheet') && !(TRAIN && !D && s.id === 'trainSheet')) close(); }));
 
 let segLevel = 'easy';
 function openNew(){
@@ -790,12 +870,13 @@ function teach(){
 function startLesson(l){ T = { lesson:l, step:0, done:false }; $('cIdea').hidden = true; showCoach(); render(); }
 function endLesson(){
   if (demo){ S = demo.saved; paused = demo.paused; demo = null; last = Date.now(); }
-  T = null; showCoach(); render();
+  T = null; if (S && S.train) syncDrill(); showCoach(); render();
 }
 const actionLabel = a => a.type === 'none' ? 'Done' : a.type === 'place' ? `Write in ${a.d}` : a.type === 'elim' ? 'Cross them off' : 'Erase it';
 function showCoach(){
   const on = !!T;
-  document.querySelector('.tools').hidden = on; $('pad').hidden = on; $('coach').hidden = !on;
+  document.querySelector('.tools').hidden = on; $('pad').hidden = on || (TRAIN && !D); $('coach').hidden = !on; $('trainCard').hidden = on || !(TRAIN && D);
+  $('cPractise').hidden = true;
   if (!on) return;
   const l = T.lesson, n = l.steps.length;
   $('cLevel').textContent = l.level; $('cName').textContent = l.name;
@@ -803,7 +884,13 @@ function showCoach(){
   $('cIdeaBtn').hidden = plain || T.done; $('cIdeaBtn').textContent = $('cIdea').hidden ? `How ${l.name} works` : 'Hide';
   $('cIdea').textContent = l.idea; if (T.done) $('cIdea').hidden = true;
   if (T.done){
-    const nx = LEARN && S.demo ? nextTopic(l.key) : null;
+    const sv0 = store.get('sudoku-game', null), nx = LEARN && S.demo ? nextTopic(l.key) : null, canTrain = !!(window.SUDOKU_TRAINING && SUDOKU_TRAINING[l.key] && GUIDE[l.key]);
+    $('cPractise').hidden = !(LEARN && S.demo && canTrain);
+    if (TRAIN && S.demo && !S.train){
+      $('cText').textContent = `That's ${l.name}. Ready to find it yourself?`; $('cDots').innerHTML = '';
+      $('cBack').disabled = false; $('cBack').textContent = 'All techniques'; $('cNext').textContent = canTrain ? 'Practise this' : 'All techniques';
+      return;
+    }
     $('cText').textContent = LEARN && S.demo ? (nx ? `That's ${l.name}. Carry on with ${topicName(nx)}, or pick any topic from the list.` : `That's ${l.name}, the last topic. Pick any topic to go through again, or start a puzzle and try it for real.`)
       : S.demo ? `That's ${l.name}. Pick another technique to see, or go back to your puzzle.`
       : l.action.type === 'elim' ? 'Crossed off. Fewer candidates often open up a single somewhere: have a look yourself, or see the next step.'
@@ -811,20 +898,20 @@ function showCoach(){
       : `Done. Try spotting the next move yourself, or let the coach show you.`;
     $('cDots').innerHTML = '';
     $('cBack').disabled = false; $('cBack').textContent = S.demo ? (LEARN ? 'All topics' : 'Guide') : 'Play on';
-    $('cNext').textContent = S.demo ? (LEARN ? (nx ? 'Next topic' : 'All topics') : 'My puzzle') : 'Next step';
+    $('cNext').textContent = S.demo ? (LEARN ? (nx ? 'Next topic' : (sv0 && sv0.puzzle && !sv0.done ? 'My puzzle' : 'Start a puzzle')) : 'My puzzle') : 'Next step';
     return;
   }
   $('cText').textContent = l.steps[T.step].text;
   $('cDots').innerHTML = n > 1 ? l.steps.map((_, k) => `<i class="${k <= T.step ? 'on' : ''}"></i>`).join('') : '';
   $('cBack').textContent = 'Back'; $('cBack').disabled = T.step === 0;
-  $('cNext').textContent = T.step === n - 1 ? actionLabel(l.action) : 'Next';
+  $('cNext').textContent = T.step === n - 1 ? (S.train ? 'Next position' : actionLabel(l.action)) : 'Next';
 }
 function applyLesson(){
   const a = T.lesson.action;
   if (S.demo){
     if (a.type === 'place'){ S.values[a.i] = a.d; S.puzzle[a.i] = a.d; }
     else if (a.type === 'elim') a.elims.forEach(([i,d]) => S.elims.push(i*10+d));
-    T.done = true; learned[T.lesson.key] = 1; store.set('sudoku-learned', learned); // the lesson was followed to its end
+    T.done = true; if (!S.train){ learned[T.lesson.key] = 1; store.set('sudoku-learned', learned); } // the lesson was followed to its end
     showCoach(); render(); if (a.type === 'place') pulse(a.i, 0); return;
   }
   const ch = [];
@@ -838,17 +925,26 @@ function applyLesson(){
 }
 $('cNext').addEventListener('click', () => {
   if (!T) return;
-  if (T.done && S.demo && LEARN){ const nx = nextTopic(T.lesson.key); if (nx) return startDemo(nx); endLesson(); return openGuide(); }
+  if (T.done && S.demo && TRAIN && !S.train){ const k = T.lesson.key, can = !!(SUDOKU_TRAINING[k] && GUIDE[k]); endLesson(); return can ? startDrill(k) : openTrainPicker(); }
+  if (T.done && S.demo && LEARN){ const nx = nextTopic(T.lesson.key); if (nx) return startDemo(nx); location.href = 'sudoku.html'; return; }
   if (T.done) return S.demo ? endLesson() : teach();
-  if (T.step === T.lesson.steps.length - 1) return applyLesson();
+  if (T.step === T.lesson.steps.length - 1) return S.train ? trainNext() : applyLesson();
   T.step++; showCoach(); render();
 });
 $('cBack').addEventListener('click', () => {
   if (!T) return;
-  if (T.done){ const wasDemo = !!S.demo; endLesson(); if (wasDemo) openGuide(); return; }
+  if (T.done){ closeLesson(); return; }
   if (T.step > 0){ T.step--; showCoach(); render(); }
 });
-$('cClose').addEventListener('click', () => { const wasDemo = !!(S && S.demo); endLesson(); if (LEARN && wasDemo) openGuide(); });
+// leave a lesson: back to the topic list (Learn, the guide or the training list), or to the training position it was explaining
+function closeLesson(){
+  const wasDemo = !!(S && S.demo), wasTrain = !!(S && S.train);
+  endLesson();
+  if (!wasDemo || wasTrain) return;
+  if (TRAIN) openTrainPicker(); else openGuide();
+}
+$('cClose').addEventListener('click', () => { const wasDemo = !!(S && S.demo), wasTrain = !!(S && S.train); endLesson(); if (LEARN && wasDemo) openGuide(); else if (TRAIN && wasDemo && !wasTrain) openTrainPicker(); });
+$('cPractise').addEventListener('click', () => { if (T) goMode('#train=' + T.lesson.key); });
 $('cIdeaBtn').addEventListener('click', () => { $('cIdea').hidden = !$('cIdea').hidden; showCoach(); });
 
 // Board overlay for the current step: shaded houses, ringed squares, circled causes, hatched blocked squares, candidates with roles, lines.
@@ -919,7 +1015,11 @@ const topicName = key => key === 'rules' ? 'The basics' : (Coach.TECHNIQUES.find
 function openGuide(){
   const groups = {};
   for (const t of Coach.TECHNIQUES) if (GUIDE[t.key]) (groups[t.level] ||= []).push(t);
-  const row = (k, name, idea) => `<button type="button" data-k="${k}"${learned[k] ? ' class="seen"' : ''}><b>${name}${learned[k] ? '<span class="tk" aria-label="done">✓</span>' : ''}</b><small>${idea}</small></button>`;
+  const study = LEARN || TRAIN;
+  const row = (k, name, idea) => { const b = `<button type="button" data-k="${k}"${learned[k] ? ' class="seen"' : ''}><b>${name}${learned[k] ? '<span class="tk" aria-label="done">✓</span>' : ''}</b><small>${idea}</small></button>`;
+    if (!study || !SUDOKU_TRAINING[k]) return b;
+    const m = trainMastery(k);
+    return `<div class="grow">${b}<button type="button" class="pr" data-p="${k}" aria-label="Practise ${name}, mastery ${m} of 3">Practise ${meterHTML(m)}</button></div>`; };
   $('guideList').innerHTML = `<div class="label">Start here</div>` + row('rules', 'The basics', 'How Sudoku works: the three rules, and how one square gets solved')
     + Object.entries(groups).map(([lvName, ts]) => `<div class="label">${lvName}</div>` + ts.map(t => row(t.key, t.name, t.idea)).join('')).join('');
   const all = TECH_ORDER(), n = all.filter(k => learned[k]).length;
@@ -930,7 +1030,7 @@ function openGuide(){
   $('guideIntro').textContent = LEARN ? 'Start with the basics, then pick up the techniques one by one. Each is worked through step by step on an example board. Nothing here starts a puzzle or touches your rating.'
     : 'Tap a technique to see it worked through on an example board. Your puzzle and timer wait for you.';
   const saved = store.get('sudoku-game', null), cont = saved && saved.puzzle && !saved.done;
-  $('guidePlay').hidden = !LEARN; $('guidePlay').textContent = cont ? 'Continue my puzzle' : 'Start a puzzle';
+  $('guideTrain').hidden = !study; $('guidePlay').hidden = !LEARN; $('guidePlay').textContent = cont ? 'Continue my puzzle' : 'Start a puzzle';
   $('guideClose').textContent = LEARN ? 'Back to all games' : 'Back to the puzzle';
   open('guideSheet');
 }
@@ -951,7 +1051,8 @@ function startDemo(key){
         elims: ex.elims.slice(), mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:true, history:[], future:[], sel:-1, notesMode:false };
   paused = false; startLesson(ex.lesson);
 }
-$('guideList').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) startDemo(b.dataset.k); });
+$('guideList').addEventListener('click', e => { const p = e.target.closest('button[data-p]'); if (p) return goMode('#train=' + p.dataset.p); const b = e.target.closest('button[data-k]'); if (b) startDemo(b.dataset.k); });
+$('guideTrain').addEventListener('click', () => goMode('#train'));
 $('guideClose').addEventListener('click', () => { if (LEARN) location.href = 'index.html'; else close(); });
 $('guidePlay').addEventListener('click', () => { location.href = 'sudoku.html'; });
 $('newLearn').addEventListener('click', openGuide);
@@ -962,9 +1063,184 @@ $('hintGuide').addEventListener('click', openGuide);
 $('hintClose').addEventListener('click', close);
 $('hintTeachMode').addEventListener('change', e => { settings.teach = e.target.checked; store.set('sudoku-settings', settings); if (settings.teach) teach(); else render(); });
 
+// ---- Strategy training ----
+// A position where one technique is the next step. The player finds and makes that step on the board; SudokuCoach.checkStep marks it.
+// The board is a demo-style S (S.demo, S.train): nothing is saved, timed or rated, and the saved puzzle, the stats and the rating are never touched.
+// Progress per technique is saved in 'sudoku-train': { pos, attempts, solved, firstTry, streak, best, done } where pos = the next position (0-29),
+// attempts = positions tried (answered, shown or skipped), solved = positions solved (any try), firstTry = solved with the first answer,
+// streak = first-try solves in a row now, best = best such run, done = the positions solved. Mastery: best run 1 / 3 / 5 = one / two / three dots; 5 = mastered.
+const PLACE = new Set(['fullHouse', 'hiddenSingle', 'nakedSingle']);
+const MASTERED = 5;
+let trainData = store.get('sudoku-train', {});
+const trRead = k => Object.assign({ pos:0, attempts:0, solved:0, firstTry:0, streak:0, best:0, done:[] }, trainData[k] || {});
+const trWrite = (k, st) => { trainData[k] = st; store.set('sudoku-train', trainData); };
+const trKeys = () => Coach.TECHNIQUES.filter(t => GUIDE[t.key] && window.SUDOKU_TRAINING && SUDOKU_TRAINING[t.key]).map(t => t.key);
+const trCount = k => SUDOKU_TRAINING[k].length;
+const trainMastery = k => { const b = trRead(k).best; return b >= MASTERED ? 3 : b >= 3 ? 2 : b >= 1 ? 1 : 0; };
+const meterHTML = n => `<span class="meter" role="img" aria-label="Mastery ${n} of 3">${[0, 1, 2].map(k => `<i class="${k < n ? 'on' : ''}"></i>`).join('')}</span>`;
+// open a mode of this page from another: the mode is read when the page loads, so change the address and reload
+function goMode(h){ location.hash = h; location.reload(); }
+const nextIdx = (st, from, n) => { for (let k = 1; k <= n; k++){ const j = (from + k) % n; if (!st.done.includes(j)) return j; } return (from + 1) % n; };
+
+function openTrainPicker(){
+  const keys = trKeys(), mastered = keys.filter(k => trRead(k).best >= MASTERED).length, tried = keys.filter(k => trRead(k).attempts > 0);
+  $('trainProgText').innerHTML = `<span><b class="cnt">${mastered}</b> of ${keys.length} techniques mastered</span>`;
+  $('trainProgBar').style.width = (100 * mastered / keys.length) + '%';
+  $('trainMixed').innerHTML = `<span><b>Mixed review</b> · random positions from ${tried.length ? (tried.length === 1 ? 'the technique you have practised' : `the ${tried.length} techniques you have practised`) : 'all the techniques'}</span><u>Start</u>`;
+  const groups = {};
+  for (const t of Coach.TECHNIQUES) if (keys.includes(t.key)) (groups[t.level] ||= []).push(t);
+  $('trainList').innerHTML = Object.entries(groups).map(([lv, ts]) => `<div class="label">${lv}</div>` + ts.map(t => {
+    const st = trRead(t.key), n = trCount(t.key), m = trainMastery(t.key);
+    const sub = (st.attempts ? `${st.solved} solved of ${st.attempts} tried · ` : '') + `position ${st.pos % n + 1} of ${n}` + (m === 3 ? ' · mastered' : st.streak > 1 ? ` · ${st.streak} in a row` : '');
+    return `<div class="grow"><button type="button" data-t="${t.key}"><b>${t.name} ${meterHTML(m)}</b><small>${sub}</small></button><button type="button" class="pr" data-l="${t.key}" aria-label="Learn ${t.name} first">Learn first</button></div>`;
+  }).join('')).join('');
+  $('trainBack').hidden = !D;
+  const saved = store.get('sudoku-game', null);
+  $('trainPlay').textContent = saved && saved.puzzle && !saved.done ? 'Continue my puzzle' : 'Start a puzzle';
+  if (!D) try { history.replaceState(null, '', '#train'); } catch (e) {}
+  open('trainSheet'); $('trainSheet').firstElementChild.scrollTop = 0;
+}
+$('trainList').addEventListener('click', e => {
+  const l = e.target.closest('button[data-l]'); if (l) return startDemo(l.dataset.l);
+  const b = e.target.closest('button[data-t]'); if (b) startDrill(b.dataset.t);
+});
+$('trainMixed').addEventListener('click', () => startMixed());
+$('trainBack').addEventListener('click', close);
+$('trainPlay').addEventListener('click', () => { location.href = 'sudoku.html'; });
+
+function startDrill(key){ const st = trRead(key); loadPosition(key, st.pos % trCount(key), false); }
+function startMixed(){
+  const keys = trKeys(), tried = keys.filter(k => trRead(k).attempts > 0), pool = tried.length ? tried : keys;
+  const key = pool[(Math.random() * pool.length) | 0], st = trRead(key), n = trCount(key), here = k => D && D.key === key && D.idx === k;
+  let left = []; for (let k = 0; k < n; k++) if (!st.done.includes(k) && !here(k)) left.push(k);
+  if (!left.length) for (let k = 0; k < n; k++) if (!here(k)) left.push(k);
+  loadPosition(key, left[(Math.random() * left.length) | 0], true);
+}
+function loadPosition(key, idx, mixed){
+  const [v, e] = SUDOKU_TRAINING[key][idx].split('|'), values = [...v].map(Number), elims = e ? e.split(' ').map(Number) : [];
+  const solution = solve(values), cand = Coach.candidates(values, new Set(elims));
+  D = { key, idx, mixed, place: PLACE.has(key), values0: values, elims, solution, cand, crossed: new Set(), bad: new Set(), hist: [], tries: 0, state: 'play', result: null,
+        counted: false, msg: '', kind: '', remind: false, placed: null };
+  if (!mixed){ const st = trRead(key); st.pos = idx; trWrite(key, st); }
+  S = { demo:true, train:true, level:'easy', idx:0, puzzle: values.slice(), solution, values: values.slice(), notes: cand.map((m, i) => values[i] ? 0 : m), hinted: new Array(81).fill(false),
+        elims: elims.slice(), mistakes:0, counted:[], hints:0, elapsed:0, done:false, failed:false, limitOff:true, history:[], future:[], sel:-1, notesMode:false,
+        crossed: D.crossed, badX: D.bad, flash: -1 };
+  T = null; paused = false;
+  try { history.replaceState(null, '', mixed ? '#train=mixed' : '#train=' + key); } catch (e) {}
+  close(); showCoach(); render();
+}
+// back to the position after a lesson: the original numbers, plus the one the player placed
+function syncDrill(){
+  S.values = D.values0.slice(); S.notes = D.cand.map((m, i) => D.values0[i] ? 0 : m); S.sel = -1; S.flash = -1;
+  if (D.placed){ S.values[D.placed[0]] = D.placed[1]; S.notes[D.placed[0]] = 0; }
+}
+// a new tap on the board clears the last answer's red marks
+function trClear(){ if (!D) return; D.bad.clear(); S.flash = -1; D.remind = false; if (D.state === 'play'){ D.msg = ''; D.kind = ''; } }
+function trSay(msg, kind){ D.msg = msg; D.kind = kind || ''; D.remind = false; }
+
+// the first answer, Show me or Skip on a position: it now counts as tried
+function trTouch(st){ if (!D.counted){ D.counted = true; st.attempts++; } }
+function trWrong(msg, cell, badKey){
+  const st = trRead(D.key); trTouch(st); D.tries++; st.streak = 0; trWrite(D.key, st);
+  D.bad.clear(); if (badKey) D.bad.add(badKey);
+  S.flash = cell == null ? -1 : cell; trSay(msg, 'bad'); buzz(); render();
+}
+function trSolved(placed){
+  const st = trRead(D.key); trTouch(st);
+  st.solved++;
+  if (D.tries === 0){ st.firstTry++; st.streak++; st.best = Math.max(st.best, st.streak); }
+  if (!st.done.includes(D.idx)) st.done.push(D.idx);
+  if (!D.mixed) st.pos = nextIdx(st, D.idx, trCount(D.key));
+  trWrite(D.key, st);
+  D.state = 'done'; D.result = 'ok'; D.bad.clear(); S.flash = -1;
+  const info = Coach.INFO[D.key], a = TASK_NOUN[D.key] || (/^[AEIOUX]/.test(info.name) ? 'an ' : 'a ') + info.name;
+  trSay(`Correct! That's ${a}: ${info.idea.charAt(0).toLowerCase() + info.idea.slice(1)}` + (D.tries === 0 && st.streak === MASTERED ? ' Mastered!' : ''), 'ok');
+  if (placed){ D.placed = placed; S.values[placed[0]] = placed[1]; S.notes[placed[0]] = 0; S.sel = placed[0]; }
+  render(); if (placed) pulse(placed[0], 0);
+}
+function trainInput(d){
+  if (!D || T || D.state === 'done' || anySheet()) return;
+  const i = S.sel;
+  if (i < 0 || S.values[i]){ trClear(); trSay(i < 0 ? 'Tap a square first, then a number.' : 'That square is already filled. Tap an empty one.', 'info'); return render(); }
+  trClear();
+  const nm = Coach.INFO[D.key].name;
+  if (D.place){
+    if (!(D.cand[i] & bit(d))){ trSay(`${d} can't go there: it is already in that square's row, column or box. Look for a ${nm} instead.`, 'bad'); S.flash = i; return render(); }
+    const r = Coach.checkStep(D.key, D.values0, new Set(D.elims), { place: [i, d] });
+    if (r.ok) return trSolved([i, d]);
+    return trWrong(d === D.solution[i] ? `${d} does belong there, but it isn't a ${nm}. Look for the one that is.` : `Not quite: ${r.reason}. Try another square or number.`, i, i * 10 + d);
+  }
+  if (!(D.cand[i] & bit(d))){ trSay(`${d} isn't a candidate in that square. Tap one of the small numbers in it.`, 'info'); return render(); }
+  const k = i * 10 + d;
+  if (D.crossed.has(k)) D.crossed.delete(k); else D.crossed.add(k);
+  D.hist.push(k); D.msg = ''; D.kind = ''; render();
+}
+function trUndo(){ if (!D || T || D.state === 'done' || D.place) return; const k = D.hist.pop(); if (k == null) return; trClear(); if (D.crossed.has(k)) D.crossed.delete(k); else D.crossed.add(k); S.sel = (k / 10) | 0; D.msg = ''; D.kind = ''; render(); }
+function trReset(){ if (!D || T || D.state === 'done' || D.place) return; D.crossed.clear(); D.hist = []; trClear(); D.msg = ''; D.kind = ''; render(); }
+function trCheck(){
+  if (!D || T || D.state === 'done' || D.place || !D.crossed.size || anySheet()) return;
+  D.remind = false;
+  const answer = { elims: [...D.crossed].map(k => [(k / 10) | 0, k % 10]) }, el = new Set(D.elims);
+  const r = Coach.checkStep(D.key, D.values0, el, answer);
+  if (r.ok) return trSolved(null);
+  const allowed = new Set(); for (const x of Coach.instances(D.key, D.values0, el)) if (x.elims) for (const [i, d] of x.elims) allowed.add(i * 10 + d);
+  const bad = [...D.crossed].filter(k => !allowed.has(k));
+  if (bad.length){
+    trWrong(`Not quite: ${r.reason}. ${bad.length > 1 ? 'The red ones are' : 'The red one is'} wrong: undo ${bad.length > 1 ? 'them' : 'it'} and look again.`, null, null);
+    bad.forEach(k => D.bad.add(k)); S.sel = (bad[0] / 10) | 0; S.flash = S.sel; render();
+  } else { trSay('Good so far: everything you crossed off is right, but this step removes more. Find the rest, then Check again.', 'info'); render(); }
+}
+// Show me / Show why: walk through the coach's lesson for this position
+function showWalk(missed){
+  if (!D || T) return;
+  if (missed && D.state !== 'done'){
+    const st = trRead(D.key); trTouch(st); st.streak = 0;
+    if (!D.mixed) st.pos = nextIdx(st, D.idx, trCount(D.key));
+    trWrite(D.key, st); D.state = 'done'; D.result = 'shown'; D.bad.clear(); S.flash = -1;
+    trSay('Here is how it works. This one does not count as solved, so it will come round again.', 'info');
+  }
+  S.values = D.values0.slice(); S.sel = -1;
+  const l = Coach.next(D.values0, D.solution, new Set(D.elims));
+  if (!l){ syncDrill(); return render(); }
+  startLesson(l);
+}
+function trainNext(){ T = null; D.mixed ? startMixed() : startDrill(D.key); }
+function trSkip(){
+  if (!D) return;
+  if (D.state !== 'done'){ const st = trRead(D.key); trTouch(st); st.streak = 0; if (!D.mixed) st.pos = nextIdx(st, D.idx, trCount(D.key)); trWrite(D.key, st); }
+  trainNext();
+}
+$('trUndo').addEventListener('click', trUndo);
+$('trReset').addEventListener('click', trReset);
+$('trCheck').addEventListener('click', trCheck);
+$('trShow').addEventListener('click', () => showWalk(true));
+$('trWhy').addEventListener('click', () => showWalk(false));
+$('trSkip').addEventListener('click', trSkip);
+$('trNext').addEventListener('click', trainNext);
+$('trRemind').addEventListener('click', () => { if (D){ D.remind = !D.remind; render(); } });
+$('trList').addEventListener('click', openTrainPicker);
+
+const TASK_NOUN = { pointing: 'a Pointing move', claiming: 'a Claiming move' };
+function drawCard(){
+  if (!D || T || !S || !S.train) return;
+  const info = Coach.INFO[D.key], nm = info.name, m = trainMastery(D.key);
+  $('trName').textContent = nm; $('trMeter').innerHTML = meterHTML(m);
+  $('trPos').textContent = `${D.idx + 1} of ${trCount(D.key)}`;
+  const what = TASK_NOUN[D.key] || (/^[AEIOUX]/.test(nm) ? 'an ' : 'a ') + nm;
+  const task = (D.mixed ? 'Mixed review. ' : '') + `Find ${what}: ` + (D.place ? 'place the number.' : 'cross off the candidates it removes.');
+  const showMsg = !!D.msg && !D.remind;
+  $('trText').textContent = D.remind ? info.idea : showMsg ? D.msg : task;
+  $('trText').className = 'trText' + (showMsg ? ' ' + D.kind : '');
+  const done = D.state === 'done';
+  $('trEdit').hidden = D.place || done; $('trDone').hidden = !done; $('trLinks').hidden = done;
+  $('trUndo').disabled = !D.hist.length; $('trReset').disabled = !D.crossed.size; $('trCheck').disabled = !D.crossed.size;
+  $('trRemind').textContent = D.remind ? 'Back to the task' : 'Remind me';
+  $('trNext').textContent = D.mixed ? 'Next review' : 'Next position';
+}
+
 // ---- input wiring ----
-$('board').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c || paused || T) return; S.sel = +c.dataset.i; render(); });
-$('pad').addEventListener('click', e => { const b = e.target.closest('.num'); if (b) input(+b.dataset.d); });
+$('board').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c || paused || T) return; S.sel = +c.dataset.i; if (S.train) trClear(); render(); });
+$('pad').addEventListener('click', e => { const b = e.target.closest('.num'); if (b) TRAIN ? trainInput(+b.dataset.d) : input(+b.dataset.d); });
 $('undo').addEventListener('click', undo);
 $('redo').addEventListener('click', redo);
 $('erase').addEventListener('click', erase);
@@ -979,6 +1255,14 @@ document.addEventListener('keydown', e => {
     if (k === 'Escape') return endLesson();
     if (k === 'ArrowRight' || k === 'Enter'){ e.preventDefault(); return $('cNext').click(); }
     if (k === 'ArrowLeft'){ e.preventDefault(); return $('cBack').click(); }
+    return;
+  }
+  if (TRAIN){
+    if (/^[1-9]$/.test(k)) return trainInput(+k);
+    if (k === 'Enter') return trCheck();
+    if (k === 'Backspace' || k === 'Delete' || (mod && k.toLowerCase() === 'z')){ e.preventDefault(); return trUndo(); }
+    const mv = { ArrowUp:-9, ArrowDown:9, ArrowLeft:-1, ArrowRight:1 }[k];
+    if (mv != null){ e.preventDefault(); let i = S.sel < 0 ? 40 : S.sel; if (mv === -1 && COL(i) === 0) i += 8; else if (mv === 1 && COL(i) === 8) i -= 8; else i = (i + mv + 81) % 81; S.sel = i; trClear(); render(); }
     return;
   }
   if (mod && k.toLowerCase() === 'z'){ e.preventDefault(); return e.shiftKey ? redo() : undo(); }
@@ -1005,19 +1289,33 @@ if (LEARN){ // study mode: an example board behind the list; the saved puzzle, t
         done:false, failed:false, limitOff:true, history:[], future:[], sel:-1, notesMode:false };
   render(); openGuide();
 }
+else if (TRAIN){ // strategy training: an example board behind the picker; the saved puzzle, the stats and the rating are not touched
+  const pz = [...P.easy.slice(0, 81)].map(Number);
+  S = { demo:true, level:'easy', idx:0, puzzle: pz, solution: solve(pz), values: pz.slice(), notes: new Array(81).fill(0), hinted: new Array(81).fill(false), elims: [], mistakes:0, counted:[], hints:0, elapsed:0,
+        done:false, failed:false, limitOff:true, history:[], future:[], sel:-1, notesMode:false };
+  render();
+  const m = location.hash.match(/train=(\w+)/), k = m && m[1];
+  if (k === 'mixed') startMixed(); else if (k && SUDOKU_TRAINING[k] && GUIDE[k]) startDrill(k); else openTrainPicker();
+}
 else if (restore()){ if (S.done) render(), openNew(); else { paused = false; render(); if (S.failed) (fillLose(), GameNav.fillEnd('loseNav', 'sudoku'), open('loseSheet')); } }
 else { newGame('easy'); }
 if (location.hash === '#new') openNew();
 // ---- game menu (tap the title) ----
 let navPaused = false;
 GameNav.init({ id: 'sudoku', note: () => S && !S.done ? 'Your puzzle and time are saved.' : '',
-  onOpen: () => { if (S && S.demo) endLesson(); navPaused = !LEARN && !!(S && !S.done && !paused); if (navPaused) setPaused(true); },
-  onClose: byAction => { if (navPaused && !byAction && S && !S.done) setPaused(false); navPaused = false; if (LEARN && !byAction) openGuide(); },
-  actions: () => LEARN ? [
+  onOpen: () => { if (S && S.demo) endLesson(); navPaused = !LEARN && !TRAIN && !!(S && !S.done && !paused); if (navPaused) setPaused(true); },
+  onClose: byAction => { if (navPaused && !byAction && S && !S.done) setPaused(false); navPaused = false; if (LEARN && !byAction) openGuide(); if (TRAIN && !byAction && !D) openTrainPicker(); },
+  actions: () => TRAIN ? [
+    { icon: 'learn', label: 'All techniques', note: 'Pick what to practise, or a mixed review.', run: openTrainPicker },
+    { icon: 'new', label: 'Start a puzzle', note: 'Leave training and play Sudoku.', run: () => { location.href = 'sudoku.html'; } },
+    { icon: 'learn', label: 'Learn Sudoku', note: 'The rules and every technique, step by step.', run: () => goMode('#learn') },
+  ] : LEARN ? [
     { icon: 'new', label: 'Start a puzzle', note: 'Leave Learn and play Sudoku.', run: () => { location.href = 'sudoku.html'; } },
     { icon: 'learn', label: 'All topics', note: 'The basics and every technique.', run: openGuide },
+    { icon: 'next', label: 'Strategy training', note: 'Practise finding each technique yourself.', run: () => goMode('#train') },
   ] : [
     { icon: 'learn', label: 'Learn Sudoku', note: 'The rules and every technique, step by step. Your puzzle and time wait for you.', run: openGuide },
+    { icon: 'next', label: 'Strategy training', note: 'Practise finding each technique yourself. Your puzzle and time wait for you.', run: () => { if (S && !S.done) save(); goMode('#train'); } },
     S && !S.done && { icon: 'restart', label: 'Restart this puzzle', note: 'Clears your numbers, notes and the timer.', confirm: 'Tap again to restart', run: restart },
     { icon: 'new', label: 'New puzzle…', note: 'Choose a level or a puzzle number.', run: openNew },
     S && !S.done && { icon: 'quit', label: 'Quit this puzzle', note: 'Throws it away and goes back to the games. Your stats are kept.', danger: true, confirm: 'Tap again to quit', leave: true,

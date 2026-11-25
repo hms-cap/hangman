@@ -253,6 +253,10 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
         <div class="art" id="artLearn"></div>
         <div class="meta"><h3>Learn Sudoku</h3><p class="status" id="sLearn"></p><div class="prog" id="bLearn" hidden><i></i></div><span class="cta" id="cLearn">Learn</span></div>
       </a>
+      <a class="tile wide t-sudoku" href="sudoku.html#train" id="tTrain">
+        <div class="art" id="artTrain"></div>
+        <div class="meta"><h3>Sudoku Training</h3><p class="status" id="sTrain"></p><div class="prog" id="bTrain" hidden><i></i></div><span class="cta" id="cTrain">Train</span></div>
+      </a>
       <a class="tile wide t-hang" href="hangman.html">
         <div class="art" id="artHang"></div>
         <div class="meta"><h3>Hangman</h3><p class="status" id="sHang"></p><span class="cta" id="cHang">Play</span></div>
@@ -518,6 +522,24 @@ let miniDone = false;
     $('sLearn').innerHTML = `<b>${Math.min(done, total)}</b> of ${total} topics worked through`;
     setBar('bLearn', Math.min(done, total) / total); $('cLearn').textContent = done >= total ? 'Revisit' : 'Continue';
   } else $('sLearn').textContent = 'The rules and 12 techniques, step by step. No puzzle needed';
+})();
+
+// ---- Sudoku Training: find each technique's next step yourself ----
+(function(){
+  const keys = ['fullHouse', 'hiddenSingle', 'nakedSingle', 'pointing', 'claiming', 'nakedPair', 'hiddenPair', 'nakedTriple', 'hiddenTriple', 'xWing', 'xyWing', 'swordfish'];
+  const tr = get('sudoku-train', {}) || {};
+  const mastered = keys.filter(k => tr[k] && tr[k].best >= 5).length, tried = keys.filter(k => tr[k] && tr[k].attempts > 0).length;
+  let body = '';
+  for (let i = 0; i < 81; i++){
+    const r = (i / 9) | 0, c = i % 9, x = c * 10.6 + Math.floor(c / 3) * 1.6 + 1, y = r * 10.6 + Math.floor(r / 3) * 1.6 + 1;
+    const lit = (r === 2 || r === 6) && (c === 2 || c === 6) || r === 4 && c === 4; // the corners of a rectangle, as in an X-Wing
+    body += `<rect x="${x}" y="${y}" width="9.2" height="9.2" rx="1.6" class="${lit ? 'su-user' : (i * 7 + 3) % 5 === 0 ? 'su-given' : 'su-empty'}"/>`;
+  }
+  $('artTrain').innerHTML = svg('0 0 100 100', body);
+  if (tried){
+    $('sTrain').innerHTML = mastered ? `<b>${mastered}</b> of ${keys.length} techniques mastered` : `<b>${tried}</b> of ${keys.length} techniques tried, none mastered yet`;
+    setBar('bTrain', mastered / keys.length); $('cTrain').textContent = 'Continue';
+  } else $('sTrain').textContent = 'Find each technique yourself on a ready-made position. No puzzle needed';
 })();
 
 // ---- Sudoku: the saved board ----

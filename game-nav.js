@@ -31,7 +31,7 @@ const css = `
 .gnav .panel{gap:12px}
 .gn-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .gn-note{font-size:.85rem}
-.gn-acts{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
+.gn-acts{flex:none;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
 .gn-acts:empty{display:none}
 .gn-act{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:12px 14px;cursor:pointer;color:var(--ink)}
 .gn-act:last-child{border-bottom:0}
