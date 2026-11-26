@@ -3,9 +3,12 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.11.0',
-  date: '2026-11-25',
+  version: '1.11.1',
+  date: '2026-11-26',
   changes: [
+    { v: '1.11.1', date: '2026-11-26', notes: [
+      'Sudoku: pencil notes are now only marked when that number is already placed in the same row, column or box. The dashed outline that hinted the right number had been crossed out is gone',
+    ] },
     { v: '1.11.0', date: '2026-11-25', notes: [
       'Sudoku: new Strategy training: 30 practice positions for each of the 12 techniques, from Full House to Swordfish',
       'Find the step yourself: place the number, or cross off the candidates the technique removes, then Check; Show why walks you through it',
