@@ -41,6 +41,7 @@
 .progress .count b{font-weight:600}
 .chipBtn{border:1px solid var(--line);background:var(--key);border-radius:999px;padding:5px 11px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink);white-space:nowrap}
 .chipBtn:disabled{opacity:.4;cursor:default}
+@media (max-width:340px){.progress{gap:6px}.progress .count{font-size:.78rem}.chipBtn{padding:5px 8px}.icon-chip{padding:5px 7px}.meter{min-width:12px}}
 
 .current{position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;gap:10px}
 .current .w{font-family:var(--mono);font-weight:700;font-size:1.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--hit)}
@@ -248,9 +249,25 @@ function loadMode(m){
     if (!S || !S.grid) S = practiceGrid('small');
   }
   P = Trail.analyze(S.grid, DICT);
+  const wasDone = S.done;
+  reconcile();
   S.total = P.targets.length;
   path = []; tapMode = false; lastFeedback = null;
   build(); render(); save();
+  if (!wasDone && !S.done && P.targets.every(t => S.found.includes(t))) complete(); // the new word list made an unfinished save complete
+}
+// A save made with an older word list: words that count now but were stored as bonus count as found, a grid that was
+// finished stays finished (every counted word is marked found), found words that are only bonus now move to the bonus list,
+// and words that are no longer accepted at all are dropped.
+function reconcile(){
+  const tg = new Set(P.targets), bn = new Set(P.bonus);
+  S.found = S.found || []; S.bonus = S.bonus || []; S.hints = S.hints || [];
+  for (const w of S.bonus) if (tg.has(w) && !S.found.includes(w)) S.found.push(w);
+  for (const w of S.found) if (!tg.has(w) && bn.has(w) && !S.bonus.includes(w)) S.bonus.push(w);
+  S.found = S.found.filter(w => tg.has(w));
+  S.bonus = S.bonus.filter(w => bn.has(w)); // words the list no longer accepts at all drop out
+  S.hints = S.hints.filter(w => tg.has(w));
+  if (S.done) for (const w of P.targets) if (!S.found.includes(w)) S.found.push(w);
 }
 function practiceGrid(z){
   const r = Trail.generate(z, DICT, Math.random);
@@ -482,12 +499,12 @@ $('hintBtn').addEventListener('click', () => {
   if (S.done) return;
   const open = P.targets.filter(w => !S.found.includes(w) && !S.hints.includes(w));
   const pending = S.hints.find(h => !S.found.includes(h));
-  if (pending){ feedback(hintText(pending), 'Follow the outlined tiles', 'bonus'); render(); return; }
+  if (pending){ feedback(hintText(pending), 'Follow the outlines', 'bonus'); render(); return; }
   if (!open.length) return;
   open.sort((a, b) => a.length - b.length);
   const pick = open[Math.floor(Math.random() * Math.min(open.length, 6))]; // a shorter word
   S.hints.push(pick); save();
-  feedback(hintText(pick), 'Follow the outlined tiles', 'bonus'); render();
+  feedback(hintText(pick), 'Follow the outlines', 'bonus'); render();
 });
 document.addEventListener('keydown', e => {
   if (anySheet()) return;
