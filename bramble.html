@@ -47,10 +47,15 @@
 .icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
 .icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
-.mode{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
 .mode button{border:0;background:transparent;border-radius:9px;padding:7px 2px;font-weight:600;font-size:.86rem;cursor:pointer;color:var(--muted);min-width:0;white-space:nowrap}
 .mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .mode small{font-family:var(--mono);font-weight:500;margin-left:3px;font-size:.72rem}
+@media (max-width:359px){.mode button{font-size:.8rem}.mode small{display:block;margin:0;font-size:.64rem;line-height:1}}
+.past{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;padding:2px}
+.past button{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--key);cursor:pointer;color:var(--ink);text-align:left}
+.past button b{font-weight:600}
+.past button small{color:var(--muted);font-size:.8rem;white-space:nowrap}
 
 #play{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0}
 .scores{display:flex;gap:6px;align-items:stretch}
@@ -246,9 +251,10 @@ button.chip:active{background:var(--peer)}
   </header>
 
   <div class="mode" id="mode" role="group" aria-label="Game mode">
-    <button type="button" data-m="cpu" aria-pressed="true">vs Computer</button>
-    <button type="button" data-m="pass" aria-pressed="false">Pass &amp; play</button>
-    <button type="button" data-m="daily" aria-pressed="false">Daily<small id="dayNo"></small></button>
+    <button type="button" data-m="cpu" aria-pressed="true" aria-label="Play the computer">Computer</button>
+    <button type="button" data-m="pass" aria-pressed="false" aria-label="Pass and play with a friend">Friends</button>
+    <button type="button" data-m="daily" aria-pressed="false" aria-label="Daily game"><span>Daily</span><small id="dayNo"></small></button>
+    <button type="button" data-m="practice" aria-pressed="false" aria-label="Practice games, unlimited">Practice</button>
   </div>
 
   <section id="setup" hidden></section>
@@ -292,7 +298,7 @@ button.chip:active{background:var(--peer)}
     <h3>Stuck?</h3>
     <ul>
       <li><b>Exchange</b> throws back any tiles for new ones (only while the bag still holds 7 or more) and ends your turn. <b>Pass</b> skips your turn. Both are in the buttons under the rack.</li>
-      <li><b>Show a play</b> (against the computer and in the daily) reveals one of the best plays on the board. It counts in your stats. The bag count above the board opens the <b>unseen tiles</b>: every tile you haven't seen yet, which is handy for planning.</li>
+      <li><b>Show a play</b> (against the computer, in the daily and in practice) reveals one of the best plays on the board. It counts in your stats. The bag count above the board opens the <b>unseen tiles</b>: every tile you haven't seen yet, which is handy for planning.</li>
     </ul>
     <h3>The end</h3>
     <ul>
@@ -303,6 +309,7 @@ button.chip:active{background:var(--peer)}
     <ul>
       <li><b>vs Computer</b>: four levels, Easy to Expert. <b>Pass &amp; play</b>: two players on one device; a cover screen hides each rack between turns.</li>
       <li><b>Daily</b>: the same tiles for everyone, just you and <b>10 turns</b>, no exchanging and no penalty at the end. Try to beat the day's <b>target</b>, which is what the Expert computer scores from the same tiles. Words flagged <b>rare</b> are valid but uncommon.</li>
+      <li><b>Practice</b>: the same as the Daily, but as many games as you like, each with a new set of tiles and its own target. <b>Past dailies</b> replays an earlier day's tiles. Practice never changes your daily streak.</li>
     </ul>
     <p class="tiny">Word list: SCOWL by Kevin Atkinson. Word frequency data: wordfreq by Robyn Speer (CC BY-SA 4.0).</p>
     <button class="btn primary" id="helpClose" type="button">Got it</button>
@@ -365,6 +372,8 @@ button.chip:active{background:var(--peer)}
     <h2 id="statsTitle">Statistics</h2>
     <div class="label">Daily</div>
     <div class="stats4" id="stDaily"></div>
+    <div class="label">Practice</div>
+    <p id="stPractice" style="margin:0"></p>
     <div class="label">Against the computer</div>
     <table class="tbl" id="stCpu"></table>
     <div class="stats4" id="stMore"></div>
@@ -398,7 +407,7 @@ const EPOCH = new Date(2026, 10, 27); // No. 1 = 27 Nov 2026
 const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
 const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const KEYS = { cpu: 'bramble-game-cpu', pass: 'bramble-game-pass', daily: 'bramble-daily' };
+const KEYS = { cpu: 'bramble-game-cpu', pass: 'bramble-game-pass', daily: 'bramble-daily', practice: 'bramble-practice' };
 const LEVEL_NOTE = {
   easy: 'Everyday words and relaxed scores. Good for learning.',
   casual: 'Decent plays, but it often misses the best one.',
@@ -424,7 +433,10 @@ let hint = null, hintList = null;
 let thinking = false, busy = false, covered = false, tok = 0, seqN = 0, anim = null, clickGuard = false, preview = null;
 let targets = store.get('bramble-targets', {});
 
-const stats = () => { const s = store.get('bramble-stats', null) || {}; return Object.assign({ v: 1, cpu: {}, best: 0, bestMove: null, hints: 0, pass: { games: 0 }, daily: { played: 0, won: 0, cur: 0, max: 0, last: null, best: 0 } }, s); };
+const stats = () => { const s = store.get('bramble-stats', null) || {}; return Object.assign({ v: 1, cpu: {}, best: 0, bestMove: null, hints: 0, pass: { games: 0 }, daily: { played: 0, won: 0, cur: 0, max: 0, last: null, best: 0 }, practice: { played: 0, beat: 0, best: 0, total: 0 } }, s); };
+const solo = g => !!g && (g.mode === 'daily' || g.mode === 'practice');   // one player, 10 turns, a target
+const pstat = () => Object.assign({ played: 0, beat: 0, best: 0, total: 0 }, stats().practice);
+const practiceLine = () => { const p = pstat(); return p.played ? `Practice: ${p.played} played, beat the target ${p.beat}, best ${p.best}, average ${Math.round(p.total / p.played)}.` : 'Practice: no games yet.'; };
 const saveStats = s => store.set('bramble-stats', s);
 
 // ---------- workers ----------
@@ -451,9 +463,12 @@ function computerMove(S, lv){
 
 // ---------- the daily target (what the computer scores from the same tiles), worked out on its own worker ----------
 const targetWait = {};
-function ensureTarget(day){
-  const t = targets['d' + day]; if (t) return Promise.resolve(t);
-  if (targetWait[day]) return targetWait[day];
+// Targets are kept under 'd<day>' (the daily) or 's<seed>' (a practice game). A replay of a past daily reuses the daily's target when it is there.
+const tkey = g => g.mode === 'daily' ? 'd' + g.day : (g.replay != null && targets['d' + g.replay] ? 'd' + g.replay : 's' + g.S.seed);
+const tgt = g => (g && targets[tkey(g)]) || null;
+function ensureTarget(g){
+  const key = tkey(g), t = targets[key]; if (t) return Promise.resolve(t);
+  if (targetWait[key]) return targetWait[key];
   if (!tworker){
     try{
       tworker = new Worker('bramble-daily-worker.js');
@@ -461,14 +476,15 @@ function ensureTarget(day){
       tworker.onerror = () => { tworker = null; };
     }catch(e){ tworker = null; }
   }
-  const run = () => ask(tworker, { day }).catch(() => new Promise(res => setTimeout(() => res(B.dailyTarget(day)), 50)));
-  return (targetWait[day] = run().then(r => {
+  const msg = g.mode === 'daily' ? { day: g.day } : { seed: g.S.seed };
+  const run = () => ask(tworker, msg).catch(() => new Promise(res => setTimeout(() => res(g.mode === 'daily' ? B.dailyTarget(g.day) : B.practiceTarget(g.S.seed)), 50)));
+  return (targetWait[key] = run().then(r => {
     const t = { target: r.target, plays: r.plays.map(p => ({ type: p.type, score: p.score, main: p.main })) };
-    targets['d' + day] = t;
-    const keep = Object.keys(targets).sort().slice(-30); const o = {}; keep.forEach(k => o[k] = targets[k]); targets = o;
+    targets[key] = t;
+    const ks = Object.keys(targets), keep = ks.filter(k => k[0] === 'd').sort().slice(-30).concat(ks.filter(k => k[0] === 's').slice(-15)); const o = {}; keep.forEach(k => o[k] = targets[k]); targets = o;
     store.set('bramble-targets', targets);
     return t;
-  }).finally(() => { delete targetWait[day]; }));
+  }).finally(() => { delete targetWait[key]; }));
 }
 
 // ---------- helpers on the game ----------
@@ -520,13 +536,18 @@ function startDaily(day){
   G = { v: 1, mode: 'daily', S, day, names: ['You'], hints: 0, orders: freshOrders(S), pend: [], done: false, recorded: false };
   afterLoad(true);
 }
+function startPractice(seed, replay){
+  const sd = seed === undefined ? B.randomSeed() : seed, S = B.newPracticeGame(sd);
+  G = { v: 1, mode: 'practice', S, replay: replay == null ? null : replay, names: ['You'], hints: 0, orders: freshOrders(S), pend: [], done: false, recorded: false };
+  afterLoad(true);
+}
 function loadGame(m){
   const raw = store.get(KEYS[m], null); G = null;
   if (raw && raw.S && raw.mode === m){
     try{
       const S = B.deserialize(raw.S);
       if (m === 'daily' && raw.day !== dayIndex()) throw 0;       // yesterday's daily is gone
-      if (m !== 'daily' && S.over) throw 0;                         // a finished game is not resumed
+      if (m !== 'daily' && S.over && !(m === 'practice' && raw.recorded && !raw.final)) throw 0;   // a finished game is not resumed (a practice game waits only for its target)
       G = Object.assign(raw, { S }); G.orders = G.orders || freshOrders(S); G.hints = G.hints || 0;
       if (m === 'cpu'){ if (!B.LEVELS.includes(G.level)) G.level = 'casual'; }
     }catch(e){ G = null; if (m !== 'daily') discardSave(m); }
@@ -543,9 +564,13 @@ function afterLoad(isNew){
   { const pl = placements(); preview = pl.length && !G.S.over ? B.validateMove(G.S, pl) : null; }
   covered = G.mode === 'pass' && !isNew && !G.S.over;
   thinking = false;
-  if (G.mode === 'daily') ensureTarget(G.day).then(() => { if (G && G.mode === 'daily') { drawScores(); if (G.S.over && !$('endSheet').hidden) openEnd(); } });
+  if (solo(G)) ensureTarget(G).then(() => { if (G && solo(G)){ drawScores(); if (G.S.over && !$('endSheet').hidden) openEnd(); } });
   save(); render();
-  if (G.S.over){ if (G.mode === 'daily'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizeDaily(false); else if (hubDaily) openEnd(); hubDaily = false; } return; }
+  if (G.S.over){
+    if (G.mode === 'daily'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizeDaily(false); else if (hubDaily) openEnd(); hubDaily = false; }
+    else if (G.mode === 'practice'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizePractice(false); }
+    return;
+  }
   hubDaily = false;
   if (G.mode === 'cpu' && G.S.turn !== G.human) startThinking();
 }
@@ -619,7 +644,7 @@ function press(){
   if (G.mode !== 'pass' && r.score > ((s.bestMove && s.bestMove.score) || 0)){ s.bestMove = { score: r.score, word: words[0].word }; saveStats(s); }
   G.orders[p] = R.filter(x => x.at < 0).map(x => x.ch);
   G.S = r.state; selItem = null; cur = -1; err = null; hint = null; hintList = null; preview = null;
-  if (G.mode === 'daily' || G.mode === 'cpu') toastScore(r);
+  if (solo(G) || G.mode === 'cpu') toastScore(r);
   proceed();
 }
 function toastScore(r){ if (r.bonus) toast(`All 7 tiles! +${r.bonus} bonus`, 1800); }
@@ -668,7 +693,7 @@ async function showHint(){
   if (my !== tok || G !== g || !canAct() || G.S.turns !== turn) return;
   hintList = list;
   const L = hintList;
-  if (!L.moves.length){ toast(G.mode === 'daily' ? 'No plays here: try passing' : 'No plays here: try exchanging or passing', 2200); return; }
+  if (!L.moves.length){ toast(solo(G) ? 'No plays here: try passing' : 'No plays here: try exchanging or passing', 2200); return; }
   recallSilent();
   L.i = L.i < 0 ? Math.floor(Math.random() * Math.min(3, L.moves.length)) : (L.i + 1) % L.moves.length;
   hint = L.moves[L.i]; G.hints++;
@@ -737,7 +762,7 @@ function openMore(){
   $('moreMenu').innerHTML = `
     <button type="button" data-a="pass"${canPass ? '' : ' disabled'}><b>Pass</b><small>${!canPass ? 'Not available right now.' : last6 ? 'Score nothing. This is the sixth scoreless turn in a row, so the game ends.' : 'Skip your turn and score nothing.'}</small></button>
     ${hintOK ? `<button type="button" data-a="hint"${canPass ? '' : ' disabled'}><b>Show a play</b><small>Reveals one of the best plays. Counts in your stats.</small></button>` : ''}
-    ${G.mode !== 'daily' ? `<button type="button" data-a="ex"${canPass && G.S.bag.length >= RACK ? '' : ' disabled'}><b>Exchange tiles</b><small>${G.S.bag.length >= RACK ? 'Swap tiles for new ones and end your turn.' : 'Not with fewer than 7 tiles in the bag.'}</small></button>` : ''}
+    ${!solo(G) ? `<button type="button" data-a="ex"${canPass && G.S.bag.length >= RACK ? '' : ' disabled'}><b>Exchange tiles</b><small>${G.S.bag.length >= RACK ? 'Swap tiles for new ones and end your turn.' : 'Not with fewer than 7 tiles in the bag.'}</small></button>` : ''}
     <button type="button" data-a="un"><b>Unseen tiles</b><small>Every tile you haven't seen yet.</small></button>
     <button type="button" data-a="hist"><b>Move history</b><small>Words and scores so far.</small></button>
     <button type="button" data-a="help"><b>How to play</b><small>Rules, scoring and the word list.</small></button>`;
@@ -844,8 +869,8 @@ function drawScores(){
   const chip = (p) => `<div class="chip${S.turn === p && !S.over ? ' on' : ''}${thinking && p === cp ? ' think' : ''}" aria-label="${esc(pname(p))}: ${S.scores[p]} points"><span class="nm">${esc(pname(p))}</span><b>${S.scores[p]}</b></div>`;
   let html;
   const bag = `<button type="button" class="chip" id="bagChip" aria-label="${S.bag.length} tiles in the bag. Show unseen tiles"><span class="nm">Bag</span><b>${S.bag.length}</b></button>`;
-  if (G.mode === 'daily'){
-    const t = targets['d' + G.day];
+  if (solo(G)){
+    const t = tgt(G);
     html = `<div class="chip on" aria-label="Your score: ${S.scores[0]}"><span class="nm">You</span><b>${S.scores[0]}</b></div>
       <div class="chip" aria-label="Target: ${t ? t.target : 'working it out'}"><span class="nm">Target</span><b>${t ? t.target : '…'}</b></div>
       <div class="chip" aria-label="Turn ${Math.min(S.turns + 1, S.turnLimit)} of ${S.turnLimit}"><span class="nm">Turn</span><b>${Math.min(S.turns + 1, S.turnLimit)}/${S.turnLimit}</b></div>${bag}`;
@@ -858,7 +883,7 @@ function drawScores(){
 $('scores').addEventListener('click', e => { if (e.target.closest('#bagChip')) openUnseen(); });
 function lastMoveText(){
   const H = G.S.history, h = H[H.length - 1]; if (!h) return '';
-  const who = G.mode === 'daily' ? 'You' : esc(pname(h.p));
+  const who = solo(G) ? 'You' : esc(pname(h.p));
   return h.type === 'play' ? `${who} played ${h.words.slice(0, 3).map(wordChip).join('')} for <b>${h.score}</b>` : h.type === 'exchange' ? `${who} exchanged ${h.tiles} tile${h.tiles > 1 ? 's' : ''}` : `${who} passed`;
 }
 function drawLine(){
@@ -875,7 +900,7 @@ function drawLine(){
     else if (err) html = `<span class="bad" role="alert">${esc(err.reason)}</span>`;
     else if (pl.length && preview && preview.ok) html = `<span>Play <b>${preview.score}</b> · ${preview.words.map(w => wordChip(w.word)).join('')}${preview.bonus ? `<b>+${preview.bonus} for all 7 tiles</b>` : ''}</span>`;
     else if (pl.length) html = `<span>${pl.length} tile${pl.length > 1 ? 's' : ''} placed</span>`;
-    else if (!S.history.length) html = `<span>${G.mode === 'daily' ? `Turn 1 of ${S.turnLimit}. ` : ''}Cover the centre star with your first word.</span>`;
+    else if (!S.history.length) html = `<span>${solo(G) ? `Turn 1 of ${S.turnLimit}. ` : ''}Cover the centre star with your first word.</span>`;
     else html = `<span>${lastMoveText()}</span>`;
   }
   el.innerHTML = html;
@@ -896,7 +921,7 @@ function drawActs(){
     return;
   }
   const ok = canAct(), n = placements().length, np = noPlays(), label = np ? 'Pass' : preview && preview.ok ? `Play ${preview.score}` : 'Play';
-  const swap = G.mode === 'daily'
+  const swap = solo(G)
     ? `<button class="act" type="button" id="aHint" aria-label="Show a play (a hint)"${ok ? '' : ' disabled'}>${ICON.hint}<span>Hint</span></button>`
     : `<button class="act" type="button" id="aEx" aria-label="Exchange tiles"${ok && G.S.bag.length >= RACK ? '' : ' disabled'}>${ICON.swap}<span>Exchange</span></button>`;
   el.innerHTML = `<button class="act" type="button" id="aShuf" aria-label="Shuffle your tiles"${ok ? '' : ' disabled'}>${ICON.shuffle}<span>Shuffle</span></button>
@@ -911,7 +936,7 @@ $('acts').addEventListener('click', e => {
 });
 $('overbar').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.id === 'obRes') openEnd(); else if (G.mode === 'daily') openStats(); else { discardSave(G.mode); G = null; render(); }
+  if (b.id === 'obRes') openEnd(); else if (G.mode === 'daily') openStats(); else if (G.mode === 'practice'){ closeSheets(); startPractice(); } else { discardSave(G.mode); G = null; render(); }
 });
 
 function drawSetup(){
@@ -922,6 +947,18 @@ function drawSetup(){
       <div class="levels" id="levels" role="group" aria-label="Computer level">${B.LEVELS.map(l => `<button type="button" data-l="${l}" aria-pressed="${l === level}"><b>${B.LEVEL_NAMES[l]}</b><small>${LEVEL_NOTE[l]}</small></button>`).join('')}</div>
       <p id="rec">${s.w + s.l + s.d ? `Your record at ${B.LEVEL_NAMES[level]}: ${s.w} won, ${s.l} lost, ${s.d} drawn.` : `No ${B.LEVEL_NAMES[level]} games yet.`}</p>
       <div class="setup-r"><button class="btn primary" type="button" id="goCpu">Start game</button><button class="btn" type="button" id="goHelp">How to play</button></div>`;
+  } else if (mode === 'practice'){
+    const td = dayIndex(), res = dailyResults();
+    let past = '';
+    if (pastOpen){
+      const rows = []; for (let d = td - 1; d >= 0; d--){ const r = res[d], dt = new Date(EPOCH.getFullYear(), EPOCH.getMonth(), EPOCH.getDate() + d);
+        rows.push(`<button type="button" data-pd="${d}" aria-label="Daily number ${d + 1}, ${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${r ? 'you scored ' + r.s + (r.t ? ' against ' + r.t : '') : 'not played'}"><span><b>No. ${d + 1}</b> <small>${dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small></span><small>${r ? r.s + (r.t ? ' / ' + r.t : '') : 'not played'}</small></button>`); }
+      past = rows.length ? `<div class="past" id="pastList" role="group" aria-label="Past dailies">${rows.join('')}</div>` : '<p>There are no past dailies yet. The first one to replay will be here tomorrow.</p>';
+    }
+    el.innerHTML = `<h2>Practice</h2><p>The Daily as often as you like: just you, 10 turns, no exchanging, and a target to beat. Every new game has fresh tiles. Practice never touches your daily streak.</p>
+      <div class="setup-r"><button class="btn primary" type="button" id="goPractice">New game</button><button class="btn" type="button" id="goPast" aria-expanded="${pastOpen}">Past dailies</button></div>
+      ${past}<p id="rec">${practiceLine()}</p>
+      <div class="setup-r"><button class="btn" type="button" id="goHelp">How to play</button></div>`;
   } else {
     el.innerHTML = `<h2>Pass and play</h2><p>Two players share one device. After each turn a cover screen hides the tiles until the next player taps it.</p>
       <div class="names"><label>Player 1<input id="n0" maxlength="14" autocomplete="off" value="${esc(names[0] || 'Player 1')}"></label><label>Player 2<input id="n1" maxlength="14" autocomplete="off" value="${esc(names[1] || 'Player 2')}"></label></div>
@@ -933,8 +970,18 @@ $('setup').addEventListener('click', e => {
   if (b.dataset.l){ level = b.dataset.l; store.set('bramble-level', level); drawSetup(); }
   else if (b.id === 'goCpu') startCpu(level);
   else if (b.id === 'goPass'){ const f = i => ($('n' + i).value.trim() || 'Player ' + (i + 1)).slice(0, 14); let a = f(0), c = f(1); if (a.toLowerCase() === c.toLowerCase()) c = c + ' 2'; startPass([a, c]); }
+  else if (b.id === 'goPractice') startPractice();
+  else if (b.id === 'goPast'){ pastOpen = !pastOpen; drawSetup(); }
+  else if (b.dataset.pd !== undefined){ const d = +b.dataset.pd; pastOpen = false; startPractice(B.dailySeed(d), d); }
   else if (b.id === 'goHelp') openSheet('helpSheet');
 });
+let pastOpen = false;
+// your finished dailies by day index: {day: {s: score, t: target}}. Kept in the stats; today's save is added in case it is not there yet.
+function dailyResults(){
+  const o = Object.assign({}, stats().dailyLog || {}), d = store.get(KEYS.daily, null);
+  if (d && d.done && d.S && !o[d.day]){ try{ o[d.day] = { s: B.deserialize(d.S).scores[0], t: d.final ? d.final.target : 0 }; }catch(e){} }
+  return o;
+}
 
 function renderCover(){
   const cv = $('cover'); cv.hidden = !(covered && G && !G.S.over && G.mode === 'pass');
@@ -951,7 +998,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && G &
 
 function syncMode(){
   [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
-  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+  $('dayNo').textContent = '#' + (dayIndex() + 1);
+  $('mode').children[2].setAttribute('aria-label', 'Daily game, number ' + (dayIndex() + 1));
 }
 function render(){
   syncMode();
@@ -980,23 +1028,40 @@ function finishGame(live){
       if (w.length > 1) l.d++; else if (w[0] === G.human) l.w++; else l.l++;
       s.best = Math.max(s.best || 0, S.scores[G.human]);
     } else if (G.mode === 'pass') s.pass.games++;
+    else if (G.mode === 'practice'){ const p = s.practice = Object.assign({ played: 0, beat: 0, best: 0, total: 0 }, s.practice); p.played++; p.best = Math.max(p.best, S.scores[0]); p.total += S.scores[0]; }
     else {
       const d = s.daily; d.played++; d.best = Math.max(d.best || 0, S.scores[0]);
       d.cur = d.last === G.day - 1 ? d.cur + 1 : (d.last === G.day ? d.cur : 1); d.last = G.day; d.max = Math.max(d.max, d.cur);
     }
     saveStats(s);
-    if (G.mode === 'daily') G.done = true;
-    if (G.mode === 'daily') save(); else discardSave(G.mode);
+    if (solo(G)) G.done = true;
+    if (solo(G)) save(); else discardSave(G.mode);
   }
   if (G.mode === 'daily') finalizeDaily(live);
+  else if (G.mode === 'practice') finalizePractice(live);
   else { if (live) celebrate(winnerIsMe()); openEnd(); }
 }
 // the daily is finished: once the target is known, record whether it was beaten (once) and show the results
 function finalizeDaily(live){
   const g = G, S = g.S;
-  ensureTarget(g.day).then(t => {
+  ensureTarget(g).then(t => {
     const won = S.scores[0] >= t.target;
-    if (!g.final){ g.final = { score: S.scores[0], target: t.target, won }; if (won){ const s = stats(); s.daily.won++; saveStats(s); } store.set(KEYS.daily, g); }
+    if (!g.final){ g.final = { score: S.scores[0], target: t.target, won }; const s = stats(); if (won) s.daily.won++; s.dailyLog = Object.assign({}, s.dailyLog); s.dailyLog[g.day] = { s: S.scores[0], t: t.target }; const ks = Object.keys(s.dailyLog).map(Number).sort((a, b) => a - b); ks.slice(0, Math.max(0, ks.length - 90)).forEach(k => delete s.dailyLog[k]); saveStats(s); store.set(KEYS.daily, g); }
+    if (G !== g) return;
+    drawScores(); if (live) celebrate(won); openEnd();
+  });
+}
+// a practice game is finished: once the target is known, count whether it was beaten (once), then the saved game is no longer needed
+const practiceCounted = new Set();
+function finalizePractice(live){
+  const g = G, S = g.S;
+  ensureTarget(g).then(t => {
+    const won = S.scores[0] >= t.target;
+    if (!g.final && !practiceCounted.has(S.seed + ':' + S.turns)){
+      practiceCounted.add(S.seed + ':' + S.turns); g.final = { score: S.scores[0], target: t.target, won };
+      if (won){ const s = stats(); s.practice = Object.assign({ played: 0, beat: 0, best: 0, total: 0 }, s.practice); s.practice.beat++; saveStats(s); }
+      discardSave('practice');
+    }
     if (G !== g) return;
     drawScores(); if (live) celebrate(won); openEnd();
   });
@@ -1009,7 +1074,7 @@ function celebrate(good){
       FX.burst({ el: '#board', shapes: ['leaf', 'petal', 'leaf'], colors: ['#8fcf86', '#f2a196', '#f3c867', '#d55f7c'], count: 44, size: 16, speed: 950, gravity: 480, delay: .2 });
       FX.rain({ shapes: ['petal', 'leaf'], colors: ['#f2a196', '#f3c867', '#8fcf86'], count: 36, size: 16, sway: 90, delay: .35 });
     }
-    FX.stamp(G.mode === 'daily' ? (good ? 'Target beaten!' : 'Well played') : G.mode === 'pass' ? `${pname(G.S.final.winners[0])} wins!` : (good ? 'You win!' : G.S.final.winners.length > 1 ? 'A draw' : 'Good game'), { color: FX.css('--br') });
+    FX.stamp(solo(G) ? (good ? 'Target beaten!' : 'Well played') : G.mode === 'pass' ? `${pname(G.S.final.winners[0])} wins!` : (good ? 'You win!' : G.S.final.winners.length > 1 ? 'A draw' : 'Good game'), { color: FX.css('--br') });
   }catch(e){}
 }
 function bestPlays(){
@@ -1019,23 +1084,29 @@ function bestPlays(){
 }
 function openEnd(){
   const S = G.S; if (!S.over) return;
-  const f = S.final, H = S.history, d = G.mode === 'daily', t = d ? targets['d' + G.day] : null;
+  const f = S.final, H = S.history, d = solo(G), pr = G.mode === 'practice', t = d ? tgt(G) : null;
   let title, sub = '', body = '', btns = '';
   const reason = f.reason === 'out' ? `${esc(pname(S.racks.findIndex(r => !r.length)))} used every tile.` : f.reason === 'stuck' ? 'Six turns in a row without a play, so the game ends.' : `All ${S.turnLimit} turns are played.`;
   if (d){
     const won = t ? S.scores[0] >= t.target : false;
-    title = !t ? 'Daily finished' : S.scores[0] > t.target ? 'Target beaten!' : won ? 'Target matched!' : 'So close';
-    sub = `No. ${G.day + 1} · ${reason}`;
+    title = !t ? (pr ? 'Practice finished' : 'Daily finished') : S.scores[0] > t.target ? 'Target beaten!' : won ? 'Target matched!' : 'So close';
+    sub = `${pr ? (G.replay != null ? `Past daily No. ${G.replay + 1}` : 'Practice game') : `No. ${G.day + 1}`} · ${reason}`;
     body += `<div class="bigscore"><b>${S.scores[0]}</b><span>${t ? `/ ${t.target} target` : '/ working out the target…'}</span></div>`;
     const bp = bestPlays()[0]; if (bp) body += `<p>Your best play: ${wordChip(bp.word)} for <b>${bp.score}</b>.${G.hints ? ` You used ${G.hints} hint${G.hints > 1 ? 's' : ''}.` : ''}</p>`;
     if (t){
       const mine = H.map(h => h.type === 'play' ? `${wordChip(h.words[0])} <b>${h.score}</b>` : 'pass');
       body += `<div class="label">How the target was made</div><table class="tbl"><tr><th>Turn</th><th>You</th><th>Target play</th></tr>${t.plays.map((p, i) => `<tr><td class="n">${i + 1}</td><td>${mine[i] || ''}</td><td>${p.type === 'play' ? `${wordChip(p.main)} <b>${p.score}</b>` : 'pass'}</td></tr>`).join('')}</table>`;
     }
+    if (pr){
+      body += `<p class="muted" style="margin:0;font-size:.85rem">${practiceLine()}</p><div class="shareText" id="shareText" hidden></div>`;
+      btns = `<div class="row"><button class="btn primary" type="button" id="eNew">New game</button><button class="btn" type="button" id="eShare">Share result</button></div>
+        <div class="row"><button class="btn small" type="button" id="ePast">Past dailies</button><button class="btn small" type="button" id="eBoard">Look at the board</button></div>`;
+    } else {
     const s = stats().daily;
     body += `<div class="stats4"><div><b>${s.played}</b><span>Played</span></div><div><b>${s.won}</b><span>Beat target</span></div><div><b>${s.cur}</b><span>Day streak</span></div><div><b>${s.max}</b><span>Best streak</span></div></div>`;
     body += `<div class="shareText" id="shareText" hidden></div><div class="next"><span class="label">Next daily in</span><b id="countdown"></b></div>`;
     btns = `<div class="row"><button class="btn primary" type="button" id="eShare">Share result</button><button class="btn" type="button" id="eBoard">Look at the board</button></div>`;
+    }
   } else {
     const w = f.winners, adj = f.adjustments, order = G.mode === 'cpu' ? [G.human, 1 - G.human] : [0, 1];
     title = w.length > 1 ? 'A draw' : G.mode === 'cpu' ? (w[0] === G.human ? 'You win!' : 'The computer wins') : `${pname(w[0])} wins!`;
@@ -1055,9 +1126,9 @@ function openEnd(){
   }
   $('endTitle').textContent = title; $('endSub').innerHTML = sub; $('endBody').innerHTML = body; $('endBtns').innerHTML = btns;
   $('endBtns').dataset.mode = G.mode;
-  $('endNav').innerHTML = GameNav.endButtons(d ? 'bramble' : 'bramble-play');
+  $('endNav').innerHTML = GameNav.endButtons(d && !pr ? 'bramble' : 'bramble-play');
   openSheet('endSheet');
-  if (d){ clearInterval(cd); const c = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
+  if (d && !pr){ clearInterval(cd); const c = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
       el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); }; c(); cd = setInterval(c, 1000); }
 }
 let cd = 0;
@@ -1065,14 +1136,16 @@ $('endSheet').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.id === 'eShare') share();
   else if (b.id === 'eBoard') closeSheets();
+  else if (b.id === 'eNew'){ closeSheets(); startPractice(); }
+  else if (b.id === 'ePast'){ closeSheets(); pastOpen = true; discardSave('practice'); tok++; G = null; render(); }
   else if (b.id === 'eAgain'){ closeSheets(); G.mode === 'cpu' ? startCpu(G.level) : startPass(G.names.slice()); }
   else if (b.id === 'eLevel' || b.id === 'eNames'){ closeSheets(); G = null; render(); }
   else if (b.dataset.mode){ closeSheets(); setMode(b.dataset.mode); }
 });
 function shareText(){
-  const S = G.S, t = targets['d' + G.day], H = S.history;
+  const S = G.S, t = tgt(G), H = S.history, nm = G.mode === 'daily' ? `No. ${G.day + 1}` : G.replay != null ? `No. ${G.replay + 1} (replay)` : 'practice';
   const em = H.map(h => h.type !== 'play' ? '⬜' : h.placements.length === RACK ? '💐' : h.score >= 60 ? '🌺' : h.score >= 40 ? '🌸' : h.score >= 20 ? '🌿' : '🌱').join('');
-  return `Bramble No. ${G.day + 1} · ${S.scores[0]} / ${t ? t.target : '?'} 🌿\n${em}${G.hints ? `\n💡 ${G.hints} hint${G.hints > 1 ? 's' : ''}` : ''}`;
+  return `Bramble ${nm} · ${S.scores[0]} / ${t ? t.target : '?'} 🌿\n${em}${G.hints ? `\n💡 ${G.hints} hint${G.hints > 1 ? 's' : ''}` : ''}`;
 }
 async function share(){
   const text = shareText();
@@ -1083,6 +1156,7 @@ async function share(){
 function openStats(){
   const s = stats(), d = s.daily;
   $('stDaily').innerHTML = [[d.played, 'Played'], [d.won, 'Beat target'], [d.cur, 'Day streak'], [d.max, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  $('stPractice').textContent = practiceLine().replace(/^Practice: /, '');
   $('stCpu').innerHTML = '<tr><th>Level</th><th class="n">Won</th><th class="n">Lost</th><th class="n">Drawn</th></tr>' + B.LEVELS.map(l => { const x = s.cpu[l] || { w: 0, l: 0, d: 0 }; return `<tr><td>${B.LEVEL_NAMES[l]}</td><td class="n">${x.w}</td><td class="n">${x.l}</td><td class="n">${x.d}</td></tr>`; }).join('');
   $('stMore').innerHTML = [[s.best || '–', 'Best game'], [s.bestMove ? s.bestMove.score : '–', s.bestMove ? 'Best play (' + esc(s.bestMove.word) + ')' : 'Best play'], [d.best || '–', 'Best daily'], [s.hints, 'Hints used']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
   openSheet('statsSheet');
