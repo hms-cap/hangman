@@ -5,6 +5,7 @@
 //   computer    allMoves(state, rack) -> every legal move with its score;  chooseMove(state, level, rng);  LEVELS
 //               (expert simulates opponent replies, see EXPERT; the same state, level and rng always give the same move)
 //   daily       dailySeed(dayIndex), newDailyGame(dayIndex), dailyTarget(dayIndex)
+//   practice    newPracticeGame(seed), practiceTarget(seed) -> {target, plays, state}: the daily's rules on any seed; randomSeed()
 // Rules in short: 9x9 board, the first word covers the centre (4,4); a move puts 1-7 tiles in one row or column, joined to the tiles
 // already there; every word formed (the main word and each cross word, 2+ letters) must be in the word list. Premium squares count only for
 // the tiles placed that turn: letter squares (DL x2, TL x3) multiply the tile, word squares (DW x2, TW x3) multiply the whole word.
@@ -516,15 +517,22 @@ function dailySeed(dayIndex) {
   h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12;
   return h >>> 0;
 }
-const newDailyGame = dayIndex => newGame({ players: 1, seed: dailySeed(dayIndex), daily: true, turnLimit: DAILY_TURNS });
-function dailyTarget(dayIndex) {
-  let s = newDailyGame(dayIndex); const plays = [];
+// Both kinds of solo game come from a seed: the daily's seed is dailySeed(day), a practice game's is any number (a replay of a past daily
+// uses dailySeed(day), so it gets the same tiles and the same target).
+const newSeedGame = seed => newGame({ players: 1, seed: seed >>> 0, daily: true, turnLimit: DAILY_TURNS });
+const newDailyGame = dayIndex => newSeedGame(dailySeed(dayIndex));
+const newPracticeGame = seed => newSeedGame(seed);
+const randomSeed = () => (Math.random() * 4294967296) >>> 0;
+function seedTarget(seed) {
+  let s = newSeedGame(seed); const plays = [];
   while (!s.over) { const m = chooseMove(s, 'expert', null, { greedy: true }); const r = applyAny(s, m); plays.push({ type: m.type, score: m.score || 0, main: m.main || '' }); s = r.state; }
   return { target: s.scores[0], plays, state: s };
 }
+const dailyTarget = dayIndex => seedTarget(dailySeed(dayIndex));
+const practiceTarget = seed => seedTarget(seed);
 
 const api = { N, CENTER, RACK, BINGO, TILES, BLANKS, VALUES, LAYOUT, premium, tileValue, decode, setDict, dict, newGame, validateMove, applyMove, exchange, pass, applyAny,
-  serialize, deserialize, winners, rackValue, unseenTiles, allMoves, chooseMove, leaveValue, LEAVE, EXPERT, EASY, CASUAL, LEVELS, LEVEL_NAMES, dailySeed, newDailyGame, dailyTarget, DAILY_TURNS, mulberry, fullBag, isEmptyBoard };
+  serialize, deserialize, winners, rackValue, unseenTiles, allMoves, chooseMove, leaveValue, LEAVE, EXPERT, EASY, CASUAL, LEVELS, LEVEL_NAMES, dailySeed, newDailyGame, dailyTarget, newSeedGame, newPracticeGame, seedTarget, practiceTarget, randomSeed, DAILY_TURNS, mulberry, fullBag, isEmptyBoard };
 root.Bramble = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);

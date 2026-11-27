@@ -307,6 +307,14 @@ let cmpMs = [], movesTotal = 0, mismatchPositions = 0, blankPositions = 0, brute
   let ns = B.newGame({ players: 1, seed: 5 }); const rv = B.rackValue(ns.racks[0]); for (let i = 0; i < 6; i++) ns = B.pass(ns).state;
   eq(ns.scores[0], -rv, 'non-daily game keeps the rack penalty when stuck');
   const tg = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => B.dailyTarget(i).target);
+  // practice: same code path on any seed
+  const ps = B.practiceTarget(B.dailySeed(7)); eq(ps.target, d1.target, 'practice on the daily seed gives the daily target'); eq(JSON.stringify(ps.plays), JSON.stringify(d1.plays), 'same plays');
+  eq(JSON.stringify(B.newPracticeGame(B.dailySeed(7)).racks), JSON.stringify(B.newDailyGame(7).racks), 'same first rack');
+  const pg = B.newPracticeGame(12345); eq(pg.players, 1, 'practice is solo'); eq(pg.turnLimit, 10, 'practice has ten turns'); eq(B.exchange(pg, [pg.racks[0][0]]).ok, false, 'no exchange in practice');
+  const p1 = B.practiceTarget(12345), p2 = B.practiceTarget(12345), p3 = B.practiceTarget(54321);
+  eq(p1.target, p2.target, 'practice target is deterministic'); eq(p1.plays.length, 10, 'practice: ten turns'); eq(p1.target, p1.plays.reduce((a, p) => a + p.score, 0), 'practice target is the sum');
+  ok(JSON.stringify(B.newPracticeGame(12345).racks) !== JSON.stringify(B.newPracticeGame(54321).racks), 'different seeds, different tiles'); ok(p3.plays.length === 10, 'another seed works');
+  const rs = B.randomSeed(); ok(Number.isInteger(rs) && rs >= 0 && rs < 4294967296, 'random seed is a uint32');
   console.log('daily targets for days 1-10: ' + tg.join(' '));
 }
 
