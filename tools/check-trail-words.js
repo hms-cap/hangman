@@ -27,7 +27,7 @@ for (const m of enc.matchAll(/(\d)([a-zA-Z]+)/g)) {
 }
 
 // offensive words
-const SWEARS = 'cunt fuck shit twat slut whore piss cock dick tits wank'.split(' ');
+const SWEARS = 'cunt fuck shit twat slut whore piss cock dick tits wank chinks kikes gooks spics dykes gimp gimps gypsy gypsies wetbacks squaws redskins retarded sambo yids mick micks coolies'.split(' ');
 for (const w of [...SWEARS, ...OFFENSIVE]) if (d.set.has(w)) bad.push(`offensive word accepted: ${w}`);
 
 // every target is accepted (and every counted word is a word)
@@ -36,7 +36,7 @@ for (const t of d.targets) if (!d.set.has(t)) bad.push(`target not accepted: ${t
 // sample classifications
 const counted = 'tall gentle teams rating outing lined tallest till gull auto dental study studies studied studying'.split(' ');
 const bonus = 'ratel atlatl ecotone'.split(' ');
-const absent = 'ital etna cunt ordn econ ecol inst auth lati fuck shit cock dick tits'.split(' ');
+const absent = 'ital etna cunt ordn econ ecol inst auth lati fuck shit cock dick tits gimp gypsy retarded sambo yids'.split(' ');
 for (const w of counted) if (!d.targets.has(w)) bad.push(`${w}: expected counted`);
 for (const w of bonus) if (!d.set.has(w) || d.targets.has(w)) bad.push(`${w}: expected bonus`);
 for (const w of absent) if (d.set.has(w)) bad.push(`${w}: expected not accepted`);

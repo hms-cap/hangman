@@ -296,6 +296,16 @@ let cmpMs = [], movesTotal = 0, mismatchPositions = 0, blankPositions = 0, brute
   eq(d1.target, d2.target, 'daily target is deterministic'); eq(d1.plays.length, 10, 'ten turns');
   eq(d1.state.over, true, 'daily game over after 10 turns'); eq(d1.target, d1.plays.reduce((a, p) => a + p.score, 0), 'target is the sum of the turns');
   const g = B.newDailyGame(7); eq(g.players, 1, 'solo'); eq(B.exchange(g, [g.racks[0][0]]).ok, false, 'no exchange in the daily');
+  // the daily has no end penalty: six scoreless turns in a row end the game with the score untouched; the turn limit also ends it
+  let st = B.newDailyGame(7); st.scores[0] = 25;
+  for (let i = 0; i < 5; i++) { st = B.pass(st).state; eq(st.over, false, 'daily not over after ' + (i + 1) + ' passes'); }
+  st = B.pass(st).state; eq(st.over, true, 'daily ends on the 6th scoreless turn'); eq(st.final.reason, 'stuck', 'daily stuck reason');
+  eq(st.scores[0], 25, 'no rack penalty in the daily'); eq(st.final.adjustments[0], 0, 'daily adjustment is 0');
+  let lim = B.newDailyGame(7); lim.turnLimit = 3; lim = B.pass(B.pass(lim).state).state; lim.passes = 0; lim = B.pass(lim).state;
+  eq(lim.over, true, 'daily ends on its turn limit'); eq(lim.final.reason, 'turns', 'turn-limit reason'); eq(lim.final.adjustments[0], 0, 'no penalty at the turn limit');
+  // a normal solo game still takes the penalty when stuck
+  let ns = B.newGame({ players: 1, seed: 5 }); const rv = B.rackValue(ns.racks[0]); for (let i = 0; i < 6; i++) ns = B.pass(ns).state;
+  eq(ns.scores[0], -rv, 'non-daily game keeps the rack penalty when stuck');
   const tg = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => B.dailyTarget(i).target);
   console.log('daily targets for days 1-10: ' + tg.join(' '));
 }

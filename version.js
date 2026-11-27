@@ -3,9 +3,15 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.12.0',
+  version: '1.13.0',
   date: '2026-11-27',
   changes: [
+    { v: '1.13.0', date: '2026-11-27', notes: [
+      'New game: Bramble, a mini word-tile board game on a 9×9 board. Play the computer (Easy, Casual, Strong or Expert), pass and play with a friend, or take the Daily',
+      'Bramble Daily: 10 turns with the same tiles as everyone else, trying to beat the computer\'s target score. It counts towards your daily streak',
+      'Bramble: drag or tap tiles, see your score before you play, swap tiles, get a hint, and check which tiles are still unseen',
+      'Word lists: more slurs and crude words removed from Tendril and Bramble',
+    ] },
     { v: '1.12.0', date: '2026-11-27', notes: [
       'Tendril: everyday words now count, including plurals and other forms (tall, gentle, teams, rating); rare words like ratel stay as bonus words',
       'Tendril: Small and Big puzzles every day: Small is 4×4 with 10 to 18 words, Big is 5×5 with 35 to 60. Finish either one to keep your streak',

@@ -99,7 +99,7 @@ button.chip:active{background:var(--peer)}
 .t.blank{background:var(--tile-blank);color:#4d6a8c}
 .t.blank::before{content:"";position:absolute;inset:11%;border:1.5px dotted rgba(77,106,140,.55);border-radius:12%}
 .t.pend{box-shadow:0 1.5px 0 var(--hit),inset 0 0 0 2px var(--hit);cursor:grab}
-.t.last{box-shadow:0 1.5px 0 var(--tile-edge),inset 0 0 0 2px var(--present)}
+.t.last{background:color-mix(in srgb,var(--present) 55%,var(--tile));box-shadow:0 1.5px 0 var(--present),0 0 0 1.5px var(--present),inset 0 0 0 3px var(--present)}
 .t.bad{box-shadow:0 1.5px 0 var(--miss),inset 0 0 0 2.5px var(--miss);background:color-mix(in srgb,var(--miss) 18%,var(--tile))}
 .t.ghost{background:color-mix(in srgb,var(--hit) 14%,transparent);box-shadow:inset 0 0 0 1.5px var(--hit);color:var(--hit);opacity:.85;border-style:dashed}
 .t.lift{opacity:.3}
@@ -124,6 +124,9 @@ button.chip:active{background:var(--peer)}
 .slot .t{inset:0;border-radius:11px;font-size:calc(var(--sq) * .6);box-shadow:0 2px 0 var(--tile-edge),inset 0 0 0 1px rgba(120,95,40,.28)}
 .slot .t.sel{transform:translateY(-4px);box-shadow:0 6px 0 var(--tile-edge),0 0 0 2.5px var(--hit)}
 .slot:focus-visible{outline:2px solid var(--hit);outline-offset:2px}
+.rack.flash{animation:rackflash .6s}
+@keyframes rackflash{0%,100%{box-shadow:none}25%,70%{box-shadow:0 0 0 3px var(--miss);border-radius:12px}}
+@media (prefers-reduced-motion:reduce){.rack.flash{animation:none;box-shadow:0 0 0 3px var(--miss);border-radius:12px}}
 .slot .q{font-size:.9em}
 .rack.cov .slot{cursor:default}
 .rack.cov .t{background:repeating-linear-gradient(45deg,var(--tile-edge) 0 4px,var(--tile) 4px 8px);color:transparent}
@@ -408,7 +411,8 @@ const PREM_SYM = { DL: 'b-leaf', TL: 'b-leaf2', DW: 'b-bloom', TW: 'b-bloom8' };
 
 // ---------- state ----------
 let mode = store.get('bramble-mode', 'cpu'); if (!KEYS[mode]) mode = 'cpu';
-{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
+let hubDaily = false;   // opened from the hub with ?daily: if today's daily is finished, show its results straight away
+{ const q = new URLSearchParams(location.search); if (q.has('daily')){ mode = 'daily'; hubDaily = true; } if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
 let level = store.get('bramble-level', 'casual'); if (!B.LEVELS.includes(level)) level = 'casual';
 let names = store.get('bramble-names', ['Player 1', 'Player 2']);
 let G = null;            // the game in this mode: {mode, S, level, human, names, hints, orders, pend, day, done, recorded, target}
@@ -477,6 +481,14 @@ const pendIndex = i => R.findIndex(x => x.at === i);
 const isPending = i => pendIndex(i) >= 0;
 function placements(){ return R.filter(x => x.at >= 0 && (x.ch !== '?' || x.letter)).map(x => ({ r: (x.at / N) | 0, c: x.at % N, ch: x.ch === '?' ? x.letter.toLowerCase() : x.ch })); }
 const tv = ch => B.tileValue(ch);
+// No legal play and no exchange available (the daily never allows one): the Play button becomes Pass. Worked out once per turn.
+let npKey = '', npVal = false;
+function noPlays(){
+  if (!canAct() || !(G.S.daily || G.S.bag.length < RACK)) return false;
+  const key = G.mode + '|' + G.S.seed + '|' + G.S.turns + '|' + G.S.racks[G.S.turn].join('');
+  if (key !== npKey){ npKey = key; try{ npVal = !B.allMoves(G.S, G.S.racks[G.S.turn]).length; }catch(e){ npVal = false; } }
+  return npVal;
+}
 let toastT = 0;
 function toast(t, ms = 1600){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
 
@@ -533,7 +545,8 @@ function afterLoad(isNew){
   thinking = false;
   if (G.mode === 'daily') ensureTarget(G.day).then(() => { if (G && G.mode === 'daily') { drawScores(); if (G.S.over && !$('endSheet').hidden) openEnd(); } });
   save(); render();
-  if (G.S.over){ if (G.mode === 'daily'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizeDaily(false); } return; }
+  if (G.S.over){ if (G.mode === 'daily'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizeDaily(false); else if (hubDaily) openEnd(); hubDaily = false; } return; }
+  hubDaily = false;
   if (G.mode === 'cpu' && G.S.turn !== G.human) startThinking();
 }
 function resetTransient(){ selItem = null; cur = -1; err = null; hint = null; hintList = null; preview = null; anim = null; busy = false; }
@@ -587,6 +600,7 @@ $('blankCancel').addEventListener('click', cancelBlank);
 // ---------- playing ----------
 function press(){
   if (!canAct()) return;
+  if (noPlays()){ doPass(); return; }   // nothing can be played: the button says Pass and passes without asking
   const pl = placements();
   if (!pl.length){ toast('Place some tiles first'); return; }
   const v = B.validateMove(G.S, pl);
@@ -640,15 +654,19 @@ function applyComputer(mv){
 async function showHint(){
   if (!G || G.mode === 'pass' || !canAct()) return;
   closeSheets(true);
+  const my = tok, g = G, turn = G.S.turns;   // the answer may arrive after the player switched mode or started over: then it is dropped
+  let list = hintList;
   try{
-    if (!hintList || hintList.turn !== G.S.turns){
+    if (!list || list.turn !== turn){
       const m = await ask(worker, { type: 'hint', state: G.S, count: 5 });
-      hintList = { turn: G.S.turns, moves: m.moves || [], i: -1 };
+      list = { turn, moves: m.moves || [], i: -1 };
     }
   }catch(e){
-    const mv = B.allMoves(G.S).sort((a, b) => b.score - a.score).slice(0, 5);
-    hintList = { turn: G.S.turns, moves: mv, i: -1 };
+    if (my !== tok || G !== g) return;
+    list = { turn, moves: B.allMoves(G.S).sort((a, b) => b.score - a.score).slice(0, 5), i: -1 };
   }
+  if (my !== tok || G !== g || !canAct() || G.S.turns !== turn) return;
+  hintList = list;
   const L = hintList;
   if (!L.moves.length){ toast(G.mode === 'daily' ? 'No plays here: try passing' : 'No plays here: try exchanging or passing', 2200); return; }
   recallSilent();
@@ -694,7 +712,6 @@ $('exGo').addEventListener('click', () => {
 });
 function doPass(){
   if (!canAct()) return;
-  if (G.S.daily && G.S.passes >= 5){ toast('You can\'t pass again: six scoreless turns in a row end the game'); return; }
   recallSilent();
   const r = B.pass(G.S); if (!r.ok) return;
   G.orders[me()] = R.map(x => x.ch);
@@ -716,9 +733,9 @@ $('confNo').addEventListener('click', () => closeSheets());
 
 function openMore(){
   if (!G) return;
-  const hintOK = G.mode !== 'pass', canPass = canAct();
+  const hintOK = G.mode !== 'pass', canPass = canAct(), last6 = G.S.passes >= 5;
   $('moreMenu').innerHTML = `
-    <button type="button" data-a="pass"${canPass ? '' : ' disabled'}><b>Pass</b><small>Skip your turn and score nothing.</small></button>
+    <button type="button" data-a="pass"${canPass ? '' : ' disabled'}><b>Pass</b><small>${!canPass ? 'Not available right now.' : last6 ? 'Score nothing. This is the sixth scoreless turn in a row, so the game ends.' : 'Skip your turn and score nothing.'}</small></button>
     ${hintOK ? `<button type="button" data-a="hint"${canPass ? '' : ' disabled'}><b>Show a play</b><small>Reveals one of the best plays. Counts in your stats.</small></button>` : ''}
     ${G.mode !== 'daily' ? `<button type="button" data-a="ex"${canPass && G.S.bag.length >= RACK ? '' : ' disabled'}><b>Exchange tiles</b><small>${G.S.bag.length >= RACK ? 'Swap tiles for new ones and end your turn.' : 'Not with fewer than 7 tiles in the bag.'}</small></button>` : ''}
     <button type="button" data-a="un"><b>Unseen tiles</b><small>Every tile you haven't seen yet.</small></button>
@@ -728,7 +745,10 @@ function openMore(){
 }
 $('moreMenu').addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b || b.disabled) return; const a = b.dataset.a;
-  if (a === 'pass') confirmBox('Pass this turn?', 'You score nothing. Six scoreless turns in a row (passes or exchanges) end the game.', 'Pass', doPass);
+  if (a === 'pass'){
+    const last6 = G.S.passes >= 5;
+    confirmBox(last6 ? 'Pass and end the game?' : 'Pass this turn?', last6 ? `This is the sixth turn in a row without a play, so the game ends${G.S.daily ? ' (no penalty in the daily)' : ''}.` : G.S.daily ? 'You score nothing. Six turns in a row without a play end the game, with no penalty.' : 'You score nothing. Six scoreless turns in a row (passes or exchanges) end the game.', 'Pass', doPass);
+  }
   else if (a === 'hint') showHint();
   else if (a === 'ex') openExchange();
   else if (a === 'un') openUnseen();
@@ -851,7 +871,8 @@ function drawLine(){
   else if (hint){ html = `<span>Hint: ${wordChip(hint.main)} for <b>${hint.score}</b></span><button class="btn small" type="button" id="placeHint">Place it</button>`; }
   else {
     const pl = placements();
-    if (err) html = `<span class="bad" role="alert">${esc(err.reason)}</span>`;
+    if (noPlays()) html = `<span><b>No plays left.</b> Press Pass to carry on.</span>`;
+    else if (err) html = `<span class="bad" role="alert">${esc(err.reason)}</span>`;
     else if (pl.length && preview && preview.ok) html = `<span>Play <b>${preview.score}</b> · ${preview.words.map(w => wordChip(w.word)).join('')}${preview.bonus ? `<b>+${preview.bonus} for all 7 tiles</b>` : ''}</span>`;
     else if (pl.length) html = `<span>${pl.length} tile${pl.length > 1 ? 's' : ''} placed</span>`;
     else if (!S.history.length) html = `<span>${G.mode === 'daily' ? `Turn 1 of ${S.turnLimit}. ` : ''}Cover the centre star with your first word.</span>`;
@@ -874,7 +895,7 @@ function drawActs(){
     ob.innerHTML = `<button class="btn primary" type="button" id="obRes">Results</button><button class="btn" type="button" id="obNew">${G.mode === 'daily' ? 'Stats' : 'New game'}</button>`;
     return;
   }
-  const ok = canAct(), n = placements().length, label = preview && preview.ok ? `Play ${preview.score}` : 'Play';
+  const ok = canAct(), n = placements().length, np = noPlays(), label = np ? 'Pass' : preview && preview.ok ? `Play ${preview.score}` : 'Play';
   const swap = G.mode === 'daily'
     ? `<button class="act" type="button" id="aHint" aria-label="Show a play (a hint)"${ok ? '' : ' disabled'}>${ICON.hint}<span>Hint</span></button>`
     : `<button class="act" type="button" id="aEx" aria-label="Exchange tiles"${ok && G.S.bag.length >= RACK ? '' : ' disabled'}>${ICON.swap}<span>Exchange</span></button>`;
@@ -882,7 +903,7 @@ function drawActs(){
     <button class="act" type="button" id="aRec" aria-label="Take all tiles back"${ok && R.some(x => x.at >= 0) ? '' : ' disabled'}>${ICON.recall}<span>Recall</span></button>
     ${swap}
     <button class="act" type="button" id="aMore" aria-label="More: pass, hint, unseen tiles, history"${covered ? ' disabled' : ''}>${ICON.more}<span>More</span></button>
-    <button class="act play" type="button" id="aPlay" aria-label="${n && preview && preview.ok ? 'Play this word for ' + preview.score + ' points' : 'Play'}"${ok && n ? '' : ' disabled'}><span>${label}</span></button>`;
+    <button class="act play" type="button" id="aPlay" aria-label="${np ? 'Pass this turn: no plays left' : n && preview && preview.ok ? 'Play this word for ' + preview.score + ' points' : 'Play'}"${ok && (n || np) ? '' : ' disabled'}><span>${label}</span></button>`;
 }
 $('acts').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.disabled) return;
@@ -1019,10 +1040,12 @@ function openEnd(){
     const w = f.winners, adj = f.adjustments, order = G.mode === 'cpu' ? [G.human, 1 - G.human] : [0, 1];
     title = w.length > 1 ? 'A draw' : G.mode === 'cpu' ? (w[0] === G.human ? 'You win!' : 'The computer wins') : `${pname(w[0])} wins!`;
     sub = reason;
-    body += `<table class="tbl"><tr><th></th><th class="n">Plays</th><th class="n">Tiles</th><th class="n">Final</th></tr>${order.map(p => `<tr class="${w.includes(p) ? 'me' : ''}"><td>${esc(pname(p))}${w.includes(p) ? ' 🌿' : ''}</td><td class="n">${S.scores[p] - adj[p]}</td><td class="n">${adj[p] > 0 ? '+' + adj[p] : adj[p] || '0'}</td><td class="n">${S.scores[p]}</td></tr>`).join('')}</table>`;
+    body += `<table class="tbl"><tr><th></th><th class="n">Score</th><th class="n">Tile adjustment</th><th class="n">Final</th></tr>${order.map(p => `<tr class="${w.includes(p) ? 'me' : ''}"><td>${esc(pname(p))}${w.includes(p) ? ' 🌿' : ''}</td><td class="n">${S.scores[p] - adj[p]}</td><td class="n">${adj[p] > 0 ? '+' + adj[p] : adj[p] < 0 ? '\u2212' + (-adj[p]) : '0'}</td><td class="n">${S.scores[p]}</td></tr>`).join('')}</table>
+      <p class="muted" style="margin:-4px 0 0;font-size:.8rem">${f.reason === 'out' ? 'Tile adjustment: leftover tiles count against their owner, and the player who went out gains their value.' : 'Tile adjustment: the value of the tiles left on each rack is taken off that player.'}</p>`;
     const bp = bestPlays();
     body += order.filter(p => bp[p]).map(p => `<p>Best word, ${esc(pname(p))}: ${wordChip(bp[p].word)} for <b>${bp[p].score}</b></p>`).join('');
-    const rare = []; H.forEach(h => { if (h.type === 'play') h.words.forEach(x => { if (B.dict().isRare(x)) rare.push(`${wordChip(x)}<span class="muted">(${esc(pname(h.p))})</span>`); }); });
+    const rareBy = new Map(); H.forEach(h => { if (h.type === 'play') h.words.forEach(x => { if (B.dict().isRare(x)){ if (!rareBy.has(x)) rareBy.set(x, []); if (!rareBy.get(x).includes(h.p)) rareBy.get(x).push(h.p); } }); });
+    const rare = [...rareBy].map(([x, ps]) => `${wordChip(x)}<span class="muted">(${ps.map(pname).map(esc).join(', ')})</span>`);
     body += rare.length ? `<p>Rare words played: ${rare.join(' ')}</p>` : '';
     const others = ['cpu', 'pass', 'daily'].filter(m => m !== G.mode), MN = { cpu: 'vs Computer', pass: 'Pass & play', daily: 'Daily' };
     btns = `<div class="row"><button class="btn primary" type="button" id="eAgain">Play again</button>${G.mode === 'cpu' ? '<button class="btn" type="button" id="eLevel">Change level</button>' : '<button class="btn" type="button" id="eNames">Change players</button>'}</div>
@@ -1164,8 +1187,11 @@ document.addEventListener('keydown', e => {
     const i = nextEmpty(cur, dir); if (i < 0){ toast('No room that way'); return; }
     const L = k.toUpperCase();
     let it = R.find(x => x.at < 0 && x.ch === L), blank = false;
-    if (!it){ it = R.find(x => x.at < 0 && x.ch === '?'); blank = !!it; }
-    if (!it){ toast(`No ${L} on your rack`); return; }
+    if (!it && e.shiftKey){ it = R.find(x => x.at < 0 && x.ch === '?'); blank = !!it; }   // a blank only with Shift held
+    if (!it){
+      const rk = $('rack'); rk.classList.remove('flash'); void rk.offsetWidth; rk.classList.add('flash'); setTimeout(() => rk.classList.remove('flash'), 650);
+      toast(R.some(x => x.at < 0 && x.ch === '?') ? `No ${L} in your rack (hold Shift to use a blank)` : `No ${L} in your rack`, 2200); return;
+    }
     selItem = null; it.at = i; it.letter = blank ? L : ''; it.seq = ++seqN;
     const nx = nextEmpty(i + (dir === 'h' ? 1 : N), dir);
     cur = nx >= 0 && (dir === 'v' || ((nx / N) | 0) === ((i / N) | 0)) ? nx : i;

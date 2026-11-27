@@ -200,7 +200,7 @@ function finish(s, why, outPlayer) {
   const adj = new Array(s.players).fill(0);
   if (why === 'out') {
     for (let p = 0; p < s.players; p++) if (p !== outPlayer) { const v = rackValue(s.racks[p]); adj[p] -= v; adj[outPlayer] += v; }
-  } else if (why === 'stuck') {
+  } else if (why === 'stuck' && !s.daily) {   // the daily has no end penalty: it just ends
     for (let p = 0; p < s.players; p++) adj[p] -= rackValue(s.racks[p]);
   }
   for (let p = 0; p < s.players; p++) s.scores[p] += adj[p];

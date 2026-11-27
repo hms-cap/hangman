@@ -10,7 +10,27 @@ pissers pissoir pissoirs cock cocks dick dicks dickhead tits titty titties wank 
 bitchier bitchily bastard bastards bastardy prick pricks pussy pussies cums cumming jizz clit clits blowjob handjob nigger niggers nigga niggas niggaz
 negro negroes negros negroid darkie darkies dago dagos dagoes wop wops kraut krauts honky fag fags faggot faggots poof poofs poofter poofters homo homos
 hooker hookers bugger buggers buggered buggery bollocks tosser tossers tosspot dildo dildoes dildos fellatio cunnilingus porn porno goddamn
-asshole assholes gyps gypped gypper gyppers gypping gypster gypsters`.split(/\s+/));
+asshole assholes gyps gypped gypper gyppers gypping gypster gypsters
+sluttiest bitchiest bastardly dickheads whoresons whoredoms`.split(/\s+/));
+// Slurs (ethnic, racial, religious, sexual-orientation, gender, disability) in every form, plus vulgar and explicit sexual words, found by QA
+// and a manual scan of both word lists. Words whose main meaning is innocent stay (chinkapin, chinking, gypsum, squawk, jewel, cripple the verb,
+// niggle, queer, tit the bird ...).
+const SLURS = `chink chinks spic spics spick spicks kike kikes kyke kykes gook gooks wetback wetbacks mick micks coon coons paki pakis jap japs yid yids
+wog wogs golliwog golliwogs coolie coolies sambo sambos jigaboo jigaboos boong boongs darky darkey darkeys darkies quadroon quadroons octoroon octoroons
+mulatto mulattoes mulattos negress nigra squaw squaws redskin redskins gypsy gypsies gypsyish gipsy gipsies gip gips papist papists papistry popery kafir kafirs
+kaffir kaffirs shylock shylocks limey limeys pommy pikey pikeys huns hun jews jewed jewing jewfish jewfishes orientals honkey honkeys ofay ofays cholo cholos dinge
+dinges jocko jockos haole haoles chav chavs niggard niggards niggardly
+retard retards retarded spaz spazzes spazzy spazzed spastic spastics gimp gimps gimped gimping gimpy mong mongs nong nongs mongoloid mongoloids mongolism
+midget midgets cretin cretins cretinous cretinoid schizo schizos tard tards
+tranny trannie trannies ladyboy ladyboys shemale shemales lezzie lezzies lezzy lesbo lesbos dyke dykes dyked dyking dykey bulldyke bulldykes fagged fagging
+fagot fagots fagoting faggoting faggy sodomite sodomites sodomise sodomised sodomises sodomize sodomized sodomizes sodomy nance nances nancy nelly terf terfs
+skank skanks skanky skanked skanking slapper slappers nympho nymphos bint bints hos
+arse arses arsed arsey arsehole arseholes gobshite gobshites shithouse shitholes shithole shitless twattle twattled twattles twattling minge minges minger
+mingers poon poons jism jisms fanny fannies lardass wiseass badass badasses hooters horny hornier horniest boner boners nookie nooky pisspot pisspots turd turds
+frig frigs frigged frigging goddam goddamed goddamned goddammit bollix bollixed bollixes bollixing bollock bollocked bollocking scrote scrotes
+orgy orgies orgasm orgasms orgasmic masturbate masturbates ejaculate ejaculates fornicate fornicates copulate copulated copulates
+rape raped rapes raper rapers rapist rapists molest molested molester molesters molesting molests pedophile pedophiles`.split(/\s+/);
+for (const w of SLURS) OFFENSIVE.add(w);
 // Also removed by hand: obscure words that read as a name or an abbreviation (ESDB does list them as lowercase words).
 const JUNK = new Set('etna etnas lati'.split(' '));
 // Accepted as bonus words but never counted by rules (b) and (c): crude, sexual, violent or sensitive words.

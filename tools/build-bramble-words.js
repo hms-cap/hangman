@@ -10,14 +10,18 @@
 //   ACCEPTED = lowercase ordinary words of 2-9 letters that ESDB lists (as a headword or a listed inflection, never a
 //              weak/variant spelling) at SCOWL size <= 70, minus offensive words: OFFENSIVE/JUNK (tools/scowl.js), "remove" lines of
 //              tools/trail-word-review.txt, anything ESDB marks vulgar or offensive, and the reviewed "drop" lines.
-//   RARE     = judged on the base word (lemma) when the word is a regular inflection (plural, -ed, -ing, -er, -est ...) of a base word that ESDB
-//              lists: rare only if the form itself is rare AND every possible base is rare (SCOWL size > 50 or Zipf < 2.5, or a
-//              name-like word); so a common form of a rare base ("during") stays ordinary. Any other word is judged on its own form: SCOWL size > 50 or Zipf < 2.5 or name-like (NAMES in
-//              tools/scowl.js). So "cats" and "walked" are ordinary because "cat" and "walk" are.
+//   RARE     = the "rare" label marks words most players would not know (about a third of the list). A word is rare-looking (selfRare) when it is
+//              name-like (NAMES in tools/scowl.js), or its Zipf is under 1.0 (practically never written), or it is in a larger SCOWL tier (size > 60)
+//              and still uncommon (Zipf < 2.0). Short words, whose Zipf is inflated by abbreviations and noise, go by SCOWL size instead:
+//              2-3 letters with size > 50, 4 letters with size > 50 and Zipf < 3.0. Judged on the base word (lemma) when the word is a regular
+//              inflection (plural, -ed, -ing, -er, -est ...) of a base word that ESDB lists: rare only if the form itself looks rare AND every
+//              possible base does; so a common form of a rare base ("during") stays ordinary and "cats" and "walked" are ordinary because "cat"
+//              and "walk" are. Any other word is judged on its own form. (The first version, size > 50 or Zipf < 2.5, marked 58% of words.)
 const fs = require('fs'), path = require('path');
 const { parseScowl, regular, OFFENSIVE, JUNK, NAMES } = require('./scowl.js');
 const root = path.join(__dirname, '..');
-const MAX_SIZE = 70, RARE_SIZE = 50, RARE_ZIPF = 2.5, MIN_LEN = 2, MAX_LEN = 9;
+const MAX_SIZE = 70, RARE_SIZE = 60, RARE_ZIPF = 2.0, UNSEEN_ZIPF = 1.0, SHORT_RARE_SIZE = 50, FOUR_ZIPF = 3.0, MIN_LEN = 2, MAX_LEN = 9;
+const OLD_RARE_SIZE = 50, OLD_RARE_ZIPF = 2.5;   // the first rule, kept only for the --report comparison
 
 function argv() {
   const a = process.argv.slice(2), pos = [], o = {};
@@ -49,7 +53,10 @@ function build(zipfFile, scowlFile, opts = {}) {
   const shortReview = opts.shortReview === undefined ? path.join(__dirname, 'bramble-short-review.txt') : opts.shortReview;
   const drop = new Set(shortReview ? readLines(shortReview).map(l => l.match(/^drop\s+([a-z]{2,3})$/)).filter(Boolean).map(m => m[1]) : []);
   const words = cand.filter(w => !drop.has(w));
-  const selfRare = w => (esdb.has(w) ? esdb.get(w).strongSize : 999) > RARE_SIZE || (zipf[w] || 0) < RARE_ZIPF || NAMES.has(w);
+  const size = w => esdb.has(w) ? esdb.get(w).strongSize : 999, Z = w => zipf[w] || 0;
+  const selfRare = w => NAMES.has(w) || Z(w) < UNSEEN_ZIPF || (size(w) > RARE_SIZE && Z(w) < RARE_ZIPF)
+    || (w.length <= 3 && size(w) > SHORT_RARE_SIZE) || (w.length === 4 && size(w) > SHORT_RARE_SIZE && Z(w) < FOUR_ZIPF);
+  const oldSelfRare = w => size(w) > OLD_RARE_SIZE || Z(w) < OLD_RARE_ZIPF || NAMES.has(w);
   // base words (lemmas) of which each word is a regular inflection
   const bases = new Map();
   for (const [lem, L] of lemmas) {
@@ -58,9 +65,9 @@ function build(zipfFile, scowlFile, opts = {}) {
       let a = bases.get(f); if (!a) bases.set(f, a = new Set()); a.add(lem);
     }
   }
-  const rareOf = w => { const b = bases.get(w); return b ? selfRare(w) && [...b].every(selfRare) : selfRare(w); }; // an inflection is rare only if it AND its base word are rare
-  const rare = new Set(words.filter(rareOf));
-  const oldRare = new Set(words.filter(selfRare));
+  const rareWith = self => w => { const b = bases.get(w); return b ? self(w) && [...b].every(self) : self(w); }; // an inflection is rare only if it AND its base word are rare
+  const rare = new Set(words.filter(rareWith(selfRare)));
+  const oldRare = new Set(words.filter(rareWith(oldSelfRare)));
   return { words, rare, oldRare, bases, shortCandidates, dropped: [...drop].filter(w => cand.includes(w)), reviewApplied: drop.size > 0 };
 }
 
@@ -81,8 +88,8 @@ function main() {
   if (o.candidates) fs.writeFileSync(o.candidates, r.shortCandidates.join('\n') + '\n');
   const enc = encode(r.words, r.rare);
   const header = `// Bramble dictionary: 2-9 letter words, sorted and front-coded (digit = letters shared with the previous word, at most 9).
-// UPPERCASE suffix = a rare word (the game may show "rare word"): a base word with SCOWL size > ${RARE_SIZE} or Zipf < ${RARE_ZIPF}, or a regular inflection
-// (plural, -ed, -ing, -er, -est) of such a base; lowercase = an ordinary word. Decode with Bramble.decode.
+// UPPERCASE suffix = a rare word (the game may show "rare word"): a base word with Zipf < ${UNSEEN_ZIPF}, or SCOWL size > ${RARE_SIZE} and Zipf < ${RARE_ZIPF} (short words go by size), or a
+// regular inflection (plural, -ed, -ing, -er, -est) of such a base; lowercase = an ordinary word. Decode with Bramble.decode.
 // Accepted words: lowercase ordinary words and their inflections listed by SCOWL/ESDB at size ${MAX_SIZE} or smaller, minus abbreviations, names,
 // offensive words (tools/scowl.js, tools/trail-word-review.txt) and 2-3 letter words dropped in review (tools/bramble-short-review.txt).
 // Rebuild with tools/build-bramble-words.js; check with tools/test-bramble.js.
