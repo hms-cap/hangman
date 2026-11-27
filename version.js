@@ -3,9 +3,14 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.13.0',
+  version: '1.14.0',
   date: '2026-11-27',
   changes: [
+    { v: '1.14.0', date: '2026-11-27', notes: [
+      'Bramble: new Practice mode, the Daily as often as you like: 10 turns against a target, with fresh tiles every game',
+      'Bramble Practice: replay any earlier Daily with the same tiles and target, without touching your streak',
+      'Home: Sudoku is now one tile, with Learn, Train and New puzzle chips showing your progress',
+    ] },
     { v: '1.13.0', date: '2026-11-27', notes: [
       'New game: Bramble, a mini word-tile board game on a 9×9 board. Play the computer (Easy, Casual, Strong or Expert), pass and play with a friend, or take the Daily',
       'Bramble Daily: 10 turns with the same tiles as everyone else, trying to beat the computer\'s target score. It counts towards your daily streak',
