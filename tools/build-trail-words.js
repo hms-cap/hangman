@@ -1,17 +1,20 @@
 // Rebuilds trailwords.js (the Tendril dictionary) from the current dictionary, word frequencies and SCOWL/ESDB levels.
-//   node tools/build-trail-words.js <zipf_en.json> <scowl-pre.txt> [--out file] [--new-counted file] [--report]
+//   node tools/build-trail-words.js <zipf_en.json> <scowl-pre.txt> [--out file] [--base file] [--new-counted file] [--review file] [--report]
 //   zipf_en.json : {word: Zipf} decoded from wordfreq's large_en list (Zipf = log10 occurrences per billion words)
 //   scowl-pre.txt: data/scowl-pre.txt from the SCOWL/ESDB distribution (https://github.com/en-wl/wordlist)
-// Deterministic: the same inputs always give the same trailwords.js. Running it again on its own output changes nothing
-// (every word counted before is kept, and nothing new is added).
+// Deterministic: the same inputs always give the same trailwords.js. The starting point is tools/trail-words-base.js, the
+// hand-reviewed dictionary from before this tool existed (the same format as trailwords.js); its targets are the hand-checked
+// words that always stay counted. trailwords.js itself is only ever written, never read, so rebuilding is repeatable.
 //
 // The rule:
-//   ACCEPTED = words already in trailwords.js, minus offensive words (OFFENSIVE below) and minus words that are not
-//              ordinary lowercase words in ESDB (abbreviations, names, not listed at all). A regular inflection of an
-//              ordinary lowercase ESDB word is never removed.
+//   ACCEPTED = words already in the base dictionary, minus offensive words (OFFENSIVE below) and minus words that are not
+//              ordinary lowercase words in ESDB (abbreviations, names, not listed at all; hand-reviewed targets are exempt from
+//              this second test). A regular inflection of an ordinary lowercase ESDB word is never removed. Also removed:
+//              anything ESDB marks vulgar-1 or offensive.
 //   COUNTED  = (a) every word that was already a target (hand-reviewed), plus
 //              (b) words with Zipf >= B_ZIPF whose ESDB size is <= B_SIZE (as a headword or as a listed inflection), plus
 //              (c) regular inflections (plural, -s, -ed, -ing, -er, -est) of a counted headword, Zipf >= C_ZIPF.
+//              Rules (b) and (c) skip NO_COUNT words (crude, sexual, sensitive, or really a name) and anything ESDB marks vulgar.
 //   Everything else accepted is BONUS (accepted, optional).
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
@@ -27,22 +30,33 @@ bitchier bitchily bastard bastards bastardy prick pricks pussy pussies cums cumm
 negro negroes negros negroid darkie darkies dago dagos dagoes wop wops kraut krauts honky fag fags faggot faggots poof poofs poofter poofters homo homos
 hooker hookers bugger buggers buggered buggery bollocks tosser tossers tosspot dildo dildoes dildos fellatio cunnilingus porn porno goddamn
 asshole assholes gyps gypped gypper gyppers gypping gypster gypsters`.split(/\s+/));
+// Also removed by hand: obscure words that read as a name or an abbreviation (ESDB does list them as lowercase words).
+const JUNK = new Set('etna etnas lati'.split(' '));
 // Accepted as bonus words but never counted by rules (b) and (c): crude, sexual, violent or sensitive words.
 const NO_COUNT = new Set(`crap crapped crapper crappers crapping craps crappy crappier fart farted farting farts dickens damn damns damned damning
 penis penises vagina vaginas vaginal anus anuses sexy sexual sexes sexed sexing sexist sexists sexism sexier sexiest sexily semen rape raped rapes rapist
 rapists raper rapers molest molested molester molests suicide suicides suicidal incest orgy orgies erotic erotica sodomy sodomize sodomite boob boobs
 boobies buttock buttocks nipple nipples bimbo bimbos retarded retarder queer queers queerer queerest gypsy gypsies niggard niggards scumbag scumbags
-pimp pimps pimped pimping lecher lechers coital coitus clitoris clitoral boner boners dildoes sexting erection`.split(/\s+/));
+pimp pimps pimped pimping lecher lechers coital coitus clitoris clitoral boner boners sexting erection sexually hooters cuckold genital genitals
+brothel brothels kinky fetish fetishes groping spanking spanked turd turds poop pooped pooping poops moron morons moronic dumbo urinate urinated urinal urinals`.split(/\s+/));
+// Lowercase ordinary words in ESDB whose frequency is really a name's (John, Mike, Wales, Oxford ...): accepted as bonus, never counted by rules (b), (c).
+const NAMES = new Set(`john mike tony jimmy charlie johnny josh maria billy rick graham warren nelson terry bobby wright victor kent brad dale sally troy newton
+joey randy jenny glen molly mickey marina timothy hank romeo barney sheila veronica barbie sonny peter harry roger jean martin batman superman khan afghan
+wales oxford oxfords basques levy lynch sanders griffin manning bailey brooks rogers hart marquis jasper hector derrick colleen kelvin curt dirk trey fritz
+phoebe myrtle rosemary jarred noel earnest beau rowan emery tiff dona`.split(/\s+/));
+for (const w of NAMES) NO_COUNT.add(w);
 
 function argv() {
   const a = process.argv.slice(2), pos = [], o = {};
   for (let i = 0; i < a.length; i++) {
     if (a[i] === '--report') o.report = true;
     else if (a[i] === '--out') o.out = a[++i];
+    else if (a[i] === '--base') o.base = a[++i];
     else if (a[i] === '--b-zipf') B_ZIPF = +a[++i];
     else if (a[i] === '--b-size') B_SIZE = +a[++i];
     else if (a[i] === '--c-zipf') C_ZIPF = +a[++i];
     else if (a[i] === '--new-counted') o.newCounted = a[++i];
+    else if (a[i] === '--review') o.review = a[++i];
     else pos.push(a[i]);
   }
   return { pos, o };
@@ -153,24 +167,25 @@ function regular(base, pos) {
 
 function main() {
   const { pos, o } = argv();
-  if (pos.length < 2) { console.error('usage: node tools/build-trail-words.js <zipf_en.json> <scowl-pre.txt> [--out file] [--new-counted file] [--report]'); process.exit(2); }
+  if (pos.length < 2) { console.error('usage: node tools/build-trail-words.js <zipf_en.json> <scowl-pre.txt> [--out file] [--base file] [--new-counted file] [--review file] [--report]'); process.exit(2); }
   const Trail = require('../trail-core.js');
   const zipf = JSON.parse(fs.readFileSync(pos[0], 'utf8'));
   const Z = w => zipf[w] || 0;
   const outFile = o.out || path.join(root, 'trailwords.js');
-  const cur = Trail.decode(loadWindowFile(path.join(root, 'trailwords.js'), 'TRAIL_WORDS'));
+  const baseFile = o.base || path.join(__dirname, 'trail-words-base.js');
+  const cur = Trail.decode(loadWindowFile(baseFile, 'TRAIL_WORDS'));
   const { words: esdb, lemmas, bad } = parseScowl(pos[1]);
 
   // ---- 1. accepted ----
   const valid = new Set(esdb.keys());          // lowercase words listed (as headword or listed inflection) of ordinary lemmas
   for (const [lem, L] of lemmas) for (const p of L.pos) for (const f of regular(lem, p)) valid.add(f);
   const flagged = (w, re) => { const r = esdb.get(w); return !!r && [...r.usage].some(u => re.test(u)); };
-  const isOffensive = w => OFFENSIVE.has(w) || flagged(w, /^(vulgar-1|offensive)/);
+  const isOffensive = w => OFFENSIVE.has(w) || JUNK.has(w) || flagged(w, /^(vulgar-1|offensive)/);
   const noCount = w => NO_COUNT.has(w) || flagged(w, /^(vulgar|offensive)/);
   const removedOffensive = [], removedOther = [], accepted = [];
   for (const w of cur.words) {
     if (isOffensive(w)) removedOffensive.push(w);
-    else if (!valid.has(w)) removedOther.push(w);
+    else if (!valid.has(w) && !cur.targets.has(w)) removedOther.push(w); // hand-reviewed targets are not second-guessed by ESDB
     else accepted.push(w);
   }
   const acc = new Set(accepted);
@@ -187,6 +202,16 @@ function main() {
     for (const p of L.pos) for (const f of regular(h, p)) cand.add(f);
     for (const f of cand) if (acc.has(f) && Z(f) >= C_ZIPF && !noCount(f)) counted.add(f);
   }
+
+  // (d) reviewed: newly counted words that a reviewer judged rare/technical (or a name/crude) go back to bonus.
+  //     tools/trail-word-review.txt, lines "rare <word>" or "flag <word>"; hand-reviewed targets (a) are never demoted.
+  const reviewFile = o.review || path.join(__dirname, 'trail-word-review.txt');
+  let demoted = 0;
+  if (fs.existsSync(reviewFile)) for (const line of fs.readFileSync(reviewFile, 'utf8').split('\n')) {
+    const m = line.trim().match(/^(rare|flag)\s+([a-z]+)$/); if (!m) continue;
+    if (counted.has(m[2]) && !cur.targets.has(m[2])) { counted.delete(m[2]); demoted++; }
+  }
+  console.error(`review: ${demoted} newly counted words returned to bonus (${reviewFile})`);
 
   // ---- 3. write ----
   const sorted = accepted.slice().sort();
@@ -228,4 +253,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { parseScowl, regular, OFFENSIVE, NO_COUNT };
+module.exports = { parseScowl, regular, OFFENSIVE, NO_COUNT, JUNK };
