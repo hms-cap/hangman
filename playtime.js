@@ -28,6 +28,7 @@ const GAMES = [
   ['gtrainer', 'Go Trainer', 'go-trainer.html', '#3f6f5a'],
   ['snake', 'Snake', 'snake.html', '#4f7f2a'],
   ['chowka', 'Chowka Bara', 'chowka.html', '#a8592c'],
+  ['bramble', 'Bramble', 'bramble.html', '#9b3358'],
 ];
 const file = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
 const HERE = (GAMES.find(g => g[2] === file) || GAMES[0])[0];

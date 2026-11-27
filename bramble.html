@@ -1,0 +1,1219 @@
+<!doctype html>
+<html lang="en" data-pwa="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Paper Games">
+<meta name="theme-color" content="#102a43">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Bramble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=IBM+Plex+Mono:wght@500;600;700&display=swap"></noscript>
+<link rel="stylesheet" href="paper.css">
+<script src="profiles.js"></script>
+<script src="playtime.js"></script>
+<script src="celebrate.js"></script>
+<style>
+/* Bramble: a little word-tile board game on a garden bed. Leaf marks are the letter squares, blossoms the word squares;
+   the tiles are pale wood with ink letters (in both themes), the player's pencil is the blue --hit. */
+:root{
+  --br:#9b3358;
+  --bd:#e8eee3; --bd-line:#c3cfc3;
+  --dl-bg:#d3e8cc; --dl-g:#5f9e54; --tl-bg:#b9e0dc; --tl-g:#238780;
+  --dw-bg:#f6d6dc; --dw-g:#d55f7c; --tw-bg:#f2bfb2; --tw-g:#bd3328;
+  --lab:rgba(38,50,59,.82);
+  --tile:#f4e6c0; --tile-edge:#c7ad70; --tile-ink:#2a2316; --tile-blank:#ede9dc;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --br:#d46a8d; --bd:#173a58; --bd-line:#2c5176;
+  --dl-bg:#1d4a40; --dl-g:#6cc08a; --tl-bg:#14505a; --tl-g:#5fd0d0;
+  --dw-bg:#5a2d48; --dw-g:#f08fb0; --tw-bg:#6a2e2c; --tw-g:#ff917c; --lab:rgba(228,237,246,.9)}}
+:root[data-theme="dark"]{
+  --br:#d46a8d; --bd:#173a58; --bd-line:#2c5176;
+  --dl-bg:#1d4a40; --dl-g:#6cc08a; --tl-bg:#14505a; --tl-g:#5fd0d0;
+  --dw-bg:#5a2d48; --dw-g:#f08fb0; --tw-bg:#6a2e2c; --tw-g:#ff917c; --lab:rgba(228,237,246,.9)}
+
+.app{height:auto;min-height:100%;gap:8px}
+@media (max-width:360px){.app{padding-left:12px;padding-right:12px}}
+.bar{grid-template-columns:auto minmax(0,1fr) auto}
+.bar h1{font-size:1.85rem}
+@media (max-width:440px){.back .txt{display:none}}
+.icons{display:flex;gap:2px;justify-self:end}
+.icon{border:0;background:transparent;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+.mode{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--peer);border:1px solid var(--line)}
+.mode button{border:0;background:transparent;border-radius:9px;padding:7px 2px;font-weight:600;font-size:.86rem;cursor:pointer;color:var(--muted);min-width:0;white-space:nowrap}
+.mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.mode small{font-family:var(--mono);font-weight:500;margin-left:3px;font-size:.72rem}
+
+#play{display:flex;flex-direction:column;gap:8px;flex:1 1 auto;min-height:0}
+.scores{display:flex;gap:6px;align-items:stretch}
+.chip{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 4px 3px;border-radius:10px;background:var(--key);border:1px solid var(--key-edge);line-height:1.1;font:inherit;color:var(--ink)}
+.chip .nm{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip b{font-family:var(--mono);font-weight:600;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.chip.on{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit)}
+.chip.on .nm{color:var(--hit)}
+button.chip{cursor:pointer}
+button.chip:active{background:var(--peer)}
+.chip.think .nm::after{content:" …"}
+
+.stage{display:flex;justify-content:center;align-items:center;flex:0 0 auto}
+.board{
+  --bw:min(100%,540px,calc(100dvh - 345px));
+  width:var(--bw);min-width:min(100%,256px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-template-rows:repeat(9,minmax(0,1fr));
+  gap:1px;padding:1px;background:var(--bd-line);border:2.5px solid var(--ink);border-radius:8px;overflow:hidden;container-type:inline-size;position:relative;
+  touch-action:manipulation;
+}
+.board:focus-visible{outline:3px solid var(--hit);outline-offset:3px}
+.board .row{display:contents}
+.sq{
+  --sq:calc(100cqw / 9);
+  position:relative;border:0;padding:0;margin:0;min-width:0;min-height:0;overflow:hidden;background:var(--bd);cursor:pointer;color:var(--ink);
+  -webkit-tap-highlight-color:transparent;contain:layout paint;
+}
+.sq .g{position:absolute;left:19%;top:7%;width:62%;height:62%;opacity:.8;fill:currentColor;pointer-events:none}
+.sq .lab{position:absolute;left:0;right:0;bottom:5%;text-align:center;font-family:var(--ui);font-weight:700;font-size:calc(var(--sq) * .26);line-height:1;color:var(--lab);pointer-events:none}
+.p-DL{background:var(--dl-bg);color:var(--dl-g)} .p-TL{background:var(--tl-bg);color:var(--tl-g)}
+.p-DW{background:var(--dw-bg);color:var(--dw-g)} .p-TW{background:var(--tw-bg);color:var(--tw-g)}
+.sq.centre .g{top:2%;left:14%;width:72%;height:72%;opacity:.95}
+.sq.centre .lab{bottom:3%}
+.sq.over{outline:2px solid var(--hit);outline-offset:-2px;background-image:linear-gradient(var(--sel),var(--sel))}
+.sq.cur{outline:2px solid var(--hit);outline-offset:-2px;z-index:1}
+.sq.cur::after{position:absolute;right:6%;bottom:0;font-size:calc(var(--sq) * .3);line-height:1;color:var(--hit);font-weight:700;pointer-events:none}
+.board[data-dir="h"] .sq.cur::after{content:"▸"} .board[data-dir="v"] .sq.cur::after{content:"▾"}
+.sq.ghostc{background-image:none}
+
+.t{
+  position:absolute;inset:4%;border-radius:16%;background:var(--tile);color:var(--tile-ink);
+  box-shadow:0 1.5px 0 var(--tile-edge),inset 0 0 0 1px rgba(120,95,40,.28);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;line-height:1;
+  font-size:calc(var(--sq) * .58);text-transform:uppercase;touch-action:none;
+}
+.t i{position:absolute;right:11%;bottom:6%;font-style:normal;font-weight:600;font-size:.42em;font-family:var(--ui);opacity:.8}
+.t.blank{background:var(--tile-blank);color:#4d6a8c}
+.t.blank::before{content:"";position:absolute;inset:11%;border:1.5px dotted rgba(77,106,140,.55);border-radius:12%}
+.t.pend{box-shadow:0 1.5px 0 var(--hit),inset 0 0 0 2px var(--hit);cursor:grab}
+.t.last{box-shadow:0 1.5px 0 var(--tile-edge),inset 0 0 0 2px var(--present)}
+.t.bad{box-shadow:0 1.5px 0 var(--miss),inset 0 0 0 2.5px var(--miss);background:color-mix(in srgb,var(--miss) 18%,var(--tile))}
+.t.ghost{background:color-mix(in srgb,var(--hit) 14%,transparent);box-shadow:inset 0 0 0 1.5px var(--hit);color:var(--hit);opacity:.85;border-style:dashed}
+.t.lift{opacity:.3}
+.t.land{animation:land .34s cubic-bezier(.2,.8,.3,1.2) both}
+@keyframes land{from{transform:translateY(-70%) scale(1.3);opacity:0}to{transform:none;opacity:1}}
+.t.drag{position:fixed;inset:auto;z-index:60;pointer-events:none;box-shadow:0 8px 18px rgba(0,0,0,.35),inset 0 0 0 2px var(--hit);transform:scale(1.12)}
+
+.line{min-height:2.7em;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem;line-height:1.3;color:var(--muted)}
+.line > span{min-width:0;flex:1 1 auto}
+.line b{color:var(--ink);font-weight:600}
+.line .bad{color:var(--miss);font-weight:600}
+.line .btn.small{font-family:var(--ui);font-size:.8rem;font-weight:600;padding:5px 12px;flex:none}
+.w{display:inline-block;font-family:var(--mono);font-weight:600;font-size:.82rem;color:var(--ink);margin-right:5px}
+.rare{font-family:var(--ui);font-style:normal;font-weight:600;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;background:var(--present);color:#fff;border-radius:999px;padding:1px 6px;margin-left:3px;vertical-align:1px}
+.think i{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--muted);margin-left:3px;animation:blink 1s infinite both}
+.think i:nth-child(2){animation-delay:.15s}.think i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+.rack{--sq:calc((100cqw - 24px) / 7);container-type:inline-size;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%;max-width:400px;margin:0 auto}
+.slot{position:relative;aspect-ratio:1;border:0;padding:0;margin:0;background:var(--peer);border-radius:10px;cursor:pointer;color:var(--tile-ink);touch-action:none;box-shadow:inset 0 0 0 1px var(--line)}
+.slot.empty{cursor:default;background:transparent;box-shadow:inset 0 0 0 1.5px var(--line);opacity:.7}
+.slot .t{inset:0;border-radius:11px;font-size:calc(var(--sq) * .6);box-shadow:0 2px 0 var(--tile-edge),inset 0 0 0 1px rgba(120,95,40,.28)}
+.slot .t.sel{transform:translateY(-4px);box-shadow:0 6px 0 var(--tile-edge),0 0 0 2.5px var(--hit)}
+.slot:focus-visible{outline:2px solid var(--hit);outline-offset:2px}
+.slot .q{font-size:.9em}
+.rack.cov .slot{cursor:default}
+.rack.cov .t{background:repeating-linear-gradient(45deg,var(--tile-edge) 0 4px,var(--tile) 4px 8px);color:transparent}
+.rack.cov .t i{display:none}
+
+.acts{display:flex;gap:5px;align-items:stretch}
+.act{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:48px;padding:0 1px;border-radius:12px;border:1.5px solid var(--line);background:var(--key);color:var(--ink);cursor:pointer;font-family:var(--ui)}
+.act svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.act span{font-size:.6rem;font-weight:600;line-height:1;white-space:nowrap;letter-spacing:-.01em}
+.act:active{background:var(--peer)}
+.act:disabled{opacity:.4;cursor:default}
+.act.play{flex:1.55 1 0;background:var(--ink);color:var(--paper);border-color:var(--ink);font-family:var(--hand);font-size:1.3rem;flex-direction:row;gap:6px}
+.act.play span{font-family:var(--hand);font-size:1.3rem;font-weight:400;letter-spacing:0}
+.act.play:disabled{opacity:.35}
+.act.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.overbar{display:flex;gap:8px}
+.overbar .btn{flex:1}
+#endBtns{display:flex;flex-direction:column;gap:10px}
+#endBtns .row .btn.small{flex:1 1 0;padding:6px 8px;white-space:normal;line-height:1.1;font-size:1.05rem}
+
+/* setup card */
+#setup{display:flex;flex-direction:column;gap:12px;padding:14px 14px 16px;border-radius:16px;background:var(--sheet);border:1px solid var(--line)}
+#setup h2{font-family:var(--hand);font-weight:400;font-size:1.7rem;margin:0;line-height:1.05}
+#setup p{margin:0;color:var(--muted);line-height:1.4;font-size:.92rem}
+.levels{display:flex;flex-direction:column;gap:6px}
+.levels button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--key);cursor:pointer;color:var(--ink)}
+.levels button b{font-weight:600}
+.levels button small{color:var(--muted);font-size:.8rem;line-height:1.3}
+.levels button[aria-pressed="true"]{border-color:var(--hit);box-shadow:inset 0 0 0 1px var(--hit)}
+.names{display:grid;grid-template-columns:1fr;gap:8px}
+.names label{display:flex;flex-direction:column;gap:3px;font-size:.78rem;color:var(--muted);font-weight:600}
+.names input{font:inherit;font-size:1rem;color:var(--ink);background:var(--key);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;-webkit-user-select:text;user-select:text;min-width:0}
+.names input:focus{outline:2px solid var(--hit);outline-offset:1px}
+.setup-r{display:flex;gap:8px;flex-wrap:wrap}
+.setup-r .btn{flex:1 1 auto}
+
+.cover{position:fixed;inset:0;z-index:30;background:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;display:flex;align-items:center;justify-content:center;padding:24px}
+.cover .cv{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:420px}
+.cover button{display:flex;flex-direction:column;align-items:center;gap:12px;border:2px dashed var(--ink);background:var(--sheet);border-radius:22px;padding:30px 24px;max-width:420px;width:100%;cursor:pointer;color:var(--ink)}
+.cover h2{font-family:var(--hand);font-weight:400;font-size:2.1rem;margin:0;line-height:1.05;text-wrap:balance}
+.cover p{margin:0;color:var(--muted);line-height:1.4}
+.cover .tap{font-family:var(--hand);font-size:1.3rem;color:var(--hit)}
+
+.toast{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--paper);font-weight:600;font-size:.92rem;padding:9px 14px;border-radius:12px;max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+
+/* sheets */
+.help ul{margin:0;padding-left:1.1em;color:var(--muted);line-height:1.5}
+.help b{color:var(--ink)}
+.help h3{margin:6px 0 -6px;font-family:var(--hand);font-weight:400;font-size:1.35rem}
+.help .tiny{font-size:.8rem}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.stats4 b{display:block;font-family:var(--mono);font-size:1.3rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stats4 span{font-size:.72rem;color:var(--muted);line-height:1.2}
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.tbl th{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:3px 4px}
+.tbl td{padding:5px 4px;border-top:1px solid var(--line);vertical-align:top}
+.tbl td.n,.tbl th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tbl tr.me td{font-weight:600}
+#endBody{display:flex;flex-direction:column;gap:12px}
+#endBody p{margin:0}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hist li{display:flex;gap:8px;align-items:baseline;padding:7px 2px;border-top:1px solid var(--line);font-size:.9rem;line-height:1.4}
+.hist li:first-child{border-top:0}
+.hist .who{flex:none;width:5.2em;font-weight:600;color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .what{flex:1;min-width:0;color:var(--muted)}
+.hist .pts{flex:none;font-family:var(--mono);font-weight:600}
+.hist .bing{font-size:.7rem;font-weight:600;color:var(--br)}
+.shareText{font-family:var(--mono);white-space:pre-wrap;user-select:text;-webkit-user-select:text;background:var(--peer);border-radius:8px;padding:10px;font-size:.9rem}
+.next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.next b{font-family:var(--mono);font-size:1.2rem;font-weight:500;font-variant-numeric:tabular-nums}
+.bigscore{display:flex;justify-content:center;align-items:baseline;gap:10px;font-family:var(--mono)}
+.bigscore b{font-size:2.3rem;font-weight:600}
+.bigscore span{color:var(--muted)}
+.picker{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.picker button{position:relative;aspect-ratio:1;border:0;border-radius:9px;background:var(--tile);color:var(--tile-ink);font-family:var(--mono);font-weight:700;font-size:1.15rem;cursor:pointer;box-shadow:0 2px 0 var(--tile-edge);min-width:0;padding:0}
+.picker button:active{transform:translateY(1px)}
+.picker.un button{cursor:default;box-shadow:0 2px 0 var(--tile-edge);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:2px}
+.picker.un button small{font-family:var(--ui);font-size:.62rem;font-weight:600}
+.picker.un button.zero{opacity:.3}
+.picker.sw button[aria-pressed="true"]{transform:translateY(-3px);box-shadow:0 5px 0 var(--tile-edge),0 0 0 2.5px var(--hit)}
+.menu{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--key)}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:11px 14px;cursor:pointer;color:var(--ink)}
+.menu button:last-child{border-bottom:0}
+.menu button:active{background:var(--peer)}
+.menu button:disabled{opacity:.45;cursor:default}
+.menu b{font-weight:600}
+.menu small{color:var(--muted);font-size:.8rem}
+.legend{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.8rem;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:4px;position:relative}
+.legend svg{position:absolute;inset:1px;width:16px;height:16px;fill:currentColor}
+.endnav-wrap:empty{display:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="b-leaf" viewBox="0 0 24 24"><path d="M12 2.5C6.3 7.5 5.6 15 12 22c6.4-7 5.7-14.500 0-19.500z"/><path d="M12 8v13" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="b-leaf2" viewBox="0 0 24 24"><g transform="rotate(-38 12 23)"><path d="M12 5C7.800 8.800 7.300 14.200 12 21c4.700-6.800 4.200-12.200 0-16z"/><path d="M12 9v11" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.1" stroke-linecap="round"/></g><g transform="rotate(38 12 23)"><path d="M12 5C7.800 8.800 7.300 14.200 12 21c4.700-6.800 4.200-12.200 0-16z"/><path d="M12 9v11" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.1" stroke-linecap="round"/></g></symbol>
+    <symbol id="b-bloom" viewBox="0 0 24 24"><g><ellipse cx="12" cy="6.300" rx="3.700" ry="5"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(288 12 12)"/></g><circle cx="12" cy="12" r="2.300" fill="#fff" fill-opacity=".75"/></symbol>
+    <symbol id="b-bloom8" viewBox="0 0 24 24"><g><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(45 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(90 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(135 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(180 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(225 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(270 12 12)"/><ellipse cx="12" cy="5.500" rx="2.600" ry="5.200" transform="rotate(315 12 12)"/></g><circle cx="12" cy="12" r="2.600" fill="#fff" fill-opacity=".8"/></symbol>
+    <symbol id="b-star" viewBox="0 0 24 24"><g><ellipse cx="12" cy="6.300" rx="3.700" ry="5"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.300" rx="3.700" ry="5" transform="rotate(288 12 12)"/></g><polygon points="12,5.800 13.900,10.100 18.500,10.400 15,13.400 16.100,18 12,15.500 7.900,18 9,13.400 5.500,10.400 10.100,10.100" fill="#fff" fill-opacity=".9"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <header class="bar">
+    <a class="back" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="txt">Games</span></a>
+    <h1>Bramble</h1>
+    <div class="icons">
+      <button class="icon" id="histBtn" type="button" aria-label="Move history"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="2.6"/></svg></button>
+      <button class="icon" id="helpBtn" type="button" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 014.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></button>
+      <button class="icon" id="statsBtn" type="button" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="mode" id="mode" role="group" aria-label="Game mode">
+    <button type="button" data-m="cpu" aria-pressed="true">vs Computer</button>
+    <button type="button" data-m="pass" aria-pressed="false">Pass &amp; play</button>
+    <button type="button" data-m="daily" aria-pressed="false">Daily<small id="dayNo"></small></button>
+  </div>
+
+  <section id="setup" hidden></section>
+
+  <section id="play">
+    <div class="scores" id="scores"></div>
+    <div class="stage"><div class="board" id="board" role="grid" aria-label="Bramble board, 9 by 9" data-dir="h"></div></div>
+    <div class="line" id="line" aria-live="polite"></div>
+    <div class="rack" id="rack" role="group" aria-label="Your tiles"></div>
+    <div class="acts" id="acts"></div>
+    <div class="overbar" id="overbar" hidden></div>
+  </section>
+</div>
+
+<div class="cover" id="cover" hidden><div class="cv"><button type="button" id="coverBtn"><h2 id="coverH"></h2><p id="coverP"></p><span class="tap">Tap to show your tiles</span></button><a class="back" href="index.html">Back to all games</a></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<div class="sheet bs" id="helpSheet" hidden>
+  <div class="panel help" role="dialog" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">How to play Bramble</h2>
+    <p>A small word-tile game on a 9 × 9 garden bed. Build words with lettered tiles, score points, and finish with more than your opponent.</p>
+    <h3>Your turn</h3>
+    <ul>
+      <li>You hold <b>7 tiles</b>. <b>Drag</b> them onto the board, or <b>tap a tile, then tap a square</b>. Tap a placed tile (or drag it back) to take it off again. With a keyboard, pick a square, type letters (tap the square again to switch between across and down), <b>Backspace</b> to take one back and <b>Enter</b> to play.</li>
+      <li>Put all your tiles in <b>one row or one column</b>, with no gaps. The first word covers the <b>centre star</b>; after that, your tiles must join onto tiles already on the board.</li>
+      <li>Every word you make, along the line and across it, must be in the word list (at least two letters). A red outline and the reason tell you what's wrong when you press <b>Play</b>.</li>
+      <li>Before you play, the button shows what the move scores. After you play, you draw back up to 7.</li>
+    </ul>
+    <h3>Scoring</h3>
+    <ul>
+      <li>Each tile has a value (small corner number): common letters are 1, rare ones up to 10. A word scores the total of its tiles.</li>
+      <li><b>Leaf squares</b> count for the tile on them that turn: <b>2L</b> doubles it, <b>3L</b> triples it.</li>
+      <li><b>Blossom squares</b> count for the whole word: <b>2W</b> doubles it, <b>3W</b> triples it. If a word covers two, they multiply.</li>
+      <li>Squares only count for tiles you place that turn. Words you cross score too, with the same squares.</li>
+      <li>Play <b>all 7 tiles</b> in one turn for <b>+30</b>.</li>
+      <li>A <b>blank</b> tile is worth 0 but can be any letter you choose.</li>
+    </ul>
+    <div class="legend" aria-hidden="true">
+      <span><i class="p-DL"><svg><use href="#b-leaf"/></svg></i>2L</span><span><i class="p-TL"><svg><use href="#b-leaf2"/></svg></i>3L</span><span><i class="p-DW"><svg><use href="#b-bloom"/></svg></i>2W</span><span><i class="p-TW"><svg><use href="#b-bloom8"/></svg></i>3W</span>
+    </div>
+    <h3>Stuck?</h3>
+    <ul>
+      <li><b>Exchange</b> throws back any tiles for new ones (only while the bag still holds 7 or more) and ends your turn. <b>Pass</b> skips your turn. Both are in the buttons under the rack.</li>
+      <li><b>Show a play</b> (against the computer and in the daily) reveals one of the best plays on the board. It counts in your stats. The bag count above the board opens the <b>unseen tiles</b>: every tile you haven't seen yet, which is handy for planning.</li>
+    </ul>
+    <h3>The end</h3>
+    <ul>
+      <li>When the bag is empty and someone plays their last tile, the game ends: that player gains the value of everyone else's leftover tiles, and the others lose it.</li>
+      <li>If six turns in a row are passes or exchanges, the game also ends and everyone loses the value of their leftover tiles.</li>
+    </ul>
+    <h3>Modes</h3>
+    <ul>
+      <li><b>vs Computer</b>: four levels, Easy to Expert. <b>Pass &amp; play</b>: two players on one device; a cover screen hides each rack between turns.</li>
+      <li><b>Daily</b>: the same tiles for everyone, just you and <b>10 turns</b>, no exchanging and no penalty at the end. Try to beat the day's <b>target</b>, which is what the Expert computer scores from the same tiles. Words flagged <b>rare</b> are valid but uncommon.</li>
+    </ul>
+    <p class="tiny">Word list: SCOWL by Kevin Atkinson. Word frequency data: wordfreq by Robyn Speer (CC BY-SA 4.0).</p>
+    <button class="btn primary" id="helpClose" type="button">Got it</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="blankSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="blankTitle">
+    <h2 id="blankTitle">Which letter?</h2>
+    <p>The blank is worth 0 points and can be any letter.</p>
+    <div class="picker" id="blankPick"></div>
+    <button class="btn" id="blankCancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="exSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="exTitle">
+    <h2 id="exTitle">Exchange tiles</h2>
+    <p id="exNote">Tap the tiles to throw back. You draw the same number and your turn ends.</p>
+    <div class="picker sw" id="exPick" style="grid-template-columns:repeat(7,minmax(0,1fr))"></div>
+    <div class="row"><button class="btn primary" id="exGo" type="button">Exchange</button><button class="btn" id="exCancel" type="button">Cancel</button></div>
+  </div>
+</div>
+
+<div class="sheet bs" id="moreSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="moreTitle">
+    <h2 id="moreTitle">More</h2>
+    <div class="menu" id="moreMenu"></div>
+    <button class="btn" id="moreClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="confirmSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="confTitle">
+    <h2 id="confTitle"></h2>
+    <p id="confText"></p>
+    <div class="row"><button class="btn primary" id="confGo" type="button">OK</button><button class="btn" id="confNo" type="button">Cancel</button></div>
+  </div>
+</div>
+
+<div class="sheet bs" id="unSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="unTitle">
+    <h2 id="unTitle">Unseen tiles</h2>
+    <p id="unNote"></p>
+    <div class="picker un" id="unPick"></div>
+    <button class="btn" id="unClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="histSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="histTitle">
+    <h2 id="histTitle">Moves so far</h2>
+    <ol class="hist" id="histList"></ol>
+    <button class="btn" id="histClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="statsSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Statistics</h2>
+    <div class="label">Daily</div>
+    <div class="stats4" id="stDaily"></div>
+    <div class="label">Against the computer</div>
+    <table class="tbl" id="stCpu"></table>
+    <div class="stats4" id="stMore"></div>
+    <button class="btn" id="statsClose" type="button">Close</button>
+  </div>
+</div>
+
+<div class="sheet bs" id="endSheet" hidden>
+  <div class="panel" role="dialog" aria-labelledby="endTitle">
+    <h2 id="endTitle"></h2>
+    <p id="endSub"></p>
+    <div id="endBody"></div>
+    <div id="endBtns"></div>
+    <div class="endnav-wrap" id="endNav"></div>
+  </div>
+</div>
+
+<script src="bramble-words.js"></script>
+<script src="bramble-core.js"></script>
+<script src="game-nav.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} },
+};
+const B = window.Bramble, N = 9, CENTER = B.CENTER, RACK = B.RACK;
+const EPOCH = new Date(2026, 10, 27); // No. 1 = 27 Nov 2026
+const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
+const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const KEYS = { cpu: 'bramble-game-cpu', pass: 'bramble-game-pass', daily: 'bramble-daily' };
+const LEVEL_NOTE = {
+  easy: 'Everyday words and relaxed scores. Good for learning.',
+  casual: 'Decent plays, but it often misses the best one.',
+  strong: 'Finds high-scoring plays and uses the premium squares.',
+  expert: 'Plans its leftover tiles as well as the score. The toughest.',
+};
+const PREM_NAME = { DL: 'double letter', TL: 'triple letter', DW: 'double word', TW: 'triple word' };
+const PREM_LAB = { DL: '2L', TL: '3L', DW: '2W', TW: '3W' };
+const PREM_SYM = { DL: 'b-leaf', TL: 'b-leaf2', DW: 'b-bloom', TW: 'b-bloom8' };
+
+// ---------- state ----------
+let mode = store.get('bramble-mode', 'cpu'); if (!KEYS[mode]) mode = 'cpu';
+{ const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
+let level = store.get('bramble-level', 'casual'); if (!B.LEVELS.includes(level)) level = 'casual';
+let names = store.get('bramble-names', ['Player 1', 'Player 2']);
+let G = null;            // the game in this mode: {mode, S, level, human, names, hints, orders, pend, day, done, recorded, target}
+let R = [];              // rack items, in display order: {ch, at (board index or -1), letter (for a blank), seq}
+let selItem = null;      // rack tile selected for tap-tap placing
+let cur = -1, dir = 'h'; // keyboard cursor square and direction
+let err = null;          // result of a failed Play press
+let hint = null, hintList = null;
+let thinking = false, busy = false, covered = false, tok = 0, seqN = 0, anim = null, clickGuard = false, preview = null;
+let targets = store.get('bramble-targets', {});
+
+const stats = () => { const s = store.get('bramble-stats', null) || {}; return Object.assign({ v: 1, cpu: {}, best: 0, bestMove: null, hints: 0, pass: { games: 0 }, daily: { played: 0, won: 0, cur: 0, max: 0, last: null, best: 0 } }, s); };
+const saveStats = s => store.set('bramble-stats', s);
+
+// ---------- workers ----------
+let worker = null, tworker = null, wid = 0; const waiting = {};
+function mkWorker(){
+  try{
+    const w = new Worker('bramble-worker.js');
+    w.onmessage = e => { const m = e.data, p = waiting[m.id]; if (!p) return; delete waiting[m.id]; m.error ? p.rej(new Error(m.error)) : p.res(m); };
+    w.onerror = () => { for (const id in waiting){ waiting[id].rej(new Error('worker')); delete waiting[id]; } };
+    return w;
+  }catch(e){ return null; }
+}
+function ask(w, msg){
+  return new Promise((res, rej) => {
+    if (!w) return rej(new Error('no worker'));
+    const id = ++wid; waiting[id] = { res, rej }; w.postMessage(Object.assign({ id }, msg));
+  });
+}
+worker = mkWorker();
+// The computer's move; falls back to thinking on the main thread if workers aren't available.
+function computerMove(S, lv){
+  return ask(worker, { state: S, level: lv, seed: (Math.random() * 4294967296) >>> 0 }).then(m => m.move).catch(() => new Promise(res => setTimeout(() => res(B.chooseMove(S, lv)), 30)));
+}
+
+// ---------- the daily target (what the computer scores from the same tiles), worked out on its own worker ----------
+const targetWait = {};
+function ensureTarget(day){
+  const t = targets['d' + day]; if (t) return Promise.resolve(t);
+  if (targetWait[day]) return targetWait[day];
+  if (!tworker){
+    try{
+      tworker = new Worker('bramble-daily-worker.js');
+      tworker.onmessage = e => { const m = e.data, p = waiting[m.id]; if (!p) return; delete waiting[m.id]; m.error ? p.rej(new Error(m.error)) : p.res(m); };
+      tworker.onerror = () => { tworker = null; };
+    }catch(e){ tworker = null; }
+  }
+  const run = () => ask(tworker, { day }).catch(() => new Promise(res => setTimeout(() => res(B.dailyTarget(day)), 50)));
+  return (targetWait[day] = run().then(r => {
+    const t = { target: r.target, plays: r.plays.map(p => ({ type: p.type, score: p.score, main: p.main })) };
+    targets['d' + day] = t;
+    const keep = Object.keys(targets).sort().slice(-30); const o = {}; keep.forEach(k => o[k] = targets[k]); targets = o;
+    store.set('bramble-targets', targets);
+    return t;
+  }).finally(() => { delete targetWait[day]; }));
+}
+
+// ---------- helpers on the game ----------
+const me = () => !G ? 0 : G.mode === 'cpu' ? G.human : G.mode === 'pass' ? G.S.turn : 0;
+const pname = p => (G && G.names[p]) || 'Player';
+const isMyTurn = () => !!G && !G.S.over && (G.mode !== 'cpu' || G.S.turn === G.human);
+const anySheet = () => [...document.querySelectorAll('.sheet.bs')].some(s => !s.hidden) || (window.GameNav && GameNav.isOpen) || (window.PlayTime && document.querySelector('.sheet.pt:not([hidden])'));
+const canAct = () => !!G && !G.S.over && isMyTurn() && !thinking && !busy && !covered;
+const pendIndex = i => R.findIndex(x => x.at === i);
+const isPending = i => pendIndex(i) >= 0;
+function placements(){ return R.filter(x => x.at >= 0 && (x.ch !== '?' || x.letter)).map(x => ({ r: (x.at / N) | 0, c: x.at % N, ch: x.ch === '?' ? x.letter.toLowerCase() : x.ch })); }
+const tv = ch => B.tileValue(ch);
+let toastT = 0;
+function toast(t, ms = 1600){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, ms); }
+
+// ---------- saving ----------
+function save(){
+  if (!G) return;
+  const pend = []; R.forEach((x, i) => { if (x.at >= 0) pend.push({ i, at: x.at, letter: x.letter }); });
+  G.pend = pend; G.orders[me()] = R.map(x => x.ch);
+  store.set(KEYS[G.mode], G);
+}
+function discardSave(m){ store.del(KEYS[m]); }
+
+// ---------- starting and loading games ----------
+function freshOrders(S){ return S.racks.map(() => []); }
+function startCpu(lv){
+  level = lv; store.set('bramble-level', lv);
+  const human = Math.random() < .5 ? 0 : 1, S = B.newGame({ players: 2 });
+  G = { v: 1, mode: 'cpu', S, level: lv, human, names: human === 0 ? ['You', 'Computer'] : ['Computer', 'You'], hints: 0, orders: freshOrders(S), pend: [], recorded: false };
+  afterLoad(true);
+}
+function startPass(nm){
+  names = nm; store.set('bramble-names', names);
+  const S = B.newGame({ players: 2 });
+  G = { v: 1, mode: 'pass', S, names: nm.slice(), hints: 0, orders: freshOrders(S), pend: [], recorded: false };
+  afterLoad(true);
+}
+function startDaily(day){
+  const S = B.newDailyGame(day);
+  G = { v: 1, mode: 'daily', S, day, names: ['You'], hints: 0, orders: freshOrders(S), pend: [], done: false, recorded: false };
+  afterLoad(true);
+}
+function loadGame(m){
+  const raw = store.get(KEYS[m], null); G = null;
+  if (raw && raw.S && raw.mode === m){
+    try{
+      const S = B.deserialize(raw.S);
+      if (m === 'daily' && raw.day !== dayIndex()) throw 0;       // yesterday's daily is gone
+      if (m !== 'daily' && S.over) throw 0;                         // a finished game is not resumed
+      G = Object.assign(raw, { S }); G.orders = G.orders || freshOrders(S); G.hints = G.hints || 0;
+      if (m === 'cpu'){ if (!B.LEVELS.includes(G.level)) G.level = 'casual'; }
+    }catch(e){ G = null; if (m !== 'daily') discardSave(m); }
+  }
+  if (!G && m === 'daily') startDaily(dayIndex()); else afterLoad(false);
+}
+function afterLoad(isNew){
+  resetTransient(); tok++;
+  if (!G){ covered = false; thinking = false; render(); return; }
+  buildRack();
+  if (!isNew && G.pend && G.pend.length && isMyTurn()){
+    G.pend.forEach(p => { const it = R[p.i]; if (it && it.at < 0 && !G.S.board[p.at] && !isPending(p.at) && (it.ch !== '?' || p.letter)){ it.at = p.at; it.letter = p.letter || ''; it.seq = ++seqN; } });
+  }
+  { const pl = placements(); preview = pl.length && !G.S.over ? B.validateMove(G.S, pl) : null; }
+  covered = G.mode === 'pass' && !isNew && !G.S.over;
+  thinking = false;
+  if (G.mode === 'daily') ensureTarget(G.day).then(() => { if (G && G.mode === 'daily') { drawScores(); if (G.S.over && !$('endSheet').hidden) openEnd(); } });
+  save(); render();
+  if (G.S.over){ if (G.mode === 'daily'){ if (!G.recorded) finishGame(false); else if (!G.final) finalizeDaily(false); } return; }
+  if (G.mode === 'cpu' && G.S.turn !== G.human) startThinking();
+}
+function resetTransient(){ selItem = null; cur = -1; err = null; hint = null; hintList = null; preview = null; anim = null; busy = false; }
+function buildRack(){
+  const p = me(), tiles = G.S.racks[p].slice(), out = [];
+  for (const ch of (G.orders[p] || [])){ const i = tiles.indexOf(ch); if (i >= 0){ tiles.splice(i, 1); out.push({ ch, at: -1, letter: '', seq: 0 }); } }
+  for (const ch of tiles) out.push({ ch, at: -1, letter: '', seq: 0 });
+  R = out;
+}
+
+// ---------- changing the pending placement ----------
+function changed(keepHint){
+  err = null; preview = null; if (!keepHint) hint = null;
+  const pl = placements(); if (pl.length) preview = B.validateMove(G.S, pl);
+  save(); drawBoard(); drawRack(); drawLine(); drawActs();
+}
+function place(it, i){
+  if (it.at >= 0 || G.S.board[i] || isPending(i)) return false;
+  it.at = i; it.letter = ''; it.seq = ++seqN; selItem = null;
+  if (it.ch === '?'){ askBlank(it); drawBoard(); drawRack(); return true; }
+  changed(); return true;
+}
+function unplace(it){ it.at = -1; it.letter = ''; changed(); }
+function recall(){ R.forEach(x => { x.at = -1; x.letter = ''; }); selItem = null; changed(); }
+function shuffleRack(){
+  if (!canAct()) return;
+  for (let i = R.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [R[i], R[j]] = [R[j], R[i]]; }
+  save(); drawRack(); drawActs();
+}
+function moveItem(it, idx){ const k = R.indexOf(it); R.splice(k, 1); R.splice(idx > k ? idx - 1 : idx, 0, it); }
+function nextEmpty(i, d){ // the next square at or after i (along d) with no tile, or -1
+  const step = d === 'h' ? 1 : N;
+  while (i >= 0 && i < N * N){
+    if (!G.S.board[i] && !isPending(i)) return i;
+    const nx = i + step; if (d === 'h' ? (nx % N === 0) : nx >= N * N) return -1; i = nx;
+  }
+  return -1;
+}
+
+// blank tile: choose a letter
+let blankFor = null;
+function askBlank(it){
+  blankFor = it;
+  $('blankPick').innerHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(L => `<button type="button" data-l="${L}" aria-label="${L}">${L}</button>`).join('');
+  openSheet('blankSheet');
+}
+$('blankPick').addEventListener('click', e => { const b = e.target.closest('button[data-l]'); if (!b || !blankFor) return; const it = blankFor; blankFor = null; it.letter = b.dataset.l; closeSheets(true); changed(); });
+function cancelBlank(){ if (blankFor){ const it = blankFor; blankFor = null; it.at = -1; it.letter = ''; closeSheets(true); changed(); } else closeSheets(); }
+$('blankCancel').addEventListener('click', cancelBlank);
+
+// ---------- playing ----------
+function press(){
+  if (!canAct()) return;
+  const pl = placements();
+  if (!pl.length){ toast('Place some tiles first'); return; }
+  const v = B.validateMove(G.S, pl);
+  if (!v.ok){
+    const cells = new Set();
+    for (const w of v.words) if (v.badWords.includes(w.word)) w.cells.forEach(([r, c]) => cells.add(r * N + c));
+    err = { reason: v.reason, cells, all: !cells.size };
+    drawBoard(); drawLine();
+    const b = $('acts').querySelector('.play'); if (b && !reduced){ b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+    return;
+  }
+  const r = B.applyMove(G.S, pl);
+  if (!r.ok){ err = { reason: r.reason, cells: new Set(), all: true }; drawBoard(); drawLine(); return; }
+  const p = me(), words = r.words;
+  const s = stats();
+  if (G.mode !== 'pass' && r.score > ((s.bestMove && s.bestMove.score) || 0)){ s.bestMove = { score: r.score, word: words[0].word }; saveStats(s); }
+  G.orders[p] = R.filter(x => x.at < 0).map(x => x.ch);
+  G.S = r.state; selItem = null; cur = -1; err = null; hint = null; hintList = null; preview = null;
+  if (G.mode === 'daily' || G.mode === 'cpu') toastScore(r);
+  proceed();
+}
+function toastScore(r){ if (r.bonus) toast(`All 7 tiles! +${r.bonus} bonus`, 1800); }
+function proceed(){
+  tok++; thinking = false;
+  save();
+  if (G.S.over){ buildRack(); render(); finishGame(true); return; }
+  covered = G.mode === 'pass';
+  buildRack(); render();
+  if (G.mode === 'cpu' && G.S.turn !== G.human) startThinking();
+}
+function startThinking(){
+  thinking = true; const my = ++tok, t0 = performance.now();
+  drawScores(); drawLine(); drawActs();
+  computerMove(G.S, G.level).then(mv => {
+    const wait = Math.max(0, 600 - (performance.now() - t0));
+    setTimeout(() => { if (my === tok && G) applyComputer(mv); }, wait);
+  });
+}
+function applyComputer(mv){
+  let r = B.applyAny(G.S, mv);
+  if (!r.ok){ r = B.pass(G.S); mv = { type: 'pass' }; }
+  const next = r.state, finish = () => { anim = null; busy = false; thinking = false; G.S = next; proceed(); };
+  if (mv.type === 'play' && !reduced){
+    anim = {}; mv.placements.forEach((p, k) => { anim[p.r * N + p.c] = { ch: p.ch, delay: k * 170 }; });
+    busy = true; drawBoard(); drawLine();
+    setTimeout(finish, mv.placements.length * 170 + 420);
+  } else finish();
+}
+
+// hints
+async function showHint(){
+  if (!G || G.mode === 'pass' || !canAct()) return;
+  closeSheets(true);
+  try{
+    if (!hintList || hintList.turn !== G.S.turns){
+      const m = await ask(worker, { type: 'hint', state: G.S, count: 5 });
+      hintList = { turn: G.S.turns, moves: m.moves || [], i: -1 };
+    }
+  }catch(e){
+    const mv = B.allMoves(G.S).sort((a, b) => b.score - a.score).slice(0, 5);
+    hintList = { turn: G.S.turns, moves: mv, i: -1 };
+  }
+  const L = hintList;
+  if (!L.moves.length){ toast(G.mode === 'daily' ? 'No plays here: try passing' : 'No plays here: try exchanging or passing', 2200); return; }
+  recallSilent();
+  L.i = L.i < 0 ? Math.floor(Math.random() * Math.min(3, L.moves.length)) : (L.i + 1) % L.moves.length;
+  hint = L.moves[L.i]; G.hints++;
+  const s = stats(); s.hints++; saveStats(s);
+  save(); drawBoard(); drawLine(); drawActs();
+}
+function recallSilent(){ R.forEach(x => { x.at = -1; x.letter = ''; }); err = null; preview = null; }
+function placeHint(){
+  if (!hint || !canAct()) return;
+  recallSilent();
+  for (const p of hint.placements){
+    const blank = p.ch >= 'a', it = R.find(x => x.at < 0 && x.ch === (blank ? '?' : p.ch));
+    if (it){ it.at = p.r * N + p.c; it.letter = blank ? p.ch.toUpperCase() : ''; it.seq = ++seqN; }
+  }
+  hint = null; changed();
+}
+
+// exchange and pass
+let exPicked = new Set();
+function openExchange(){
+  if (!canAct() || G.S.daily) return;
+  if (G.S.bag.length < RACK){ toast('The bag has fewer than 7 tiles, so you can\'t exchange', 2400); return; }
+  recallSilent(); exPicked = new Set(); drawBoard(); drawRack();
+  $('exPick').innerHTML = R.map((x, k) => `<button type="button" data-k="${k}" aria-pressed="false" aria-label="${x.ch === '?' ? 'Blank' : x.ch}">${x.ch === '?' ? '?' : x.ch}</button>`).join('');
+  syncEx(); openSheet('exSheet');
+}
+function syncEx(){
+  [...$('exPick').children].forEach(b => b.setAttribute('aria-pressed', exPicked.has(+b.dataset.k)));
+  $('exGo').disabled = !exPicked.size; $('exGo').textContent = exPicked.size ? `Exchange ${exPicked.size} tile${exPicked.size > 1 ? 's' : ''}` : 'Exchange';
+}
+$('exPick').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (!b) return; const k = +b.dataset.k; exPicked.has(k) ? exPicked.delete(k) : exPicked.add(k); syncEx(); });
+$('exCancel').addEventListener('click', () => closeSheets());
+$('exGo').addEventListener('click', () => {
+  if (!exPicked.size) return;
+  const tiles = [...exPicked].map(k => R[k].ch), p = me();
+  const r = B.exchange(G.S, tiles); if (!r.ok){ toast(r.reason); return; }
+  G.orders[p] = R.filter((x, k) => !exPicked.has(k)).map(x => x.ch);
+  closeSheets(true); G.S = r.state; selItem = null; hint = null; hintList = null; cur = -1;
+  toast(`Exchanged ${tiles.length} tile${tiles.length > 1 ? 's' : ''}`);
+  proceed();
+});
+function doPass(){
+  if (!canAct()) return;
+  if (G.S.daily && G.S.passes >= 5){ toast('You can\'t pass again: six scoreless turns in a row end the game'); return; }
+  recallSilent();
+  const r = B.pass(G.S); if (!r.ok) return;
+  G.orders[me()] = R.map(x => x.ch);
+  G.S = r.state; selItem = null; hint = null; hintList = null; cur = -1;
+  toast('You passed');
+  proceed();
+}
+
+// ---------- sheets ----------
+function openSheet(id){ document.querySelectorAll('.sheet.bs').forEach(s => s.hidden = s.id !== id); }
+function closeSheets(silent){ document.querySelectorAll('.sheet.bs').forEach(s => s.hidden = true); }
+document.querySelectorAll('.sheet.bs').forEach(s => s.addEventListener('click', e => { if (e.target === s){ s.id === 'blankSheet' ? cancelBlank() : closeSheets(); } }));
+['helpClose', 'moreClose', 'unClose', 'histClose', 'statsClose'].forEach(id => $(id).addEventListener('click', () => closeSheets()));
+function confirmBox(title, text, ok, fn){
+  $('confTitle').textContent = title; $('confText').textContent = text; $('confGo').textContent = ok;
+  $('confGo').onclick = () => { closeSheets(); fn(); }; openSheet('confirmSheet');
+}
+$('confNo').addEventListener('click', () => closeSheets());
+
+function openMore(){
+  if (!G) return;
+  const hintOK = G.mode !== 'pass', canPass = canAct();
+  $('moreMenu').innerHTML = `
+    <button type="button" data-a="pass"${canPass ? '' : ' disabled'}><b>Pass</b><small>Skip your turn and score nothing.</small></button>
+    ${hintOK ? `<button type="button" data-a="hint"${canPass ? '' : ' disabled'}><b>Show a play</b><small>Reveals one of the best plays. Counts in your stats.</small></button>` : ''}
+    ${G.mode !== 'daily' ? `<button type="button" data-a="ex"${canPass && G.S.bag.length >= RACK ? '' : ' disabled'}><b>Exchange tiles</b><small>${G.S.bag.length >= RACK ? 'Swap tiles for new ones and end your turn.' : 'Not with fewer than 7 tiles in the bag.'}</small></button>` : ''}
+    <button type="button" data-a="un"><b>Unseen tiles</b><small>Every tile you haven't seen yet.</small></button>
+    <button type="button" data-a="hist"><b>Move history</b><small>Words and scores so far.</small></button>
+    <button type="button" data-a="help"><b>How to play</b><small>Rules, scoring and the word list.</small></button>`;
+  openSheet('moreSheet');
+}
+$('moreMenu').addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]'); if (!b || b.disabled) return; const a = b.dataset.a;
+  if (a === 'pass') confirmBox('Pass this turn?', 'You score nothing. Six scoreless turns in a row (passes or exchanges) end the game.', 'Pass', doPass);
+  else if (a === 'hint') showHint();
+  else if (a === 'ex') openExchange();
+  else if (a === 'un') openUnseen();
+  else if (a === 'hist') openHistory();
+  else if (a === 'help') openSheet('helpSheet');
+});
+
+function openUnseen(){
+  if (!G || covered) return;
+  const un = B.unseenTiles(G.S, me()), cnt = {}; un.forEach(t => cnt[t] = (cnt[t] || 0) + 1);
+  const bag = G.S.bag.length, opp = un.length - bag;
+  $('unNote').textContent = G.S.players > 1 ? `${un.length} tiles not on the board or your rack: ${bag} in the bag and ${opp} on ${G.mode === 'cpu' ? 'the computer\'s' : 'the other'} rack.`
+    : `${un.length} tiles not on the board or your rack, all still in the bag (${bag}).`;
+  const ls = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ?'.split('');
+  $('unPick').innerHTML = ls.map(L => `<button type="button" class="${cnt[L] ? '' : 'zero'}" tabindex="-1" aria-label="${L === '?' ? 'Blank' : L}: ${cnt[L] || 0} unseen">${L}<small>×${cnt[L] || 0}</small></button>`).join('');
+  openSheet('unSheet');
+}
+const wordChip = w => `<span class="w">${esc(w)}${B.dict().isRare(w) ? '<em class="rare">rare</em>' : ''}</span>`;
+function openHistory(){
+  if (!G) return;
+  const H = G.S.history;
+  $('histList').innerHTML = H.length ? H.map((h, i) => {
+    const what = h.type === 'play' ? h.words.map(wordChip).join('') + (h.placements.length === RACK ? ' <span class="bing">all 7 tiles</span>' : '') : h.type === 'exchange' ? `exchanged ${h.tiles} tile${h.tiles > 1 ? 's' : ''}` : 'passed';
+    return `<li><span class="who">${esc(pname(h.p))}</span><span class="what">${what}</span><span class="pts">${h.type === 'play' ? '+' + h.score : ''}</span></li>`;
+  }).reverse().join('') : '<li><span class="what">No moves yet.</span></li>';
+  openSheet('histSheet');
+}
+$('histBtn').addEventListener('click', openHistory);
+$('helpBtn').addEventListener('click', () => openSheet('helpSheet'));
+$('statsBtn').addEventListener('click', openStats);
+
+// ---------- drawing ----------
+const tileHTML = (ch, cls = '', extra = '') => {
+  const blank = ch >= 'a', L = ch.toUpperCase();
+  return `<span class="t${blank ? ' blank' : ''}${cls ? ' ' + cls : ''}"${extra}>${L}${blank ? '' : `<i>${tv(L)}</i>`}</span>`;
+};
+const cellCache = [];
+function buildBoard(){
+  const bd = $('board'); let html = '';
+  for (let r = 0; r < N; r++){
+    html += '<div class="row" role="row">';
+    for (let c = 0; c < N; c++){
+      const i = r * N + c, p = B.premium(r, c), centre = i === CENTER;
+      html += `<button type="button" class="sq${p ? ' p-' + p : ''}${centre ? ' centre' : ''}" role="gridcell" data-i="${i}" tabindex="-1"></button>`;
+    }
+    html += '</div>';
+  }
+  bd.innerHTML = html;
+}
+function drawBoard(){
+  if (!G){ return; }
+  const S = G.S, cells = $('board').querySelectorAll('.sq'), hist = S.history, lastH = hist[hist.length - 1];
+  const lastSet = new Set(lastH && lastH.type === 'play' ? lastH.placements.map(p => p.r * N + p.c) : []);
+  const ghost = {}; if (hint && canAct()) hint.placements.forEach(p => { ghost[p.r * N + p.c] = p.ch; });
+  $('board').dataset.dir = dir;
+  for (let i = 0; i < N * N; i++){
+    const el = cells[i], r = (i / N) | 0, c = i % N, p = B.premium(r, c), centre = i === CENTER;
+    const ch = S.board[i], k = pendIndex(i), an = anim && anim[i], g = ghost[i];
+    const isBad = err && (err.all ? k >= 0 : err.cells.has(i));
+    let html = '', label = `Row ${r + 1}, column ${c + 1}`;
+    if (p) label += `, ${PREM_NAME[p]}`; if (centre) label += ', centre star';
+    if (ch){ html = tileHTML(ch, (lastSet.has(i) ? 'last ' : '') + (isBad ? 'bad' : '')); label += `, ${ch >= 'a' ? 'blank tile as ' : 'tile '}${ch.toUpperCase()}${ch >= 'a' ? '' : ', worth ' + tv(ch)}`; }
+    else if (an){ html = tileHTML(an.ch, `last land`, ` style="animation-delay:${an.delay}ms"`); label += `, tile ${an.ch.toUpperCase()}`; }
+    else if (k >= 0){
+      const it = R[k], shown = it.ch === '?' ? (it.letter || '?') : it.ch;
+      html = `<span class="t pend${it.ch === '?' ? ' blank' : ''}${isBad ? ' bad' : ''}" data-k="${k}">${shown}${it.ch === '?' ? '' : `<i>${tv(it.ch)}</i>`}</span>`;
+      label += `, your tile ${it.ch === '?' ? 'blank as ' + (it.letter || '?') : it.ch}, tap to take back`;
+    } else {
+      if (g){ html += tileHTML(g, 'ghost'); label += `, suggested tile ${g.toUpperCase()}`; }
+      else { if (p) html += `<svg class="g" aria-hidden="true"><use href="#${centre ? 'b-star' : PREM_SYM[p]}"/></svg>`; if (p) html += `<span class="lab" aria-hidden="true">${PREM_LAB[p]}</span>`; label += ', empty'; }
+    }
+    const cls = `sq${p ? ' p-' + p : ''}${centre ? ' centre' : ''}${i === cur ? ' cur' : ''}`;
+    const key = cls + '|' + label + '|' + html;
+    if (cellCache[i] !== key){ cellCache[i] = key; el.className = cls; el.innerHTML = html; el.setAttribute('aria-label', label); }
+    el.setAttribute('aria-selected', i === cur ? 'true' : 'false');
+    el.tabIndex = (cur >= 0 ? i === cur : i === CENTER) ? 0 : -1;
+  }
+}
+function drawRack(){
+  const rk = $('rack'); if (!G){ rk.innerHTML = ''; return; }
+  rk.classList.toggle('cov', covered);
+  if (covered){ rk.innerHTML = Array.from({ length: RACK }, () => '<div class="slot" aria-hidden="true"><span class="t"></span></div>').join(''); rk.setAttribute('aria-label', 'Tiles hidden'); return; }
+  rk.setAttribute('aria-label', 'Your tiles');
+  rk.innerHTML = R.map((it, k) => {
+    if (it.at >= 0 && (it.ch !== '?' || it.letter || blankFor === it)) return `<div class="slot empty" aria-hidden="true"></div>`;
+    const blank = it.ch === '?', sel = selItem === it;
+    return `<button type="button" class="slot" data-k="${k}" aria-pressed="${sel}" aria-label="${blank ? 'Blank tile, worth 0' : 'Tile ' + it.ch + ', worth ' + tv(it.ch)}${sel ? ', selected' : ''}"><span class="t${blank ? ' blank' : ''}${sel ? ' sel' : ''}">${blank ? '?' : it.ch}${blank ? '' : `<i>${tv(it.ch)}</i>`}</span></button>`;
+  }).join('');
+}
+function drawScores(){
+  const sc = $('scores'); if (!G){ sc.innerHTML = ''; return; }
+  const S = G.S, cp = G.mode === 'cpu' ? 1 - G.human : -1;
+  const chip = (p) => `<div class="chip${S.turn === p && !S.over ? ' on' : ''}${thinking && p === cp ? ' think' : ''}" aria-label="${esc(pname(p))}: ${S.scores[p]} points"><span class="nm">${esc(pname(p))}</span><b>${S.scores[p]}</b></div>`;
+  let html;
+  const bag = `<button type="button" class="chip" id="bagChip" aria-label="${S.bag.length} tiles in the bag. Show unseen tiles"><span class="nm">Bag</span><b>${S.bag.length}</b></button>`;
+  if (G.mode === 'daily'){
+    const t = targets['d' + G.day];
+    html = `<div class="chip on" aria-label="Your score: ${S.scores[0]}"><span class="nm">You</span><b>${S.scores[0]}</b></div>
+      <div class="chip" aria-label="Target: ${t ? t.target : 'working it out'}"><span class="nm">Target</span><b>${t ? t.target : '…'}</b></div>
+      <div class="chip" aria-label="Turn ${Math.min(S.turns + 1, S.turnLimit)} of ${S.turnLimit}"><span class="nm">Turn</span><b>${Math.min(S.turns + 1, S.turnLimit)}/${S.turnLimit}</b></div>${bag}`;
+  } else {
+    const order = G.mode === 'cpu' ? [G.human, 1 - G.human] : [0, 1];
+    html = order.map(chip).join('') + bag;
+  }
+  sc.innerHTML = html;
+}
+$('scores').addEventListener('click', e => { if (e.target.closest('#bagChip')) openUnseen(); });
+function lastMoveText(){
+  const H = G.S.history, h = H[H.length - 1]; if (!h) return '';
+  const who = G.mode === 'daily' ? 'You' : esc(pname(h.p));
+  return h.type === 'play' ? `${who} played ${h.words.slice(0, 3).map(wordChip).join('')} for <b>${h.score}</b>` : h.type === 'exchange' ? `${who} exchanged ${h.tiles} tile${h.tiles > 1 ? 's' : ''}` : `${who} passed`;
+}
+function drawLine(){
+  const el = $('line'); if (!G){ el.innerHTML = ''; return; }
+  const S = G.S; let html = '';
+  if (S.over) html = '<span>Game over</span>';
+  else if (thinking) html = `<span class="think">${esc(pname(S.turn))} is thinking<i></i><i></i><i></i></span>`;
+  else if (busy) html = `<span>${esc(pname(S.turn))} is playing…</span>`;
+  else if (covered) html = '<span>Pass the device to the next player.</span>';
+  else if (hint){ html = `<span>Hint: ${wordChip(hint.main)} for <b>${hint.score}</b></span><button class="btn small" type="button" id="placeHint">Place it</button>`; }
+  else {
+    const pl = placements();
+    if (err) html = `<span class="bad" role="alert">${esc(err.reason)}</span>`;
+    else if (pl.length && preview && preview.ok) html = `<span>Play <b>${preview.score}</b> · ${preview.words.map(w => wordChip(w.word)).join('')}${preview.bonus ? `<b>+${preview.bonus} for all 7 tiles</b>` : ''}</span>`;
+    else if (pl.length) html = `<span>${pl.length} tile${pl.length > 1 ? 's' : ''} placed</span>`;
+    else if (!S.history.length) html = `<span>${G.mode === 'daily' ? `Turn 1 of ${S.turnLimit}. ` : ''}Cover the centre star with your first word.</span>`;
+    else html = `<span>${lastMoveText()}</span>`;
+  }
+  el.innerHTML = html;
+}
+$('line').addEventListener('click', e => { if (e.target.closest('#placeHint')) placeHint(); });
+const ICON = {
+  shuffle: '<svg viewBox="0 0 24 24"><path d="M3 7h3.500c3 0 4.500 2 6 5s3 5 6 5H21M3 17h3.500c1.500 0 2.800-.6 3.800-1.800M21 7h-2.500c-1.500 0-2.800.6-3.800 1.800M18.500 4L21 7l-2.500 3M18.500 14l2.500 3-2.500 3"/></svg>',
+  recall: '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.500a5.500 5.500 0 010 11H11"/></svg>',
+  swap: '<svg viewBox="0 0 24 24"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.400"/><circle cx="12" cy="12" r="1.400"/><circle cx="19" cy="12" r="1.400"/></svg>',
+  hint: '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.500 10.900c.6.500 1 1.200 1 2.100h5c0-.9.400-1.600 1-2.100A6 6 0 0012 3z"/></svg>',
+};
+function drawActs(){
+  const el = $('acts'), ob = $('overbar'); if (!G){ el.innerHTML = ''; return; }
+  const over = G.S.over; el.hidden = over; ob.hidden = !over;
+  if (over){
+    ob.innerHTML = `<button class="btn primary" type="button" id="obRes">Results</button><button class="btn" type="button" id="obNew">${G.mode === 'daily' ? 'Stats' : 'New game'}</button>`;
+    return;
+  }
+  const ok = canAct(), n = placements().length, label = preview && preview.ok ? `Play ${preview.score}` : 'Play';
+  const swap = G.mode === 'daily'
+    ? `<button class="act" type="button" id="aHint" aria-label="Show a play (a hint)"${ok ? '' : ' disabled'}>${ICON.hint}<span>Hint</span></button>`
+    : `<button class="act" type="button" id="aEx" aria-label="Exchange tiles"${ok && G.S.bag.length >= RACK ? '' : ' disabled'}>${ICON.swap}<span>Exchange</span></button>`;
+  el.innerHTML = `<button class="act" type="button" id="aShuf" aria-label="Shuffle your tiles"${ok ? '' : ' disabled'}>${ICON.shuffle}<span>Shuffle</span></button>
+    <button class="act" type="button" id="aRec" aria-label="Take all tiles back"${ok && R.some(x => x.at >= 0) ? '' : ' disabled'}>${ICON.recall}<span>Recall</span></button>
+    ${swap}
+    <button class="act" type="button" id="aMore" aria-label="More: pass, hint, unseen tiles, history"${covered ? ' disabled' : ''}>${ICON.more}<span>More</span></button>
+    <button class="act play" type="button" id="aPlay" aria-label="${n && preview && preview.ok ? 'Play this word for ' + preview.score + ' points' : 'Play'}"${ok && n ? '' : ' disabled'}><span>${label}</span></button>`;
+}
+$('acts').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  ({ aShuf: shuffleRack, aRec: recall, aEx: openExchange, aMore: openMore, aPlay: press, aHint: showHint })[b.id]();
+});
+$('overbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'obRes') openEnd(); else if (G.mode === 'daily') openStats(); else { discardSave(G.mode); G = null; render(); }
+});
+
+function drawSetup(){
+  const el = $('setup');
+  if (mode === 'cpu'){
+    const s = stats().cpu[level] || { w: 0, l: 0, d: 0 };
+    el.innerHTML = `<h2>Play the computer</h2><p>Pick a level. Who plays first is chosen at random.</p>
+      <div class="levels" id="levels" role="group" aria-label="Computer level">${B.LEVELS.map(l => `<button type="button" data-l="${l}" aria-pressed="${l === level}"><b>${B.LEVEL_NAMES[l]}</b><small>${LEVEL_NOTE[l]}</small></button>`).join('')}</div>
+      <p id="rec">${s.w + s.l + s.d ? `Your record at ${B.LEVEL_NAMES[level]}: ${s.w} won, ${s.l} lost, ${s.d} drawn.` : `No ${B.LEVEL_NAMES[level]} games yet.`}</p>
+      <div class="setup-r"><button class="btn primary" type="button" id="goCpu">Start game</button><button class="btn" type="button" id="goHelp">How to play</button></div>`;
+  } else {
+    el.innerHTML = `<h2>Pass and play</h2><p>Two players share one device. After each turn a cover screen hides the tiles until the next player taps it.</p>
+      <div class="names"><label>Player 1<input id="n0" maxlength="14" autocomplete="off" value="${esc(names[0] || 'Player 1')}"></label><label>Player 2<input id="n1" maxlength="14" autocomplete="off" value="${esc(names[1] || 'Player 2')}"></label></div>
+      <div class="setup-r"><button class="btn primary" type="button" id="goPass">Start game</button><button class="btn" type="button" id="goHelp">How to play</button></div>`;
+  }
+}
+$('setup').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.l){ level = b.dataset.l; store.set('bramble-level', level); drawSetup(); }
+  else if (b.id === 'goCpu') startCpu(level);
+  else if (b.id === 'goPass'){ const f = i => ($('n' + i).value.trim() || 'Player ' + (i + 1)).slice(0, 14); let a = f(0), c = f(1); if (a.toLowerCase() === c.toLowerCase()) c = c + ' 2'; startPass([a, c]); }
+  else if (b.id === 'goHelp') openSheet('helpSheet');
+});
+
+function renderCover(){
+  const cv = $('cover'); cv.hidden = !(covered && G && !G.S.over && G.mode === 'pass');
+  if (!cv.hidden){
+    $('coverH').textContent = `Pass to ${pname(G.S.turn)}`;
+    const h = G.S.history[G.S.history.length - 1];
+    $('coverP').innerHTML = h ? (h.type === 'play' ? `${esc(pname(h.p))} played ${h.words[0]} for ${h.score}.` : h.type === 'exchange' ? `${esc(pname(h.p))} exchanged tiles.` : `${esc(pname(h.p))} passed.`) : 'Your tiles stay hidden until you tap.';
+    setTimeout(() => $('coverBtn').focus({ preventScroll: true }), 0);
+  }
+}
+$('coverBtn').addEventListener('click', () => { covered = false; render(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'pass' && !G.S.over && !covered){ covered = true; render(); } });
+
+function syncMode(){
+  [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
+  $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
+}
+function render(){
+  syncMode();
+  const inGame = !!G;
+  $('setup').hidden = inGame; $('play').hidden = !inGame;
+  if (!inGame){ drawSetup(); renderCover(); return; }
+  drawScores(); drawBoard(); drawRack(); drawLine(); drawActs(); renderCover();
+}
+function setMode(m){
+  if (m === mode) return;
+  if (G) save();
+  closeSheets(); mode = m; store.set('bramble-mode', m);
+  loadGame(m);
+}
+$('mode').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) setMode(b.dataset.m); });
+
+// ---------- end of game ----------
+const dailyWon = S => { const t = targets['d' + G.day]; return !!t && S.scores[0] >= t.target; };
+function finishGame(live){
+  const S = G.S;
+  if (!G.recorded){
+    G.recorded = true;
+    const s = stats();
+    if (G.mode === 'cpu'){
+      const l = s.cpu[G.level] || (s.cpu[G.level] = { w: 0, l: 0, d: 0 }), w = S.final.winners;
+      if (w.length > 1) l.d++; else if (w[0] === G.human) l.w++; else l.l++;
+      s.best = Math.max(s.best || 0, S.scores[G.human]);
+    } else if (G.mode === 'pass') s.pass.games++;
+    else {
+      const d = s.daily; d.played++; d.best = Math.max(d.best || 0, S.scores[0]);
+      d.cur = d.last === G.day - 1 ? d.cur + 1 : (d.last === G.day ? d.cur : 1); d.last = G.day; d.max = Math.max(d.max, d.cur);
+    }
+    saveStats(s);
+    if (G.mode === 'daily') G.done = true;
+    if (G.mode === 'daily') save(); else discardSave(G.mode);
+  }
+  if (G.mode === 'daily') finalizeDaily(live);
+  else { if (live) celebrate(winnerIsMe()); openEnd(); }
+}
+// the daily is finished: once the target is known, record whether it was beaten (once) and show the results
+function finalizeDaily(live){
+  const g = G, S = g.S;
+  ensureTarget(g.day).then(t => {
+    const won = S.scores[0] >= t.target;
+    if (!g.final){ g.final = { score: S.scores[0], target: t.target, won }; if (won){ const s = stats(); s.daily.won++; saveStats(s); } store.set(KEYS.daily, g); }
+    if (G !== g) return;
+    drawScores(); if (live) celebrate(won); openEnd();
+  });
+}
+const winnerIsMe = () => G.mode === 'cpu' ? G.S.final.winners.length === 1 && G.S.final.winners[0] === G.human : G.mode === 'pass' ? true : false;
+function celebrate(good){
+  if (!window.FX) return;
+  try{
+    if (good){
+      FX.burst({ el: '#board', shapes: ['leaf', 'petal', 'leaf'], colors: ['#8fcf86', '#f2a196', '#f3c867', '#d55f7c'], count: 44, size: 16, speed: 950, gravity: 480, delay: .2 });
+      FX.rain({ shapes: ['petal', 'leaf'], colors: ['#f2a196', '#f3c867', '#8fcf86'], count: 36, size: 16, sway: 90, delay: .35 });
+    }
+    FX.stamp(G.mode === 'daily' ? (good ? 'Target beaten!' : 'Well played') : G.mode === 'pass' ? `${pname(G.S.final.winners[0])} wins!` : (good ? 'You win!' : G.S.final.winners.length > 1 ? 'A draw' : 'Good game'), { color: FX.css('--br') });
+  }catch(e){}
+}
+function bestPlays(){
+  const best = {};
+  G.S.history.forEach(h => { if (h.type === 'play' && (!best[h.p] || h.score > best[h.p].score)) best[h.p] = { score: h.score, word: h.words[0] }; });
+  return best;
+}
+function openEnd(){
+  const S = G.S; if (!S.over) return;
+  const f = S.final, H = S.history, d = G.mode === 'daily', t = d ? targets['d' + G.day] : null;
+  let title, sub = '', body = '', btns = '';
+  const reason = f.reason === 'out' ? `${esc(pname(S.racks.findIndex(r => !r.length)))} used every tile.` : f.reason === 'stuck' ? 'Six turns in a row without a play, so the game ends.' : `All ${S.turnLimit} turns are played.`;
+  if (d){
+    const won = t ? S.scores[0] >= t.target : false;
+    title = !t ? 'Daily finished' : S.scores[0] > t.target ? 'Target beaten!' : won ? 'Target matched!' : 'So close';
+    sub = `No. ${G.day + 1} · ${reason}`;
+    body += `<div class="bigscore"><b>${S.scores[0]}</b><span>${t ? `/ ${t.target} target` : '/ working out the target…'}</span></div>`;
+    const bp = bestPlays()[0]; if (bp) body += `<p>Your best play: ${wordChip(bp.word)} for <b>${bp.score}</b>.${G.hints ? ` You used ${G.hints} hint${G.hints > 1 ? 's' : ''}.` : ''}</p>`;
+    if (t){
+      const mine = H.map(h => h.type === 'play' ? `${wordChip(h.words[0])} <b>${h.score}</b>` : 'pass');
+      body += `<div class="label">How the target was made</div><table class="tbl"><tr><th>Turn</th><th>You</th><th>Target play</th></tr>${t.plays.map((p, i) => `<tr><td class="n">${i + 1}</td><td>${mine[i] || ''}</td><td>${p.type === 'play' ? `${wordChip(p.main)} <b>${p.score}</b>` : 'pass'}</td></tr>`).join('')}</table>`;
+    }
+    const s = stats().daily;
+    body += `<div class="stats4"><div><b>${s.played}</b><span>Played</span></div><div><b>${s.won}</b><span>Beat target</span></div><div><b>${s.cur}</b><span>Day streak</span></div><div><b>${s.max}</b><span>Best streak</span></div></div>`;
+    body += `<div class="shareText" id="shareText" hidden></div><div class="next"><span class="label">Next daily in</span><b id="countdown"></b></div>`;
+    btns = `<div class="row"><button class="btn primary" type="button" id="eShare">Share result</button><button class="btn" type="button" id="eBoard">Look at the board</button></div>`;
+  } else {
+    const w = f.winners, adj = f.adjustments, order = G.mode === 'cpu' ? [G.human, 1 - G.human] : [0, 1];
+    title = w.length > 1 ? 'A draw' : G.mode === 'cpu' ? (w[0] === G.human ? 'You win!' : 'The computer wins') : `${pname(w[0])} wins!`;
+    sub = reason;
+    body += `<table class="tbl"><tr><th></th><th class="n">Plays</th><th class="n">Tiles</th><th class="n">Final</th></tr>${order.map(p => `<tr class="${w.includes(p) ? 'me' : ''}"><td>${esc(pname(p))}${w.includes(p) ? ' 🌿' : ''}</td><td class="n">${S.scores[p] - adj[p]}</td><td class="n">${adj[p] > 0 ? '+' + adj[p] : adj[p] || '0'}</td><td class="n">${S.scores[p]}</td></tr>`).join('')}</table>`;
+    const bp = bestPlays();
+    body += order.filter(p => bp[p]).map(p => `<p>Best word, ${esc(pname(p))}: ${wordChip(bp[p].word)} for <b>${bp[p].score}</b></p>`).join('');
+    const rare = []; H.forEach(h => { if (h.type === 'play') h.words.forEach(x => { if (B.dict().isRare(x)) rare.push(`${wordChip(x)}<span class="muted">(${esc(pname(h.p))})</span>`); }); });
+    body += rare.length ? `<p>Rare words played: ${rare.join(' ')}</p>` : '';
+    const others = ['cpu', 'pass', 'daily'].filter(m => m !== G.mode), MN = { cpu: 'vs Computer', pass: 'Pass & play', daily: 'Daily' };
+    btns = `<div class="row"><button class="btn primary" type="button" id="eAgain">Play again</button>${G.mode === 'cpu' ? '<button class="btn" type="button" id="eLevel">Change level</button>' : '<button class="btn" type="button" id="eNames">Change players</button>'}</div>
+      <div class="label" style="margin:2px 0 -6px">New mode</div>
+      <div class="row">${others.map(m => `<button class="btn small" type="button" data-mode="${m}">${MN[m]}</button>`).join('')}</div>
+      <div class="row"><button class="btn small" type="button" id="eBoard">Look at the board</button></div>`;
+  }
+  $('endTitle').textContent = title; $('endSub').innerHTML = sub; $('endBody').innerHTML = body; $('endBtns').innerHTML = btns;
+  $('endBtns').dataset.mode = G.mode;
+  $('endNav').innerHTML = GameNav.endButtons(d ? 'bramble' : 'bramble-play');
+  openSheet('endSheet');
+  if (d){ clearInterval(cd); const c = () => { const el = $('countdown'); if (!el) return; const n = new Date(), ms = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1) - n, x = Math.floor(ms / 1000);
+      el.textContent = [Math.floor(x / 3600), Math.floor(x % 3600 / 60), x % 60].map(v => String(v).padStart(2, '0')).join(':'); }; c(); cd = setInterval(c, 1000); }
+}
+let cd = 0;
+$('endSheet').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'eShare') share();
+  else if (b.id === 'eBoard') closeSheets();
+  else if (b.id === 'eAgain'){ closeSheets(); G.mode === 'cpu' ? startCpu(G.level) : startPass(G.names.slice()); }
+  else if (b.id === 'eLevel' || b.id === 'eNames'){ closeSheets(); G = null; render(); }
+  else if (b.dataset.mode){ closeSheets(); setMode(b.dataset.mode); }
+});
+function shareText(){
+  const S = G.S, t = targets['d' + G.day], H = S.history;
+  const em = H.map(h => h.type !== 'play' ? '⬜' : h.placements.length === RACK ? '💐' : h.score >= 60 ? '🌺' : h.score >= 40 ? '🌸' : h.score >= 20 ? '🌿' : '🌱').join('');
+  return `Bramble No. ${G.day + 1} · ${S.scores[0]} / ${t ? t.target : '?'} 🌿\n${em}${G.hints ? `\n💡 ${G.hints} hint${G.hints > 1 ? 's' : ''}` : ''}`;
+}
+async function share(){
+  const text = shareText();
+  try{ if (navigator.share && matchMedia('(pointer: coarse)').matches){ await navigator.share({ text }); return; } }catch(e){ if (e && e.name === 'AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Copied to clipboard'); }
+  catch(e){ const b = $('shareText'); b.textContent = text; b.hidden = false; const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+}
+function openStats(){
+  const s = stats(), d = s.daily;
+  $('stDaily').innerHTML = [[d.played, 'Played'], [d.won, 'Beat target'], [d.cur, 'Day streak'], [d.max, 'Best streak']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  $('stCpu').innerHTML = '<tr><th>Level</th><th class="n">Won</th><th class="n">Lost</th><th class="n">Drawn</th></tr>' + B.LEVELS.map(l => { const x = s.cpu[l] || { w: 0, l: 0, d: 0 }; return `<tr><td>${B.LEVEL_NAMES[l]}</td><td class="n">${x.w}</td><td class="n">${x.l}</td><td class="n">${x.d}</td></tr>`; }).join('');
+  $('stMore').innerHTML = [[s.best || '–', 'Best game'], [s.bestMove ? s.bestMove.score : '–', s.bestMove ? 'Best play (' + esc(s.bestMove.word) + ')' : 'Best play'], [d.best || '–', 'Best daily'], [s.hints, 'Hints used']].map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+  openSheet('statsSheet');
+}
+
+// ---------- input: tap, drag and keys ----------
+let drag = null;
+const boardCell = el => el && el.closest ? el.closest('.sq') : null;
+function tapRackItem(it){
+  if (!canAct()) return;
+  if (it.at >= 0){ unplace(it); return; }
+  if (selItem === it){ selItem = null; drawRack(); return; }
+  if (cur >= 0){ // a square is chosen: the tile goes there and the cursor moves on
+    const i = nextEmpty(cur, dir);
+    if (i >= 0){ place(it, i); const nx = nextEmpty(i + (dir === 'h' ? 1 : N), dir); cur = nx >= 0 && (dir === 'v' || ((nx / N) | 0) === ((i / N) | 0)) ? nx : -1; drawBoard(); return; }
+  }
+  selItem = it; drawRack();
+}
+function tapSquare(i){
+  if (!canAct()) return;
+  if (G.S.board[i]) return;
+  const k = pendIndex(i);
+  if (k >= 0){ unplace(R[k]); return; }
+  if (selItem){ place(selItem, i); return; }
+  if (cur === i) dir = dir === 'h' ? 'v' : 'h'; else cur = i;
+  drawBoard();
+}
+$('board').addEventListener('click', e => {
+  const c = boardCell(e.target); if (!c) return;
+  if (clickGuard){ clickGuard = false; if (e.detail > 0) return; } // the pointer events already handled this tap or drag
+  tapSquare(+c.dataset.i);
+});
+$('rack').addEventListener('click', e => {
+  const b = e.target.closest('.slot[data-k]'); if (!b) return;
+  if (clickGuard){ clickGuard = false; if (e.detail > 0) return; }
+  tapRackItem(R[+b.dataset.k]);
+});
+document.addEventListener('pointerdown', e => {
+  clickGuard = false;
+  if (e.button > 0 || !canAct() || anySheet()) return;
+  const el = e.target.closest && e.target.closest('[data-k]'); if (!el || !(el.closest('#rack') || el.closest('#board'))) return;
+  const it = R[+el.dataset.k]; if (!it) return;
+  drag = { it, el, x0: e.clientX, y0: e.clientY, moved: false, clone: null, touch: e.pointerType !== 'mouse', over: null };
+});
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved){
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+    drag.moved = true; if (drag.touch) e.preventDefault();
+    const sq = $('board').querySelector('.sq').getBoundingClientRect().width, c = document.createElement('span');
+    c.className = 't drag' + (drag.it.ch === '?' ? ' blank' : ''); c.style.width = c.style.height = sq * 1.15 + 'px'; c.style.fontSize = sq * .66 + 'px';
+    c.innerHTML = (drag.it.ch === '?' ? (drag.it.letter || '?') : drag.it.ch) + (drag.it.ch === '?' ? '' : `<i>${tv(drag.it.ch)}</i>`);
+    document.body.appendChild(c); drag.clone = c; drag.size = sq * 1.15;
+    drag.el.classList.add('lift'); if (drag.el.querySelector) drag.el.querySelectorAll('.t').forEach(x => x.classList.add('lift'));
+  }
+  const lift = drag.touch ? 46 : 0, cx = e.clientX, cy = e.clientY - lift;
+  drag.clone.style.left = cx - drag.size / 2 + 'px'; drag.clone.style.top = cy - drag.size / 2 + 'px';
+  const hit = document.elementsFromPoint(cx, cy), cell = hit.map(boardCell).find(Boolean);
+  const ok = cell && !G.S.board[+cell.dataset.i] ? cell : null;
+  if (drag.over !== ok){ drag.over && drag.over.classList.remove('over'); ok && ok.classList.add('over'); drag.over = ok; }
+  drag.hitRack = hit.some(h => h.id === 'rack' || (h.closest && h.closest('#rack'))); drag.cx = cx;
+}, { passive: false });
+function endDrag(e, cancel){
+  if (!drag) return; const d = drag; drag = null;
+  clickGuard = true;
+  if (d.clone) d.clone.remove(); d.over && d.over.classList.remove('over');
+  if (!d.moved){ // a tap
+    if (cancel) return;
+    if (d.el.closest('#rack')) tapRackItem(d.it); else if (d.it.at >= 0) { if (canAct()) unplace(d.it); }
+    return;
+  }
+  if (!cancel && canAct()){
+    const it = d.it;
+    if (d.over){
+      const i = +d.over.dataset.i, k = pendIndex(i);
+      if (k >= 0 && R[k] !== it){ const occ = R[k]; if (it.at >= 0){ const j = it.at; occ.at = j; it.at = i; changed(); } else { occ.at = -1; occ.letter = ''; place(it, i); } }
+      else if (it.at >= 0){ const bl = it.ch === '?'; it.at = i; it.seq = ++seqN; changed(); if (bl && !it.letter) askBlank(it); }
+      else place(it, i);
+      return;
+    }
+    if (d.hitRack){ // back to the rack, in the slot nearest the finger
+      const slots = [...$('rack').children]; let idx = slots.length;
+      for (let n = 0; n < slots.length; n++){ const r = slots[n].getBoundingClientRect(); if (d.cx < r.left + r.width / 2){ idx = n; break; } }
+      if (it.at >= 0){ it.at = -1; it.letter = ''; }
+      moveItem(it, idx); changed(); return;
+    }
+  }
+  drawBoard(); drawRack();
+}
+document.addEventListener('pointerup', e => endDrag(e, false));
+document.addEventListener('pointercancel', e => endDrag(e, true));
+
+// keyboard: type letters at the chosen square, Backspace takes the last tile back, Enter plays
+document.addEventListener('keydown', e => {
+  if (!G || anySheet() || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (!canAct()) { if (e.key === 'Enter' && covered) { covered = false; render(); } return; }
+  const k = e.key;
+  if (/^[a-zA-Z]$/.test(k)){
+    e.preventDefault();
+    if (cur < 0){ if (B.isEmptyBoard(G.S.board)) cur = CENTER; else { toast('Tap a square first, then type'); return; } }
+    const i = nextEmpty(cur, dir); if (i < 0){ toast('No room that way'); return; }
+    const L = k.toUpperCase();
+    let it = R.find(x => x.at < 0 && x.ch === L), blank = false;
+    if (!it){ it = R.find(x => x.at < 0 && x.ch === '?'); blank = !!it; }
+    if (!it){ toast(`No ${L} on your rack`); return; }
+    selItem = null; it.at = i; it.letter = blank ? L : ''; it.seq = ++seqN;
+    const nx = nextEmpty(i + (dir === 'h' ? 1 : N), dir);
+    cur = nx >= 0 && (dir === 'v' || ((nx / N) | 0) === ((i / N) | 0)) ? nx : i;
+    changed();
+  } else if (k === 'Backspace'){
+    e.preventDefault();
+    const last = R.filter(x => x.at >= 0).sort((a, b) => b.seq - a.seq)[0];
+    if (last){ cur = last.at; unplace(last); }
+  } else if (k === 'Enter'){ if (document.activeElement && document.activeElement.closest && document.activeElement.closest('button:not(.sq)')) return; e.preventDefault(); press(); }
+  else if (k === 'Escape'){ selItem = null; cur = -1; drawBoard(); drawRack(); }
+  else if (k.startsWith('Arrow') && (t === $('board') || (t && t.closest && t.closest('#board')))){
+    e.preventDefault(); if (cur < 0) cur = CENTER;
+    const r = (cur / N) | 0, c = cur % N;
+    if (k === 'ArrowLeft' && c > 0) cur--; else if (k === 'ArrowRight' && c < N - 1) cur++; else if (k === 'ArrowUp' && r > 0) cur -= N; else if (k === 'ArrowDown' && r < N - 1) cur += N;
+    drawBoard(); const el = $('board').children[(cur / N) | 0].children[cur % N]; el && el.focus({ preventScroll: true });
+  }
+});
+
+// ---------- start ----------
+store.set('bramble-mode', mode);
+buildBoard();
+syncMode();
+loadGame(mode);
+setTimeout(() => { try{ B.dict(); }catch(e){} }, 0);   // decode the word list now, not at the first move
+if (!store.get('bramble-seen-help', false)){ store.set('bramble-seen-help', true); openSheet('helpSheet'); }
+
+GameNav.init({ id: 'bramble',
+  note: () => !G ? '' : G.mode === 'daily' ? 'Your daily progress is saved.' : 'Your game is saved.',
+  actions: () => {
+    const a = [];
+    if (G && !G.S.over){
+      if (G.mode === 'cpu') a.push({ icon: 'flag', label: 'Resign', note: 'Counts as a loss.', danger: true, confirm: 'Tap again to resign', run: resign });
+      if (G.mode !== 'daily') a.push({ icon: 'new', label: 'New game', note: 'Throws this game away. No result is recorded.', confirm: 'Tap again for a new game', run: () => { discardSave(G.mode); tok++; G = null; thinking = false; covered = false; render(); } });
+    }
+    if (G && G.S.over) a.push({ icon: 'next', label: 'Results', run: openEnd });
+    a.push({ icon: 'learn', label: 'How to play', run: () => openSheet('helpSheet') });
+    a.push({ icon: 'mode', label: 'Statistics', run: openStats });
+    return a;
+  } });
+function resign(){
+  const s = stats(), l = s.cpu[G.level] || (s.cpu[G.level] = { w: 0, l: 0, d: 0 }); l.l++; saveStats(s);
+  discardSave('cpu'); tok++; G = null; thinking = false; render(); toast('You resigned: counted as a loss', 2200);
+}
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swReloaded){ window.__swReloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

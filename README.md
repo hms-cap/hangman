@@ -1,6 +1,6 @@
 # Paper Games
 
-Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Tendril, Clover, Trellis (mini crossword), Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
+Hangman, Sudoku, Stelium, Chess, Chess Trainer, Go, Go Problems, Go Trainer, Tendril, Clover, Trellis (mini crossword), Bramble (a word-tile board game), Snake and Chowka Bara on graph paper, built as an installable web app for iPhone, Android and desktop. It is plain HTML, CSS and JavaScript with no build step, and works offline after the first visit.
 
 **Play:** https://hms-cap.github.io/hangman/
 
@@ -222,6 +222,18 @@ The traditional Indian race game (also called Chowka Bhara or Ashta Chamma) for 
 - Player names, wins on this phone, a How to play summary, and the game saves itself
 - Rules and the computer player live in `chowka-core.js`; `node tools/test-chowka.js` checks the rules, plays 3,000 random games to make sure every game ends, and checks that the computer only makes legal moves and that each level beats the one below
 
+### Bramble
+A small word-tile board game on a 9 × 9 garden bed. Seven tiles in your rack; make words in one row or column, joined to what is on the board, and score the tile values with the premium squares. Leaf marks are the letter squares (**2L**, **3L**), blossoms the word squares (**2W**, **3W**), a star marks the centre; using all 7 tiles earns +30, and blanks stand for any letter at 0 points. The page is `bramble.html`; the rules, scoring, move generator and computer players are in `bramble-core.js`, the word list in `bramble-words.js`, and two workers: `bramble-worker.js` (the computer player and hints) and `bramble-daily-worker.js` (the daily target).
+- **Three modes** (segmented at the top, each with its own saved game): **vs Computer** (Easy, Casual, Strong, Expert; the level is remembered; who plays first is random), **Pass & play** (two named players, with a cover screen between turns so racks stay hidden) and the **Daily**
+- **Daily** (No. 1 = 27 Nov 2026), the same tiles for everyone: just you and 10 turns, no exchanging and no end-of-game penalty, scored against the day's **target**, which is what the computer makes from the same tiles (`dailyTarget` in the engine, worked out on a worker the first time it is needed and kept). Share text `Bramble No. 1 · 312 / 355 🌿` with a flower for each turn, a day streak that counts toward the home-page flame (a finished daily keeps it going, beating the target is counted separately), a countdown, and after you finish **How the target was made**: your ten plays beside the Expert's
+- **Placing tiles:** drag a tile onto a square (and back to the rack to take it off or reorder), or tap a tile and then a square; tap a placed tile to return it. With a keyboard, pick a square and type letters (tap the same square again to switch across/down), Backspace takes the last tile back, Enter plays. A blank asks which letter it stands for
+- **Live score:** the Play button shows what the move scores as soon as it is a legal play. Pressing Play on an illegal one outlines the offending tiles in red and says why (a word that isn't in the list, a gap, tiles not touching)
+- The computer thinks in a Web Worker behind a short "thinking" indicator and its tiles drop onto the board; the last move stays outlined until the next. **Move history** lists the words and scores, with a **rare** chip on valid but uncommon words
+- **Shuffle**, **Recall**, **Exchange** (while the bag holds 7 or more) and **Pass** (under More); **Show a play** (vs Computer and Daily; counts in the stats and is noted in the daily share text) reveals one of the best plays; the **bag count** opens **Unseen tiles**, every letter you haven't seen yet
+- The end sheet shows the winner, final scores with the end-of-game adjustments, each player's best word and the rare words played, then Play again, Change level and the other modes
+- Stats: wins, losses and draws at each level, best game and best play, hints used, and the daily's played, beat-target, streak and best. Saved in `bramble-game-cpu`, `bramble-game-pass`, `bramble-daily`, `bramble-stats`, `bramble-targets` (the daily targets, so they are worked out once), `bramble-level`, `bramble-mode` and `bramble-names`
+- Word list credit: SCOWL by Kevin Atkinson, with word frequency data from wordfreq by Robyn Speer (CC BY-SA 4.0)
+
 ## Getting around
 Every game has a **‹ Games** link back to the home screen, and tapping the **game's title** opens its menu:
 - **Back to all games**, with the game in progress saved, and **Switch game** to jump straight to any other game
@@ -255,6 +267,7 @@ Every game ends with a short animation in its own theme (`celebrate.js`, drawn o
 - **Chess** and **Chess Puzzles**: a gold wave across the squares, crowns, stars and fireworks ("Checkmate!"); a loss drops grey squares
 - **Go** and **Go Problems**: ink rings spread across the board and black and white stones scatter; a loss leaves grey ripples
 - **Snake**: the snake crumbles into pixels, with fireworks for a new best or a full board
+- **Bramble**: leaves and petals fall over the board when you win (or beat the daily target)
 - **Chowka Bara**: a rangoli blooms on the board in the winner's colour and cowry shells shower down
 - **Trainers**: stars burst for a pass, fireworks for mastery or a finished path
 They play once, when the game ends (not when a finished game is reopened). With reduced motion turned on, only the word shows.
@@ -285,6 +298,7 @@ The version is in `version.js` and shows on the About page (the About button abo
 | `chess-trainer.html`, `chess-trainer-core.js`, `chess-trainer-data.js`, `chess-openings.js` (opening lines, ideas and traps), `chess-endgames.js`, `chess-endgames-worker.js` | Chess Trainer page; drill generators and level map; engine-checked fork, pin, skewer and combination positions (`tools/generate-chess-trainer.js`); exact K+Q, K+R and K+P vs K tables built on first use (about a second) in a worker |
 | `chess-puzzles.html`, `chess-puzzles.js`, `chess-daily.js` | Chess Puzzles page; its verified puzzle set; which puzzle is the daily one |
 | `snake.html` | Snake game |
+| `bramble.html`, `bramble-core.js`, `bramble-words.js`, `bramble-worker.js`, `bramble-daily-worker.js` | Bramble page; rules, scoring, move generator and the computer levels; packed word list; computer-player worker; worker that works out the daily target |
 | `chowka.html`, `chowka-core.js` | Chowka Bara page; rules (board paths, cowry scoring, moves, captures) and the computer player |
 | `paper.css` | Shared look and colors (light and dark) |
 | `emblems.js` | The Tendril, Stelium and Clover emblems (title marks, home-tile watermarks, progress pictures) |
