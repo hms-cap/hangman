@@ -155,15 +155,18 @@ A course from the rules to life and death, 18 levels in four groups; pass a leve
 ### Tendril
 A letter-grid word search in the style of Squares. Each word you trace is drawn as a vine that leafs out between letters, and the vine on the home tile and stats sheet grows as you find the words.
 - Swipe through neighboring letters (diagonals included) to spell words of 4 to 8 letters, or tap letters and tap the last one again to enter
-- Find every target word to finish the grid; each tile shows how many target words still pass through it, and inks in at zero
-- Target words are everyday words (5,843 hand-reviewed); 53,000+ other words from the Hunspell dictionary count as bonus words
-- **Daily** grid (No. 1 = 16 Oct 2026; 730 pre-made grids), the same for everyone, with streaks and a countdown
-- **Practice**: unlimited fresh 4×4 or 5×5 grids made on the phone
-- Every grid is checked so all tiles are covered by target words and at least one longer word is hidden
+- **Small and Big.** Small is a 4×4 grid with 10–18 counted words (at least one of 5+ letters); Big is a 5×5 grid with 35–60 counted words (at least one of 7+ letters). Every tile lies on at least one counted word
+- **Counted vs bonus:** common words count, rare ones are bonus. You must find every counted word to finish the grid; the other accepted words (rarer words, plurals and other forms) are bonus words that are kept and shown but not needed. Each tile shows how many counted words still start there, and inks in at zero
+- **Daily:** a Small and a Big grid every day (No. 1 = 16 Oct 2026; 730 days of each), the same for everyone, with a Small | Big switch (the last choice is remembered), separate progress for each size, a countdown, and a streak that counts a day once either size is finished. The result is shared as "Tendril No. 43 · Small"
+- **Practice**: unlimited fresh Small or Big grids made on the phone (an older saved 4×4 or 5×5 practice game still loads as Small or Big)
+- The home tile shows both, e.g. "Small 12/15 · Big to go"; the day counts as done (greeting, tab dot, streak) when either size is finished
 - Rotate the grid a quarter-turn at a time (letters stay upright) to spot new words; the rotation is saved
 - Hints show the first three letters of a word and outline those tiles, numbered, on the grid
 - Share your result, saves progress
-- **Every word you find blooms**: the vine stays for a moment and a random flower or fruit grows at its end (daisy, sunflower, cherry blossom, tulip, rose, violet, cherries, apple, strawberry, lemon, grapes or orange), with buds opening along it: pink for target words, yellow for bonus words
+- **Every word you find blooms**: the vine stays for a moment and a random flower or fruit grows at its end (daisy, sunflower, cherry blossom, tulip, rose, violet, cherries, apple, strawberry, lemon, grapes or orange), with buds opening along it: pink for counted words, yellow for bonus words
+- Storage: `trail-daily` (Small), `trail-daily-big` (Big), `trail-practice`, `trail-stats` (`daily` and `practice`), `trail-size`, `trail-mode`
+- Daily grids are made by `node tools/generate-trail.js` (seeded, so re-running with the same dictionary gives the same file) into `trail-daily.js` (`TRAIL_DAILY` = Small, 16 letters a day; `TRAIL_DAILY_BIG` = Big, 25 letters a day). Small grids up to No. 43 (27 Nov 2026) are kept exactly as first published and may have more counted words than the Small rule; every later Small grid and every Big grid is generated to the rule. Re-run it whenever `trailwords.js` changes; `node tools/generate-trail.js --check` verifies the grids already written
+- Word lists: the counted/bonus split uses word frequencies from wordfreq by Robyn Speer (CC BY-SA 4.0), and the list of valid words and its levels come from SCOWL by Kevin Atkinson. Both are credited in the app's About panel
 
 ### Clover
 A word-grouping puzzle in the style of Connections. Four groups, four leaves: each group you find adds a leaf, in its colour, to the clover beside the mistakes counter, on the stats sheet and on the home tile.

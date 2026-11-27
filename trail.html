@@ -30,6 +30,9 @@
 .mode button{border:0;background:transparent;border-radius:9px;padding:7px 4px;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--muted)}
 .mode button[aria-pressed="true"]{background:var(--key);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .mode small{font-family:var(--mono);font-weight:500;margin-left:4px}
+.size button{padding:5px 4px;font-size:.85rem}
+.size small{opacity:.8}
+#otherSize{margin-top:8px}
 
 .progress{display:flex;align-items:center;gap:10px}
 .meter{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
@@ -38,6 +41,7 @@
 .progress .count b{font-weight:600}
 .chipBtn{border:1px solid var(--line);background:var(--key);border-radius:999px;padding:5px 11px;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink);white-space:nowrap}
 .chipBtn:disabled{opacity:.4;cursor:default}
+@media (max-width:340px){.progress{gap:6px}.progress .count{font-size:.78rem}.chipBtn{padding:5px 8px}.icon-chip{padding:5px 7px}.meter{min-width:12px}}
 
 .current{position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;gap:10px}
 .current .w{font-family:var(--mono);font-weight:700;font-size:1.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--hit)}
@@ -138,6 +142,11 @@
     <button type="button" data-m="practice" aria-pressed="false">Practice</button>
   </div>
 
+  <div class="mode size" id="sizeSw" role="group" aria-label="Puzzle size">
+    <button type="button" data-z="small" aria-pressed="true">Small<small>4×4</small></button>
+    <button type="button" data-z="big" aria-pressed="false">Big<small>5×5</small></button>
+  </div>
+
   <div class="progress">
     <div class="count" id="count"></div>
     <div class="meter"><i id="meter"></i></div>
@@ -159,13 +168,13 @@
     <ol>
       <li><b>Swipe</b> through neighboring letters to spell a word, in any direction, diagonals included. You can also tap letters one at a time, then tap the last letter again to enter the word.</li>
       <li>Words need <b>4 or more letters</b> and can't reuse a tile.</li>
-      <li>Find every <b>target word</b> to finish the grid. Targets are everyday words. Plurals, other word forms and rarer words still count as <b>bonus words</b>.</li>
-      <li>The small number on a tile shows how many target words still to find <b>start</b> there. A tile is inked in once every target word that uses it has been found.</li>
+      <li>Find every <b>counted word</b> to finish the grid. Common words count; rarer words are <b>bonus</b>: they are accepted and kept, but you don't need them to finish. A <b>Small</b> grid (4×4) hides about 10–18 counted words, a <b>Big</b> grid (5×5) about 35–60 with longer ones.</li>
+      <li>The small number on a tile shows how many counted words still to find <b>start</b> there. A tile is inked in once every counted word that uses it has been found.</li>
       <li>Turn the grid with <b>Rotate</b> to see the letters from a new angle. The words don't change.</li>
       <li>Stuck? <b>Hint</b> shows the first three letters of a word and outlines them on the grid.</li>
     </ol>
     <div class="demo"><span class="on">c<i>2</i></span><span class="on">a<i>1</i></span><span class="done">t</span><span>p<i>3</i></span><span class="on">r<i>2</i></span><span>e<i>4</i></span></div>
-    <p>A new daily grid starts at midnight. Practice gives you as many fresh grids as you like, in 4×4 or 5×5.</p>
+    <p>Every day brings a new <b>Small</b> and a new <b>Big</b> grid at midnight. Finish either one to keep your streak going. Practice gives you as many fresh grids as you like, Small or Big.</p>
     <p class="why" id="whyName">Every word is a tendril: it winds from letter to letter and leafs out as you go.</p>
     <button class="btn primary" id="helpClose" type="button">Start</button>
   </div>
@@ -185,7 +194,7 @@
 <div class="sheet" id="newSheet" hidden>
   <div class="panel" role="dialog" aria-labelledby="newTitle">
     <h2 id="newTitle">New practice grid</h2>
-    <div class="seg2" id="sizeSeg"><button type="button" data-s="4">4 × 4</button><button type="button" data-s="5">5 × 5</button></div>
+    <div class="seg2" id="sizeSeg"><button type="button" data-s="small">Small 4×4</button><button type="button" data-s="big">Big 5×5</button></div>
     <p id="sizeNote"></p>
     <button class="btn primary" id="newGo" type="button">Make a grid</button>
     <button class="btn" id="newCancel" type="button">Keep this grid</button>
@@ -206,7 +215,10 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
 };
 const DICT = Trail.decode(window.TRAIL_WORDS);
-const DAILY = window.TRAIL_DAILY.match(/.{16}/g);
+const DAILY = { small: window.TRAIL_DAILY.match(/.{16}/g), big: (window.TRAIL_DAILY_BIG || '').match(/.{25}/g) || [] };
+const DKEY = { small: 'trail-daily', big: 'trail-daily-big' };
+const sizeName = n => n === 5 || n === 'big' ? 'big' : 'small'; // 16-tile grids are Small, 25-tile grids are Big
+const SIZE_LABEL = { small: 'Small', big: 'Big' };
 const EPOCH = new Date(2026, 9, 16);
 const dayIndex = (d = new Date()) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - EPOCH) / 864e5);
 const PRAISE = { 4: ['Good', 'Nice', 'Got it'], 5: ['Great', 'Nice one'], 6: ['Excellent', 'Superb'], 7: ['Brilliant!', 'Wonderful!'], 8: ['Outstanding!', 'Incredible!'] };
@@ -214,6 +226,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let mode = store.get('trail-mode', 'daily');
 { const q = new URLSearchParams(location.search); if (q.has('daily')) mode = 'daily'; if (q.has('practice')) mode = 'practice'; if ([...q.keys()].length) history.replaceState(null, '', location.pathname); }
+let size = sizeName(store.get('trail-size', 'small')); // last chosen daily size
 let stats = store.get('trail-stats', {});
 const st = m => (stats[m] ||= { played: 0, done: 0, cur: 0, max: 0, last: null, best: null, bonus: 0 });
 let S = null, P = null; // S = saved progress, P = analyzed puzzle
@@ -225,24 +238,42 @@ function loadMode(m){
   [...$('mode').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
   $('dayNo').textContent = 'No. ' + (dayIndex() + 1);
   $('newBtn').hidden = m !== 'practice';
+  $('sizeSw').hidden = m !== 'daily';
+  [...$('sizeSw').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.z === size));
   if (m === 'daily'){
-    const day = dayIndex(), grid = DAILY[((day % DAILY.length) + DAILY.length) % DAILY.length];
-    S = store.get('trail-daily', null);
-    if (!S || S.day !== day) S = { day, grid, found: [], bonus: [], hints: [], elapsed: 0, done: false };
+    const day = dayIndex(), list = DAILY[size].length ? DAILY[size] : DAILY.small, grid = list[((day % list.length) + list.length) % list.length];
+    S = store.get(DKEY[size], null);
+    if (!S || S.day !== day || (S.grid && S.grid !== grid)) S = { day, grid, found: [], bonus: [], hints: [], elapsed: 0, done: false };
   } else {
     S = store.get('trail-practice', null);
-    if (!S || !S.grid) S = practiceGrid(4);
+    if (!S || !S.grid) S = practiceGrid('small');
   }
   P = Trail.analyze(S.grid, DICT);
+  const wasDone = S.done;
+  reconcile();
   S.total = P.targets.length;
   path = []; tapMode = false; lastFeedback = null;
   build(); render(); save();
+  if (!wasDone && !S.done && P.targets.every(t => S.found.includes(t))) complete(); // the new word list made an unfinished save complete
 }
-function practiceGrid(size){
-  const r = Trail.generate(size, DICT, Math.random);
+// A save made with an older word list: words that count now but were stored as bonus count as found, a grid that was
+// finished stays finished (every counted word is marked found), found words that are only bonus now move to the bonus list,
+// and words that are no longer accepted at all are dropped.
+function reconcile(){
+  const tg = new Set(P.targets), bn = new Set(P.bonus);
+  S.found = S.found || []; S.bonus = S.bonus || []; S.hints = S.hints || [];
+  for (const w of S.bonus) if (tg.has(w) && !S.found.includes(w)) S.found.push(w);
+  for (const w of S.found) if (!tg.has(w) && bn.has(w) && !S.bonus.includes(w)) S.bonus.push(w);
+  S.found = S.found.filter(w => tg.has(w));
+  S.bonus = S.bonus.filter(w => bn.has(w)); // words the list no longer accepts at all drop out
+  S.hints = S.hints.filter(w => tg.has(w));
+  if (S.done) for (const w of P.targets) if (!S.found.includes(w)) S.found.push(w);
+}
+function practiceGrid(z){
+  const r = Trail.generate(z, DICT, Math.random);
   return { grid: r.grid, found: [], bonus: [], hints: [], elapsed: 0, done: false };
 }
-const save = () => store.set(mode === 'daily' ? 'trail-daily' : 'trail-practice', S);
+const save = () => store.set(mode === 'daily' ? DKEY[size] : 'trail-practice', S);
 
 // ---- grid DOM ----
 let tiles = [];
@@ -468,12 +499,12 @@ $('hintBtn').addEventListener('click', () => {
   if (S.done) return;
   const open = P.targets.filter(w => !S.found.includes(w) && !S.hints.includes(w));
   const pending = S.hints.find(h => !S.found.includes(h));
-  if (pending){ feedback(hintText(pending), 'Follow the outlined tiles', 'bonus'); render(); return; }
+  if (pending){ feedback(hintText(pending), 'Follow the outlines', 'bonus'); render(); return; }
   if (!open.length) return;
   open.sort((a, b) => a.length - b.length);
   const pick = open[Math.floor(Math.random() * Math.min(open.length, 6))]; // a shorter word
   S.hints.push(pick); save();
-  feedback(hintText(pick), 'Follow the outlined tiles', 'bonus'); render();
+  feedback(hintText(pick), 'Follow the outlines', 'bonus'); render();
 });
 document.addEventListener('keydown', e => {
   if (anySheet()) return;
@@ -492,8 +523,11 @@ const fmt = ms => { const s = Math.round(ms / 1000), m = Math.floor(s / 60); ret
 function complete(){
   S.done = true; save();
   const s = st(mode); s.played++; s.done++; s.bonus += S.bonus.length;
-  if (mode === 'daily'){ s.cur = s.last === S.day - 1 ? s.cur + 1 : 1; s.last = S.day; s.max = Math.max(s.max, s.cur); }
-  if (s.best == null || S.elapsed < s.best) s.best = S.elapsed;
+  // a day counts for the streak once, when either size is finished
+  if (mode === 'daily' && s.last !== S.day){ s.cur = s.last === S.day - 1 ? s.cur + 1 : 1; s.last = S.day; s.max = Math.max(s.max, s.cur); }
+  const bk = mode === 'daily' && size === 'big' ? 'bestBig' : 'best'; // Fastest is kept per size (Small in `best`)
+  if (s[bk] == null || S.elapsed < s[bk]) s[bk] = S.elapsed;
+  if (mode === 'daily') s[size] = (s[size] || 0) + 1;
   store.set('trail-stats', stats);
   if (!reduced) tiles.forEach((t, i) => t.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 380, delay: i * 30 }));
   if (window.FX){
@@ -504,29 +538,31 @@ function complete(){
   setTimeout(openStats, 1700);
 }
 function shareText(){
-  const head = mode === 'daily' ? `Tendril No. ${S.day + 1}` : `Tendril practice ${P.size}×${P.size}`;
+  const head = mode === 'daily' ? `Tendril No. ${S.day + 1} · ${SIZE_LABEL[size]}` : `Tendril practice · ${SIZE_LABEL[sizeName(P.size)]}`;
   return `${head}\n✏️ ${S.found.filter(w => P.targets.includes(w)).length}/${P.targets.length} words${S.bonus.length ? ` + ${S.bonus.length} bonus` : ''}\n⏱️ ${fmt(S.elapsed)}${S.hints.length ? ` · 💡 ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}`;
 }
 let tick;
 function openStats(){
   const s = st(mode);
-  $('statsTitle').textContent = mode === 'daily' ? 'Daily statistics' : 'Practice statistics';
+  $('statsTitle').textContent = mode === 'daily' ? `Daily statistics · ${SIZE_LABEL[size]}` : 'Practice statistics';
   $('hero').innerHTML = Emblems.tendril(S.done ? 1 : S.found.length / Math.max(1, P.targets.length), { line: 'var(--em-tendril)', leaf: 'var(--em-leaf)', ghost: 'var(--line)' });
   $('result').textContent = S.done ? `You found all ${P.targets.length} words${S.bonus.length ? ` and ${S.bonus.length} bonus word${S.bonus.length > 1 ? 's' : ''}` : ''} in ${fmt(S.elapsed)}${S.hints.length ? `, with ${S.hints.length} hint${S.hints.length > 1 ? 's' : ''}` : ''}.` : `${S.found.length} of ${P.targets.length} words found so far.`;
   $('stats4').innerHTML = (mode === 'daily'
-    ? [[s.done, 'Completed'], [s.cur, 'Current streak'], [s.max, 'Best streak'], [s.best == null ? '–' : fmt(s.best), 'Fastest']]
-    : [[s.done, 'Completed'], [s.bonus, 'Bonus words'], [s.best == null ? '–' : fmt(s.best), 'Fastest'], [P.size + '×' + P.size, 'This grid']])
+    ? [[s.done, 'Completed'], [s.cur, 'Current streak'], [s.max, 'Best streak'], [(size === 'big' ? s.bestBig : s.best) == null ? '–' : fmt(size === 'big' ? s.bestBig : s.best), 'Fastest']]
+    : [[s.done, 'Completed'], [s.bonus, 'Bonus words'], [s.best == null ? '–' : fmt(s.best), 'Fastest'], [SIZE_LABEL[sizeName(P.size)], 'This grid']])
     .map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
   let after = '';
   if (S.done){
     after += `<div class="row"><button class="btn primary" id="shareBtn" type="button">Share result</button>${mode === 'daily' ? `<button class="btn" id="toPractice" type="button">Practice grid</button>` : `<button class="btn" id="again" type="button">New grid</button>`}</div>`;
     after += `<div class="shareText" id="shareText" hidden></div>`;
+    if (mode === 'daily'){ const o = size === 'big' ? 'small' : 'big', od = store.get(DKEY[o], null); if (!(od && od.day === S.day && od.done)) after += `<button class="btn" id="otherSize" type="button">${od && od.day === S.day && od.found.length ? 'Continue' : 'Play'} today's ${SIZE_LABEL[o]} grid</button>`; }
   }
   if (mode === 'daily') after += `<div class="next"><span class="label">Next daily grid in</span><b id="countdown"></b></div>`;
   if (S.done) after += GameNav.endButtons('trail');
   $('after').innerHTML = after;
   if (S.done){
     $('shareBtn').onclick = share;
+    if ($('otherSize')) $('otherSize').onclick = () => { closeAll(); size = size === 'big' ? 'small' : 'big'; store.set('trail-size', size); loadMode('daily'); };
     if ($('toPractice')) $('toPractice').onclick = () => { closeAll(); loadMode('practice'); };
     if ($('again')) $('again').onclick = () => { closeAll(); openNew(); };
   }
@@ -548,16 +584,16 @@ const anySheet = () => [...document.querySelectorAll('.sheet')].some(s => !s.hid
 function open(id){ document.querySelectorAll('.sheet').forEach(s => s.hidden = s.id !== id); }
 function closeAll(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); last = Date.now(); }
 document.querySelectorAll('.sheet').forEach(s => s.addEventListener('click', e => { if (e.target === s) closeAll(); }));
-let newSize = 4;
+let newSize = 'small';
 function openNew(){
-  newSize = P && mode === 'practice' ? P.size : 4;
+  newSize = P && mode === 'practice' ? sizeName(P.size) : size;
   drawNew(); $('newCancel').hidden = !(mode === 'practice' && S && !S.done && S.found.length); open('newSheet');
 }
 function drawNew(){
-  [...$('sizeSeg').children].forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === newSize));
-  $('sizeNote').textContent = newSize === 4 ? 'About 15–35 target words. A quick game.' : 'About 30–55 target words, with longer words to find.';
+  [...$('sizeSeg').children].forEach(b => b.setAttribute('aria-pressed', b.dataset.s === newSize));
+  $('sizeNote').textContent = newSize === 'small' ? 'About 10–18 words to find. A quick game.' : 'About 35–60 words to find, with longer words hiding.';
 }
-$('sizeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ newSize = +b.dataset.s; drawNew(); } });
+$('sizeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ newSize = b.dataset.s; drawNew(); } });
 $('newGo').addEventListener('click', () => {
   if (mode === 'practice' && S && !S.done && S.found.length){ const s = st('practice'); s.played++; store.set('trail-stats', stats); }
   closeAll(); S = practiceGrid(newSize); store.set('trail-practice', S); loadMode('practice');
@@ -569,6 +605,7 @@ $('helpClose').addEventListener('click', closeAll);
 $('statsBtn').addEventListener('click', openStats);
 $('statsClose').addEventListener('click', closeAll);
 $('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) loadMode(b.dataset.m); });
+$('sizeSw').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.z !== size){ if (anySheet()) closeAll(); size = b.dataset.z; store.set('trail-size', size); loadMode('daily'); } });
 
 // ---- boot ----
 loadMode(mode);
@@ -578,7 +615,7 @@ GameNav.init({ id: 'trail', note: () => S && !S.done && S.found.length ? 'Your w
   actions: () => mode === 'practice' ? [
     S && !S.done && S.found.length && { icon: 'restart', label: 'Start this grid over', note: 'Clears the words you have found and the timer.', confirm: 'Tap again to start over',
       run: () => { Object.assign(S, { found: [], bonus: [], hints: [], elapsed: 0, done: false }); save(); loadMode('practice'); } },
-    { icon: 'new', label: 'New grid…', note: '4×4 or 5×5.', run: openNew },
+    { icon: 'new', label: 'New grid…', note: 'Small (4×4) or Big (5×5).', run: openNew },
     { icon: 'mode', label: "Today's grid", run: () => loadMode('daily') },
   ] : [
     { icon: 'mode', label: 'Practice grids', note: 'Unlimited fresh grids. Today’s grid stays as it is.', run: () => loadMode('practice') },

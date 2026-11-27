@@ -3,9 +3,17 @@
 // Add the new entry at the top of CHANGES, and set CACHE in sw.js to 'paper-games-v' + the same version
 // (that is what makes installed copies pick up the update). tools/check-version.js checks the two match.
 self.APP = {
-  version: '1.11.1',
-  date: '2026-11-26',
+  version: '1.12.0',
+  date: '2026-11-27',
   changes: [
+    { v: '1.12.0', date: '2026-11-27', notes: [
+      'Tendril: everyday words now count, including plurals and other forms (tall, gentle, teams, rating); rare words like ratel stay as bonus words',
+      'Tendril: Small and Big puzzles every day: Small is 4×4 with 10 to 18 words, Big is 5×5 with 35 to 60. Finish either one to keep your streak',
+      'Tendril practice: choose a Small or Big grid',
+      'Tendril no longer accepts swear words, slurs, explicit words or abbreviations',
+      'Puzzles you already finished stay finished, and words you found earlier as bonus now count',
+      'Word lists use wordfreq by Robyn Speer (CC BY-SA 4.0) and SCOWL by Kevin Atkinson (see About)',
+    ] },
     { v: '1.11.1', date: '2026-11-26', notes: [
       'Sudoku: pencil notes are now only marked when that number is already placed in the same row, column or box. The dashed outline that hinted the right number had been crossed out is gone',
     ] },

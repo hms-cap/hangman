@@ -58,35 +58,50 @@ const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
 
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-const RULES = {
-  4: { minTargets: 14, maxTargets: 34, vowels: [5, 7], maxSame: 2, longest: 6 },
-  5: { minTargets: 30, maxTargets: 55, vowels: [8, 11], maxSame: 3, longest: 7 },
-};
+// Puzzle sizes. SMALL = 4x4, BIG = 5x5. "Counted" words (the dictionary's targets, i.e. common words) must all be found;
+// rarer words are accepted as bonus. Every tile must lie on some counted word. RULES[4] / RULES[5] keep the old size keys.
+const SMALL = { name: 'small', size: 4, minTargets: 10, maxTargets: 18, vowels: [4, 8], maxSame: 2, longest: 5, rare: 1 };
+const BIG = { name: 'big', size: 5, minTargets: 35, maxTargets: 60, vowels: [7, 12], maxSame: 3, longest: 7, rare: 2 };
+const RULES = { 4: SMALL, 5: BIG, small: SMALL, big: BIG, SMALL, BIG };
+const ruleFor = k => RULES[k] || RULES[String(k).toLowerCase()];
 
-function randomLetters(size, rand) {
-  const R = RULES[size], n = size * size;
+function randomLetters(R, rand) {
+  const n = R.size * R.size;
   for (;;) {
     const g = [];
     for (let i = 0; i < n; i++) { let x = rand() * TOTAL, k = 0; while ((x -= WEIGHTS[LETTERS[k]]) > 0) k++; g.push(LETTERS[k]); }
     const v = g.filter(c => VOWELS.has(c)).length; if (v < R.vowels[0] || v > R.vowels[1]) continue;
     const counts = {}; let ok = true, rare = 0;
     for (const c of g) { counts[c] = (counts[c] || 0) + 1; if (counts[c] > R.maxSame) ok = false; if ('jkvwxz'.includes(c)) rare++; }
-    if (!ok || rare > (size === 4 ? 1 : 2)) continue;
+    if (!ok || rare > R.rare) continue;
     return g;
   }
 }
 
-// Make a playable grid: every tile lies on some target word, a sensible number of targets, and at least one long word.
-function generate(size, dict, rand) {
-  const R = RULES[size];
-  for (let attempt = 0; attempt < 5000; attempt++) {
-    const g = randomLetters(size, rand), all = solve(g, size, dict);
+// Does this grid meet the rule? (every tile on a counted word, count in range, a long enough word)
+function check(gridStr, dict, key) {
+  const R = ruleFor(key || Math.round(Math.sqrt(gridStr.length))), size = R.size, all = solve(gridStr.split(''), size, dict);
+  const targets = [...all.keys()].filter(w => dict.targets.has(w));
+  const covered = new Set(); for (const w of targets) for (const t of all.get(w)) covered.add(t);
+  const problems = [];
+  if (targets.length < R.minTargets || targets.length > R.maxTargets) problems.push(`${targets.length} counted words`);
+  if (!targets.some(w => w.length >= R.longest)) problems.push(`no ${R.longest}+ letter word`);
+  if (covered.size < size * size) problems.push(`${size * size - covered.size} tile(s) unused`);
+  return { ok: !problems.length, problems, targets: targets.length };
+}
+
+// Make a playable grid for a size (4, 5, 'small' or 'big'): every tile lies on some counted word, a sensible number of
+// counted words, and at least one long word.
+function generate(key, dict, rand) {
+  const R = ruleFor(key), size = R.size;
+  for (let attempt = 0; attempt < 100000; attempt++) {
+    const g = randomLetters(R, rand), all = solve(g, size, dict);
     const targets = [...all.keys()].filter(w => dict.targets.has(w));
     if (targets.length < R.minTargets || targets.length > R.maxTargets) continue;
     if (!targets.some(w => w.length >= R.longest)) continue;
     const covered = new Set(); for (const w of targets) for (const t of all.get(w)) covered.add(t);
     if (covered.size < size * size) continue;
-    return { grid: g.join(''), size, attempts: attempt + 1 };
+    return { grid: g.join(''), size, attempts: attempt + 1, targets: targets.length };
   }
   return null;
 }
@@ -102,7 +117,7 @@ function analyze(gridStr, dict) {
   return { size, grid: g, targets, bonus, tiles, start };
 }
 
-const api = { decode, solve, generate, analyze, neighbors, mulberry, RULES };
+const api = { decode, solve, generate, check, analyze, neighbors, mulberry, RULES, SMALL, BIG };
 root.Trail = api;
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : globalThis);
