@@ -628,7 +628,7 @@ function startThinking(){
 function applyComputer(mv){
   let r = B.applyAny(G.S, mv);
   if (!r.ok){ r = B.pass(G.S); mv = { type: 'pass' }; }
-  const next = r.state, finish = () => { anim = null; busy = false; thinking = false; G.S = next; proceed(); };
+  const my = tok, next = r.state, finish = () => { if (my !== tok || !G) return; anim = null; busy = false; thinking = false; G.S = next; proceed(); };   // tok changes if the player switched mode / started over during the animation
   if (mv.type === 'play' && !reduced){
     anim = {}; mv.placements.forEach((p, k) => { anim[p.r * N + p.c] = { ch: p.ch, delay: k * 170 }; });
     busy = true; drawBoard(); drawLine();
@@ -917,6 +917,7 @@ $('setup').addEventListener('click', e => {
 
 function renderCover(){
   const cv = $('cover'); cv.hidden = !(covered && G && !G.S.over && G.mode === 'pass');
+  document.querySelector('.app').inert = !cv.hidden;   // nothing behind the cover (a tile placed before a reload) is reachable by keyboard or screen reader
   if (!cv.hidden){
     $('coverH').textContent = `Pass to ${pname(G.S.turn)}`;
     const h = G.S.history[G.S.history.length - 1];
