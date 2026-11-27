@@ -11,8 +11,8 @@
 //              weak/variant spelling) at SCOWL size <= 70, minus offensive words: OFFENSIVE/JUNK (tools/scowl.js), "remove" lines of
 //              tools/trail-word-review.txt, anything ESDB marks vulgar or offensive, and the reviewed "drop" lines.
 //   RARE     = judged on the base word (lemma) when the word is a regular inflection (plural, -ed, -ing, -er, -est ...) of a base word that ESDB
-//              lists: rare iff that base is rare (SCOWL size > 50 or Zipf < 2.5, or a name-like word); a word with several possible bases is
-//              rare only if all of them are. Any other word is judged on its own form: SCOWL size > 50 or Zipf < 2.5 or name-like (NAMES in
+//              lists: rare only if the form itself is rare AND every possible base is rare (SCOWL size > 50 or Zipf < 2.5, or a
+//              name-like word); so a common form of a rare base ("during") stays ordinary. Any other word is judged on its own form: SCOWL size > 50 or Zipf < 2.5 or name-like (NAMES in
 //              tools/scowl.js). So "cats" and "walked" are ordinary because "cat" and "walk" are.
 const fs = require('fs'), path = require('path');
 const { parseScowl, regular, OFFENSIVE, JUNK, NAMES } = require('./scowl.js');
@@ -58,7 +58,7 @@ function build(zipfFile, scowlFile, opts = {}) {
       let a = bases.get(f); if (!a) bases.set(f, a = new Set()); a.add(lem);
     }
   }
-  const rareOf = w => { const b = bases.get(w); return b ? [...b].every(selfRare) : selfRare(w); };
+  const rareOf = w => { const b = bases.get(w); return b ? selfRare(w) && [...b].every(selfRare) : selfRare(w); }; // an inflection is rare only if it AND its base word are rare
   const rare = new Set(words.filter(rareOf));
   const oldRare = new Set(words.filter(selfRare));
   return { words, rare, oldRare, bases, shortCandidates, dropped: [...drop].filter(w => cand.includes(w)), reviewApplied: drop.size > 0 };
