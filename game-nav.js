@@ -21,6 +21,7 @@ const GAMES = [
   ['gtrainer', 'Go Trainer', 'go-trainer.html', '#3f6f5a'],
   ['snake', 'Snake', 'snake.html', '#4f7f2a'],
   ['chowka', 'Chowka Bara', 'chowka.html', '#a8592c'],
+  ['bramble', 'Bramble', 'bramble.html', '#9b3358'],
 ];
 const css = `
 .gn-title{font:inherit;color:inherit;background:none;border:0;padding:2px 4px;margin:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:10px;line-height:1}
@@ -155,6 +156,7 @@ const DAILIES = [
   ['cpz', 'Chess Puzzles', 'chess-puzzles.html?daily', [2026, 9, 17]],
   ['groups', 'Clover', 'groups.html?daily', [2026, 9, 16]],
   ['mini', 'Trellis', 'mini.html', [2026, 9, 24]],
+  ['bramble', 'Bramble', 'bramble.html?daily', [2026, 10, 27]],
 ];
 const read = k => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } };
 const dayOf = ([y, m, d]) => { const n = new Date(); return Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(y, m, d)) / 864e5); };
@@ -165,7 +167,7 @@ function dailyDone(id){
     return lv.some(x => x && x.done && x.won) || lv.every(x => x && x.done);
   }
   if (id === 'trail') return ['trail-daily', 'trail-daily-big'].some(k => { const t = read(k); return !!(t && t.day === day && t.done); }); // Tendril: either size counts
-  const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily', mini: 'mini-daily' }[id]);
+  const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily', mini: 'mini-daily', bramble: 'bramble-daily' }[id]);
   return !!(s && s.day === day && s.done);
 }
 // HTML for the end of a results screen: "Up next" to the next unfinished daily (if any), then Back to all games.
