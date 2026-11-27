@@ -183,8 +183,10 @@ function main() {
   const isOffensive = w => OFFENSIVE.has(w) || JUNK.has(w) || flagged(w, /^(vulgar-1|offensive)/);
   const noCount = w => NO_COUNT.has(w) || flagged(w, /^(vulgar|offensive)/);
   const removedOffensive = [], removedOther = [], accepted = [];
+  const reviewPath = o.review || path.join(__dirname, 'trail-word-review.txt');
+  const REMOVE = new Set(fs.existsSync(reviewPath) ? fs.readFileSync(reviewPath, 'utf8').split('\n').map(l => l.trim().match(/^remove\s+([a-z]+)$/)).filter(Boolean).map(m => m[1]) : []);
   for (const w of cur.words) {
-    if (isOffensive(w)) removedOffensive.push(w);
+    if (isOffensive(w) || REMOVE.has(w)) removedOffensive.push(w);
     else if (!valid.has(w) && !cur.targets.has(w)) removedOther.push(w); // hand-reviewed targets are not second-guessed by ESDB
     else accepted.push(w);
   }
