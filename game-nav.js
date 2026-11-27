@@ -164,6 +164,7 @@ function dailyDone(id){
     const p = read('groups-progress') || {}, lv = ['e', 'm', 'h'].map(l => p['d' + day + l]);
     return lv.some(x => x && x.done && x.won) || lv.every(x => x && x.done);
   }
+  if (id === 'trail') return ['trail-daily', 'trail-daily-big'].some(k => { const t = read(k); return !!(t && t.day === day && t.done); }); // Tendril: either size counts
   const s = read({ five: 'five-daily', trail: 'trail-daily', cpz: 'cpz-daily', mini: 'mini-daily' }[id]);
   return !!(s && s.day === day && s.done);
 }

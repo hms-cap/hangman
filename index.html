@@ -187,6 +187,7 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
 .ab-ver b{color:var(--hit)}
 .ab-ver span{display:block;font-family:var(--ui);font-weight:500;font-size:.8rem;margin-top:2px}
 .ab-desc{margin:0;line-height:1.5;font-size:1rem}
+.ab-credit{margin:0;line-height:1.5;font-size:.88rem;color:var(--muted)}
 .ab-facts{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;color:var(--muted);line-height:1.45}
 .ab-facts b{color:var(--ink);font-weight:600}
 .ab-log{display:flex;flex-direction:column;gap:10px}
@@ -321,6 +322,8 @@ h2.sec{font-family:var(--hand);font-weight:400;font-size:1.65rem;margin:4px 0 -6
       <li><b>Up to 5 players</b> on one device, each with their own colour, saved games, stats and time played.</li>
       <li><b>Private:</b> no account and no ads. Your progress stays on this device and is never sent anywhere.</li>
     </ul>
+    <h2 class="sec">Word lists</h2>
+    <p class="ab-credit">Tendril word frequencies: wordfreq by Robyn Speer (CC BY-SA 4.0). Word list levels: SCOWL by Kevin Atkinson.</p>
     <h2 class="sec">What's new</h2>
     <div class="ab-log" id="abLog"></div>
   </div>
@@ -409,28 +412,31 @@ let fiveDone = false;
 let trailDone = false;
 (function(){
   const grids = (window.TRAIL_DAILY || '').match(/.{16}/g) || [], grid = grids.length ? grids[((trailDay % grids.length) + grids.length) % grids.length] : '';
-  const d = get('trail-daily', null), playing = d && d.day === trailDay;
+  // Small (trail-daily) and Big (trail-daily-big) are separate games; the day counts as done once either is finished
+  const sm = get('trail-daily', null), bg = get('trail-daily-big', null);
+  const ds = sm && sm.day === trailDay ? sm : null, db = bg && bg.day === trailDay ? bg : null;
+  const frac1 = d => !d ? 0 : d.done ? 1 : d.total ? (d.found || []).length / d.total : 0;
+  const playing = !!ds, d = ds || {};
   // today's letters, with a vine climbing up the side of the grid that grows as you find the words
   let body = '';
   for (let i = 0; i < 16; i++){
     const x = (i % 4) * 33 + 40, y = Math.floor(i / 4) * 33 + 16, done = playing && d.done;
     body += `<rect x="${x}" y="${y}" width="29" height="29" rx="6" class="tr-tile${done ? ' on' : ''}"/><text x="${x + 14.5}" y="${y + 19.5}" class="tr-l${done ? ' on' : ''}" style="font-size:14px">${grid[i] || ''}</text>`;
   }
-  const frac = !playing ? 0 : d.done ? 1 : d.total ? (d.found || []).length / d.total : 0;
+  const frac = (frac1(ds) + frac1(db)) / 2; // the vine grows with both of today's grids
   const VINE = 'M12 160C6 132 26 114 18 88C12 66 10 40 24 22C36 6 58 4 60 14C62 22 52 26 48 20';
   const LEAVES = [[.18, 'M15 128C4 126 0 116 2 108C12 110 17 118 15 128Z'], [.42, 'M17 82C24 74 34 72 38 76C34 84 25 87 17 82Z'], [.66, 'M15 40C5 36 3 26 6 19C14 23 18 31 15 40Z']];
   body += `<path d="${VINE}" class="vn-ghost"/>` + (frac > 0 ? `<path d="${VINE}" pathLength="1" class="vn-stem" style="stroke-dasharray:${frac.toFixed(3)} 2"/>` : '')
     + LEAVES.filter(([at]) => frac >= at).map(([, dd]) => `<path d="${dd}" class="vn-leaf"/>`).join('');
   $('artTrail').innerHTML = svg('0 0 172 164', body);
-  if (playing && d.done){
-    trailDone = true; badge($('tTrail'));
-    $('sTrail').innerHTML = `No. ${trailDay + 1} complete in <b>${fmt(d.elapsed || 0)}</b>`;
-    $('cTrail').textContent = 'See stats'; $('cTrail').classList.add('ghost');
-  } else if (playing && d.found && d.found.length){
-    $('sTrail').innerHTML = `<b>${d.found.length}</b>${d.total ? ` of ${d.total}` : ''} words found`;
-    if (d.total) setBar('bTrail', d.found.length / d.total);
-    $('cTrail').textContent = 'Continue';
-  } else $('sTrail').innerHTML = `No. ${trailDay + 1} is ready`;
+  const part = (name, x) => x && x.done ? `${name}&nbsp;done` : x && x.found && x.found.length ? `${name}&nbsp;<b>${x.found.length}</b>${x.total ? `/${x.total}` : ''}` : `${name}&nbsp;to&nbsp;go`;
+  const any = [ds, db].some(x => x && x.found && x.found.length);
+  trailDone = !!((ds && ds.done) || (db && db.done));
+  if (trailDone) badge($('tTrail'));
+  if (!any && !trailDone) $('sTrail').innerHTML = `No. ${trailDay + 1}: Small and Big are ready`;
+  else { $('sTrail').innerHTML = `${part('Small', ds)} · ${part('Big', db)}`; if (frac > 0) setBar('bTrail', frac); }
+  if (ds && ds.done && db && db.done){ $('cTrail').textContent = 'See stats'; $('cTrail').classList.add('ghost'); }
+  else if (any || trailDone) $('cTrail').textContent = 'Continue';
 })();
 
 // ---- Chess Puzzles: today's daily position (the starting position gives nothing away) ----
